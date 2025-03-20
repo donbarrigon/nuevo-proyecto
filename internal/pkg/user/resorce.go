@@ -24,7 +24,7 @@ func NewTokenResource(t *model.Token) *TokenResource {
 	}
 }
 
-type UserStoreResource struct {
+type UserLoginResource struct {
 	ID        string         `json:"id"`
 	Name      string         `json:"name"`
 	Email     *string        `json:"email,omitempty"`
@@ -35,12 +35,12 @@ type UserStoreResource struct {
 	Token     *TokenResource `json:"token,omitempty"`
 }
 
-func NewUserStoreResource(u *model.User, t *model.Token) *UserStoreResource {
+func NewUserLoginResource(u *model.User, t *model.Token) *UserLoginResource {
 	var token *TokenResource
 	if t != nil {
 		token = NewTokenResource(t)
 	}
-	return &UserStoreResource{
+	return &UserLoginResource{
 		ID:        u.ID.Hex(),
 		Name:      u.Name,
 		Email:     u.Email,

@@ -3,21 +3,33 @@ package app
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
+
+	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 )
 
-func GetRequestBody(ctx *HandlerContext, request any, method string) bool {
-	if ctx.Request.Method != method {
-		message := "Method " + ctx.Request.Method + " Not Allowed"
-		ResponseErrorJSON(ctx.Writer, message, http.StatusMethodNotAllowed, "Method Not Allowed")
-		return false
-	}
-
+func GetRequestBody(ctx *HandlerContext, request any) *ErrorJSON {
 	decoder := json.NewDecoder(ctx.Request.Body)
 	if err := decoder.Decode(request); err != nil {
-		message := "Failed to decode request body: " + err.Error()
-		ResponseErrorJSON(ctx.Writer, message, http.StatusBadRequest, "Invalid Request Body")
-		return false
+		return &ErrorJSON{
+			Status:  http.StatusBadRequest,
+			Message: lang.M(ctx.Lang(), "app.bad-request"),
+			Error:   "Failed to decode request body: " + err.Error(),
+		}
 	}
 	defer ctx.Request.Body.Close()
-	return true
+	return nil
+}
+
+func AllowedMethods(ctx *HandlerContext, methods ...string) *ErrorJSON {
+
+	if slices.Contains(methods, ctx.Request.Method) {
+		return nil
+	}
+
+	return &ErrorJSON{
+		Status:  http.StatusMethodNotAllowed,
+		Message: lang.M(ctx.Lang(), "app.method-not-allowed"),
+		Error:   "Method [" + ctx.Request.Method + "] Not Allowed",
+	}
 }

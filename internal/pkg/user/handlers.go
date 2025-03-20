@@ -6,68 +6,75 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/guard"
 	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 )
 
 func Show(w http.ResponseWriter, r *http.Request) {
 	ctx := app.NewHandlerContext(w, r)
-	if !guard.AuthToken(ctx) {
+	if err := guard.AuthToken(ctx); err != nil {
+		err.WriteResponse(w)
 		return
 	}
-	userID := showUserRequest(ctx)
-	if userID == "" {
-		app.ResponseErrorJSON(ctx.Writer, "No existe", http.StatusNotFound, "No existe")
+
+	userID, err := showUserRequest(ctx)
+	if err != nil {
+		err.WriteResponse(w)
 		return
 	}
 
 	userModel := &model.User{}
-	if err := app.DB.FindByHexID(userModel, userID); err != nil {
-		app.ResponseErrorJSON(ctx.Writer, "No se encontró el usuario: "+err.Error(), http.StatusNotFound, "No existe")
+	if err := app.Mongo.FindByHexID(userModel, userID); err != nil {
+		app.ResponseErrorJSON(w, err.Error(), http.StatusNotFound, lang.M(ctx.Lang(), "app.not_found"))
 		return
 	}
-	app.ResponseJSON(ctx.Writer, NewUserStoreResource(userModel, nil), 200)
+
+	app.ResponseJSON(w, NewUserLoginResource(userModel, nil), http.StatusOK)
 }
 
 func Store(w http.ResponseWriter, r *http.Request) {
 	ctx := app.NewHandlerContext(w, r)
-	req := storeRequest(ctx)
-	if req == nil {
-		return
-	}
-
-	userModel, err := storeService(req)
+	req, err := storeRequest(ctx)
 	if err != nil {
-		app.ResponseErrorJSON(ctx.Writer, err.Error(), 500, "No se guardo")
+		err.WriteResponse(w)
 		return
 	}
 
-	tokenModel, err := tokenStoreService(userModel)
+	userModel, err := storeService(ctx, req)
 	if err != nil {
-		app.ResponseErrorJSON(ctx.Writer, err.Error(), 500, "No se creo el token")
+		err.WriteResponse(w)
 		return
 	}
 
-	ur := NewUserStoreResource(userModel, tokenModel)
-	app.ResponseJSON(ctx.Writer, ur, 200)
+	tokenModel, err := tokenStoreService(ctx, userModel)
+	if err != nil {
+		err.WriteResponse(w)
+		return
+	}
+
+	ulr := NewUserLoginResource(userModel, tokenModel)
+	app.ResponseJSON(ctx.Writer, ulr, 200)
 }
 
 func Update(w http.ResponseWriter, r *http.Request) {
 	ctx := app.NewHandlerContext(w, r)
-	if !guard.AuthToken(ctx) {
+	if err := guard.AuthToken(ctx); err != nil {
+		err.WriteResponse(w)
 		return
 	}
 
-	req := updateRequest(ctx)
-	if req == nil {
-		return
-	}
-
-	userModel, err := updateService(req, ctx.User)
+	req, err := updateRequest(ctx)
 	if err != nil {
-		app.ResponseErrorJSON(ctx.Writer, err.Error(), 500, "No se modifico")
+		err.WriteResponse(w)
 		return
 	}
 
-	ur := NewUserStoreResource(userModel, nil)
+	userModel, err := updateService(ctx, req)
+	if err != nil {
+		err.WriteResponse(w)
+		return
+	}
+
+	ur := NewUserLoginResource(userModel, nil)
 	app.ResponseJSON(ctx.Writer, ur, 200)
 }
 
@@ -77,37 +84,36 @@ func Delete(w http.ResponseWriter, r *http.Request) {
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	ctx := app.NewHandlerContext(w, r)
-	req := loginRequest(ctx)
-	if req == nil {
-		message := "Las credenciales no son validas"
-		app.ResponseErrorJSON(ctx.Writer, message, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	userModel := loginService(req)
-	if userModel == nil {
-		message := "Las credenciales no son validas"
-		app.ResponseErrorJSON(ctx.Writer, message, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	tokenModel, err := tokenStoreService(userModel)
+	req, err := loginRequest(ctx)
 	if err != nil {
-		app.ResponseErrorJSON(ctx.Writer, err.Error(), 500, "Intentelo de nuevo mas tarde")
+		err.WriteResponse(w)
 		return
 	}
 
-	ur := NewUserStoreResource(userModel, tokenModel)
+	userModel, err := loginService(ctx, req)
+	if err != nil {
+		err.WriteResponse(w)
+		return
+	}
+
+	tokenModel, err := tokenStoreService(ctx, userModel)
+	if err != nil {
+		err.WriteResponse(w)
+		return
+	}
+
+	ur := NewUserLoginResource(userModel, tokenModel)
 	app.ResponseJSON(ctx.Writer, ur, 200)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
 	ctx := app.NewHandlerContext(w, r)
-	if !guard.AuthToken(ctx) {
+	if err := guard.AuthToken(ctx); err != nil {
+		err.WriteResponse(w)
 		return
 	}
 
-	if _, err := app.DB.Destroy(ctx.Token); err != nil {
+	if _, err := app.Mongo.Destroy(ctx.Token); err != nil {
 		app.ResponseErrorJSON(ctx.Writer, err.Error(), 500, "Intentelo de nuevo mas tarde")
 		return
 	}

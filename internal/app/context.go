@@ -1,21 +1,27 @@
 package app
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/model"
 )
 
 type HandlerContext struct {
-	Request *http.Request
 	Writer  http.ResponseWriter
+	Request *http.Request
 	User    *model.User
 	Token   *model.Token
 }
 
 func NewHandlerContext(w http.ResponseWriter, r *http.Request) *HandlerContext {
+	log.Println(r.Header.Get("Accept-Language"))
 	return &HandlerContext{
 		Request: r,
 		Writer:  w,
 	}
+}
+
+func (h *HandlerContext) Lang() string {
+	return h.Request.Header.Get("Accept-Language")
 }

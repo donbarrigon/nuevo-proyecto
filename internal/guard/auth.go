@@ -8,49 +8,63 @@ import (
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/model"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func AuthToken(ctx *app.HandlerContext) bool {
+func AuthToken(ctx *app.HandlerContext) *app.ErrorJSON {
 	authHeader := ctx.Request.Header.Get("Authorization")
 
 	if authHeader == "" {
-		app.ResponseErrorJSON(ctx.Writer, "Invalid authorization header", http.StatusUnauthorized, "Unauthorized")
-		return false
+		return &app.ErrorJSON{
+			Status:  http.StatusUnauthorized,
+			Message: "Unauthorized",
+			Error:   "Invalid authorization header",
+		}
 	}
 
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
-		app.ResponseErrorJSON(ctx.Writer, "Invalid Authorization header format", http.StatusUnauthorized, "Unauthorized")
-		return false
+		return &app.ErrorJSON{
+			Status:  http.StatusUnauthorized,
+			Message: "Unauthorized",
+			Error:   "Invalid Authorization header format",
+		}
 	}
 
 	authToken := parts[1]
 	tokenModel := &model.Token{}
-	filter := bson.D{{Key: "token", Value: authToken}}
-	if err := app.DB.FindOne(tokenModel, filter); err != nil {
-		app.ResponseErrorJSON(ctx.Writer, "Invalid token "+err.Error(), http.StatusUnauthorized, "Unauthorized")
-		return false
+	if err := app.Mongo.FindByHexID(tokenModel, authToken); err != nil {
+		return &app.ErrorJSON{
+			Status:  http.StatusUnauthorized,
+			Message: "Unauthorized",
+			Error:   "Invalid token",
+		}
 	}
 
 	if tokenModel.ExpiresAt.Before(time.Now()) {
-		app.ResponseErrorJSON(ctx.Writer, "Token has expired", http.StatusUnauthorized, "Unauthorized")
-		return false
+		return &app.ErrorJSON{
+			Status:  http.StatusUnauthorized,
+			Message: "Unauthorized",
+			Error:   "Token has expired",
+		}
 	}
 
 	tokenModel.Refresh()
-	if _, err := app.DB.Update(tokenModel, tokenModel.ID); err != nil {
+	if _, err := app.Mongo.Update(tokenModel); err != nil {
 		log.Println("Error updating token [" + tokenModel.Token + "]")
+		log.Println(err)
 		log.Println(tokenModel)
 	}
 
 	userModel := &model.User{}
-	if err := app.DB.FindByID(userModel, tokenModel.UserID); err != nil {
-		app.ResponseErrorJSON(ctx.Writer, "Invalid user "+err.Error(), http.StatusUnauthorized, "Unauthorized")
-		return false
+	if err := app.Mongo.FindByID(userModel, tokenModel.UserID); err != nil {
+		return &app.ErrorJSON{
+			Status:  http.StatusUnauthorized,
+			Message: "Unauthorized",
+			Error:   "Invalid user " + err.Error(),
+		}
 	}
 
 	ctx.User = userModel
 	ctx.Token = tokenModel
-	return true
+	return nil
 }

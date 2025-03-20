@@ -5,15 +5,17 @@ import (
 	"strings"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/validate"
 )
 
 type UserRequest struct {
-	ID       string
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Phone    string `json:"phone"`
-	Password string `json:"password"`
+	ID       string              `json:"-"`
+	Name     string              `json:"name"`
+	Email    string              `json:"email"`
+	Phone    string              `json:"phone"`
+	Password string              `json:"password"`
+	ctx      *app.HandlerContext `json:"-"`
 }
 
 type LoginRequest struct {
@@ -21,31 +23,31 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-func validateUserRequest(request *UserRequest) map[string][]string {
+func validateRequest(ctx *app.HandlerContext, request *UserRequest) map[string][]string {
 	errMap := make(map[string][]string, 0)
 	errFields := make([]string, 0)
 
 	if strings.TrimSpace(request.Name) != "" {
 		if len(request.Name) < 3 {
-			errFields = append(errFields, "Minimo 3 caracteres")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.min", 3))
 		}
 		if len(request.Name) > 255 {
-			errFields = append(errFields, "Maximo 255 caracteres")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.max", 255))
 		}
 		if len(errFields) > 0 {
 			errMap["name"] = errFields
 			errFields = make([]string, 0)
 		}
 	} else {
-		errMap["name"] = []string{"Es requerido"}
+		errMap["name"] = []string{lang.M(request.ctx.Lang(), "app.request.required")}
 	}
 
 	if strings.TrimSpace(request.Email) != "" {
 		if len(request.Email) > 255 {
-			errFields = append(errFields, "Maximo 255 caracteres")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.max", 255))
 		}
 		if !validate.Email(request.Email) {
-			errFields = append(errFields, "El email no es valido")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.email"))
 		}
 		if len(errFields) > 0 {
 			errMap["email"] = errFields
@@ -55,10 +57,10 @@ func validateUserRequest(request *UserRequest) map[string][]string {
 
 	if strings.TrimSpace(request.Phone) != "" {
 		if len(request.Phone) < 5 {
-			errFields = append(errFields, "Minimo 5 caracteres")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.min", 5))
 		}
 		if len(request.Phone) > 255 {
-			errFields = append(errFields, "Maximo 255 caracteres")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.max", 255))
 		}
 		if len(errFields) > 0 {
 			errMap["phone"] = errFields
@@ -68,16 +70,16 @@ func validateUserRequest(request *UserRequest) map[string][]string {
 
 	if strings.TrimSpace(request.Password) != "" {
 		if len(request.Password) < 8 {
-			errFields = append(errFields, "Minimo 8 caracteres")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.min", 8))
 		}
 		if len(request.Password) > 32 {
-			errFields = append(errFields, "Maximo 32 caracteres")
+			errFields = append(errFields, lang.M(request.ctx.Lang(), "app.request.max", 32))
 		}
 		if len(errFields) > 0 {
 			errMap["password"] = errFields
 		}
 	} else {
-		errMap["password"] = []string{"Es requerido"}
+		errMap["password"] = []string{lang.M(request.ctx.Lang(), "app.request.required")}
 	}
 
 	if strings.TrimSpace(request.Email) == "" && strings.TrimSpace(request.Phone) == "" {
@@ -113,59 +115,89 @@ func validateLoginRequest(request *LoginRequest) bool {
 	return true
 }
 
-func storeRequest(ctx *app.HandlerContext) *UserRequest {
-	request := &UserRequest{}
-	if !app.GetRequestBody(ctx, request, http.MethodPost) {
-		return nil
+func storeRequest(ctx *app.HandlerContext) (*UserRequest, *app.ErrorJSON) {
+	if err := app.AllowedMethods(ctx, http.MethodPost); err != nil {
+		return nil, err
 	}
 
-	if errMap := validateUserRequest(request); len(errMap) > 0 {
-		app.ResponseErrorJSON(ctx.Writer, errMap, http.StatusUnprocessableEntity, "Unprocessable Entity")
-		return nil
+	request := &UserRequest{ctx: ctx}
+	if err := app.GetRequestBody(ctx, request); err != nil {
+		return nil, err
 	}
 
-	return request
+	if errMap := validateRequest(ctx, request); len(errMap) > 0 {
+		return nil, &app.ErrorJSON{
+			Status:  http.StatusUnprocessableEntity,
+			Message: lang.M(ctx.Lang(), "app.unprocessable-entity"),
+			Error:   errMap,
+		}
+	}
+
+	return request, nil
 }
 
-func updateRequest(ctx *app.HandlerContext) *UserRequest {
-	request := &UserRequest{}
-	if !app.GetRequestBody(ctx, request, http.MethodPut) {
-		return nil
+func updateRequest(ctx *app.HandlerContext) (*UserRequest, *app.ErrorJSON) {
+	if err := app.AllowedMethods(ctx, http.MethodPut); err != nil {
+		return nil, err
 	}
 
-	if errMap := validateUserRequest(request); len(errMap) > 0 {
-		app.ResponseErrorJSON(ctx.Writer, errMap, http.StatusUnprocessableEntity, "Unprocessable Entity")
-		return nil
+	request := &UserRequest{}
+	if err := app.GetRequestBody(ctx, request); err != nil {
+		return nil, err
 	}
 
 	userId := ctx.Request.URL.Query().Get("u")
 	if userId == "" {
-		app.ResponseErrorJSON(ctx.Writer, "Query params is invalid", http.StatusBadRequest, "Bad request")
-		return nil
+		return nil, &app.ErrorJSON{
+			Status:  http.StatusBadRequest,
+			Message: "Bad request",
+			Error:   "Query params is invalid",
+		}
 	}
 	request.ID = userId
 
-	return request
-}
-
-func showUserRequest(ctx *app.HandlerContext) string {
-	if ctx.Request.Method != http.MethodGet {
-		message := "Method " + ctx.Request.Method + " Not Allowed"
-		app.ResponseErrorJSON(ctx.Writer, message, http.StatusMethodNotAllowed, "Method Not Allowed")
-		return ""
+	if errMap := validateUserRequest(request); len(errMap) > 0 {
+		return nil, &app.ErrorJSON{
+			Status:  http.StatusUnprocessableEntity,
+			Message: "Invalid request",
+			Error:   errMap,
+		}
 	}
-	return ctx.Request.URL.Query().Get("u")
+
+	return request, nil
 }
 
-func loginRequest(ctx *app.HandlerContext) *LoginRequest {
+func showUserRequest(ctx *app.HandlerContext) (string, *app.ErrorJSON) {
+	if err := app.AllowedMethods(ctx, http.MethodGet); err != nil {
+		return "", err
+	}
+	userId := ctx.Request.URL.Query().Get("u")
+	if userId == "" {
+		return "", &app.ErrorJSON{
+			Status:  http.StatusBadRequest,
+			Message: "Bad request",
+			Error:   "Query params is invalid",
+		}
+	}
+	return userId, nil
+}
+
+func loginRequest(ctx *app.HandlerContext) (*LoginRequest, *app.ErrorJSON) {
+	if err := app.AllowedMethods(ctx, http.MethodGet); err != nil {
+		return nil, err
+	}
 	request := &LoginRequest{}
-	if !app.GetRequestBody(ctx, request, http.MethodPost) {
-		return nil
+	if err := app.GetRequestBody(ctx, request); err != nil {
+		return nil, err
 	}
 
 	if !validateLoginRequest(request) {
-		return nil
+		return nil, &app.ErrorJSON{
+			Status:  http.StatusUnauthorized,
+			Message: lang.M(ctx.Lang(), "user.service.unautorized"),
+			Error:   lang.M(ctx.Lang(), "user.service.unautorized"),
+		}
 	}
 
-	return request
+	return request, nil
 }

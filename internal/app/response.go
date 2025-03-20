@@ -5,6 +5,42 @@ import (
 	"net/http"
 )
 
+type ErrorJSON struct {
+	Status  int    `json:"-"`
+	Message string `json:"message"`
+	Error   any    `json:"error"`
+}
+
+func (e *ErrorJSON) WriteResponse(w http.ResponseWriter) {
+	ResponseJSON(w, e, e.Status)
+}
+
+func NewErrorJSON(err any) *ErrorJSON {
+	return &ErrorJSON{
+		Status:  http.StatusInternalServerError,
+		Message: "Error",
+		Error:   err,
+	}
+}
+
+type OkJSON struct {
+	Status  int    `json:"-"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
+}
+
+func NewOkJSON(data any) *OkJSON {
+	return &OkJSON{
+		Status:  http.StatusOK,
+		Message: "Success",
+		Data:    data,
+	}
+}
+
+func (o *OkJSON) WriteResponse(w http.ResponseWriter) {
+	ResponseJSON(w, o, o.Status)
+}
+
 func ResponseJSON(w http.ResponseWriter, data any, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -17,17 +53,19 @@ func ResponseJSON(w http.ResponseWriter, data any, status int) {
 }
 
 func ResponseOkJSON(w http.ResponseWriter, data any, status int, message string) {
-	jsonMap := map[string]any{
-		"message": message,
-		"data":    data,
+	okJSON := &OkJSON{
+		Message: message,
+		Status:  status,
+		Data:    data,
 	}
-	ResponseJSON(w, jsonMap, http.StatusOK)
+	okJSON.WriteResponse(w)
 }
 
 func ResponseErrorJSON(w http.ResponseWriter, err any, status int, message string) {
-	jsonMap := map[string]any{
-		"message": message,
-		"error":   err,
+	errorJSON := &ErrorJSON{
+		Message: message,
+		Status:  status,
+		Error:   err,
 	}
-	ResponseJSON(w, jsonMap, status)
+	errorJSON.WriteResponse(w)
 }
