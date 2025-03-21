@@ -17,18 +17,6 @@ type Token struct {
 	ExpiresAt time.Time     `bson:"expiresAt"`
 }
 
-func (t *Token) CollectionName() string {
-	return "tokens"
-}
-
-func (t *Token) GetID() bson.ObjectID {
-	return t.ID
-}
-
-func (t *Token) Refresh() {
-	t.ExpiresAt = time.Now().Add(100 * time.Minute)
-}
-
 func NewToken() *Token {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
@@ -42,4 +30,23 @@ func NewToken() *Token {
 	}
 	tokenModel.Refresh()
 	return tokenModel
+}
+
+func (t *Token) CollectionName() string {
+	return "tokens"
+}
+
+func (t *Token) Refresh() {
+	t.ExpiresAt = time.Now().Add(10 * time.Hour)
+}
+
+func (t *Token) GetID() bson.ObjectID {
+	return t.ID
+}
+
+func (t *Token) Index() map[string]string {
+	return map[string]string{
+		"token":     "unique",
+		"expiresAt": "index",
+	}
 }

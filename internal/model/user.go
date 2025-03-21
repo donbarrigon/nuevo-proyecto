@@ -17,6 +17,13 @@ type User struct {
 	DeletedAt *time.Time    `bson:"deletedAt,omitempty"`
 }
 
+func NewUser() *User {
+	return &User{
+		ID:        bson.NewObjectID(),
+		CreatedAt: time.Now(),
+	}
+}
+
 func (u *User) CollectionName() string {
 	return "users"
 }
@@ -25,9 +32,11 @@ func (u *User) GetID() bson.ObjectID {
 	return u.ID
 }
 
-func NewUser() *User {
-	return &User{
-		ID:        bson.NewObjectID(),
-		CreatedAt: time.Now(),
+func (u *User) Index() map[string]string {
+	return map[string]string{
+		"token":     "unique",
+		"email":     "index",
+		"phone":     "index",
+		"deletedAt": "index",
 	}
 }

@@ -3,12 +3,46 @@ package app
 import (
 	"encoding/json"
 	"net/http"
-	"slices"
 
 	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 )
 
-func GetRequestBody(ctx *HandlerContext, request any) *ErrorJSON {
+type Request interface {
+	Validate(language string) map[string][]string
+}
+
+func AllowedMethod(ctx *HandlerContext, method string) *ErrorJSON {
+
+	if method == ctx.Request.Method {
+		return nil
+	}
+
+	return &ErrorJSON{
+		Status:  http.StatusMethodNotAllowed,
+		Message: lang.M(ctx.Lang(), "app.method-not-allowed"),
+		Error:   "Method [" + ctx.Request.Method + "] Not Allowed",
+	}
+}
+
+func AllowedMethods(ctx *HandlerContext, methods ...string) *ErrorJSON {
+
+	// if slices.Contains(methods, ctx.Request.Method) {
+	// 	return nil
+	// }
+	for _, method := range methods {
+		if method == ctx.Request.Method {
+			return nil
+		}
+	}
+
+	return &ErrorJSON{
+		Status:  http.StatusMethodNotAllowed,
+		Message: lang.M(ctx.Lang(), "app.method-not-allowed"),
+		Error:   "Method [" + ctx.Request.Method + "] Not Allowed",
+	}
+}
+
+func GetBodyRequest(ctx *HandlerContext, request any) *ErrorJSON {
 	decoder := json.NewDecoder(ctx.Request.Body)
 	if err := decoder.Decode(request); err != nil {
 		return &ErrorJSON{
@@ -21,15 +55,23 @@ func GetRequestBody(ctx *HandlerContext, request any) *ErrorJSON {
 	return nil
 }
 
-func AllowedMethods(ctx *HandlerContext, methods ...string) *ErrorJSON {
+func GetRequest(ctx *HandlerContext, request Request, methods ...string) *ErrorJSON {
 
-	if slices.Contains(methods, ctx.Request.Method) {
-		return nil
+	if err := AllowedMethods(ctx, methods...); err != nil {
+		return err
 	}
 
-	return &ErrorJSON{
-		Status:  http.StatusMethodNotAllowed,
-		Message: lang.M(ctx.Lang(), "app.method-not-allowed"),
-		Error:   "Method [" + ctx.Request.Method + "] Not Allowed",
+	if err := GetBodyRequest(ctx, request); err != nil {
+		return err
 	}
+
+	if errMap := request.Validate(ctx.Lang()); len(errMap) > 0 {
+		return &ErrorJSON{
+			Status:  http.StatusUnprocessableEntity,
+			Message: lang.M(ctx.Lang(), "app.unprocessable-entity"),
+			Error:   errMap,
+		}
+	}
+
+	return nil
 }

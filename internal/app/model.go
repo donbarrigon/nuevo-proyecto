@@ -6,3 +6,7 @@ type Model interface {
 	CollectionName() string
 	GetID() bson.ObjectID
 }
+
+type Migration interface {
+	Index() map[string]string
+}

@@ -99,6 +99,19 @@ func (db *ConexionMongoDB) Update(model Model) (*mongo.UpdateResult, error) {
 	update := bson.D{bson.E{Key: "$set", Value: model}}
 	return collection.UpdateOne(context.TODO(), filter, update)
 }
+func (db *ConexionMongoDB) Delete(model Model) (*mongo.UpdateResult, error) {
+	collection := db.Database.Collection(model.CollectionName())
+	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deletedAt", Value: time.Now()}}}}
+	return collection.UpdateOne(context.TODO(), filter, update)
+}
+
+func (db *ConexionMongoDB) Restore(model Model) (*mongo.UpdateResult, error) {
+	collection := db.Database.Collection(model.CollectionName())
+	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deletedAt", Value: nil}}}}
+	return collection.UpdateOne(context.TODO(), filter, update)
+}
 
 func (db *ConexionMongoDB) Destroy(model Model) (*mongo.DeleteResult, error) {
 	collection := db.Database.Collection(model.CollectionName())

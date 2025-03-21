@@ -6,19 +6,19 @@ import (
 )
 
 type ErrorJSON struct {
-	Status  int    `json:"-"`
 	Message string `json:"message"`
 	Error   any    `json:"error"`
+	Status  int    `json:"-"`
 }
 
 func (e *ErrorJSON) WriteResponse(w http.ResponseWriter) {
 	ResponseJSON(w, e, e.Status)
 }
 
-func NewErrorJSON(err any) *ErrorJSON {
+func NewErrorJSON(message string, err any, status int) *ErrorJSON {
 	return &ErrorJSON{
-		Status:  http.StatusInternalServerError,
-		Message: "Error",
+		Status:  status,
+		Message: message,
 		Error:   err,
 	}
 }
@@ -59,13 +59,4 @@ func ResponseOkJSON(w http.ResponseWriter, data any, status int, message string)
 		Data:    data,
 	}
 	okJSON.WriteResponse(w)
-}
-
-func ResponseErrorJSON(w http.ResponseWriter, err any, status int, message string) {
-	errorJSON := &ErrorJSON{
-		Message: message,
-		Status:  status,
-		Error:   err,
-	}
-	errorJSON.WriteResponse(w)
 }
