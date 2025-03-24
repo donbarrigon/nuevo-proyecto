@@ -11,9 +11,9 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 )
 
-func AuthToken(next func(ctx *app.HandlerContext)) func(ctx *app.HandlerContext) {
+func AuthToken(next func(ctx *app.ControllerContext)) func(ctx *app.ControllerContext) {
 
-	return func(ctx *app.HandlerContext) {
+	return func(ctx *app.ControllerContext) {
 
 		authHeader := ctx.Request.Header.Get("Authorization")
 

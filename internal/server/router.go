@@ -9,7 +9,8 @@ import (
 func NewRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
-	user.Routes(router)
+	//user.Routes(router)
+	router.HandleFunc("/user/", user.Routes)
 
 	return router
 }

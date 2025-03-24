@@ -114,7 +114,7 @@ func validateLoginRequest(request *LoginRequest) bool {
 	return true
 }
 
-func showUserRequest(ctx *app.HandlerContext) (string, *app.ErrorJSON) {
+func showUserRequest(ctx *app.ControllerContext) (string, *app.ErrorJSON) {
 	userId := ctx.Request.URL.Query().Get("u")
 	if userId == "" {
 		return "", &app.ErrorJSON{
@@ -126,7 +126,7 @@ func showUserRequest(ctx *app.HandlerContext) (string, *app.ErrorJSON) {
 	return userId, nil
 }
 
-func loginRequest(ctx *app.HandlerContext) (*LoginRequest, *app.ErrorJSON) {
+func loginRequest(ctx *app.ControllerContext) (*LoginRequest, *app.ErrorJSON) {
 	if err := app.AllowedMethods(ctx, http.MethodGet); err != nil {
 		return nil, err
 	}

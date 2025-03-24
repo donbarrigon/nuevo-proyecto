@@ -8,7 +8,7 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 )
 
-func StoreRole(ctx *app.HandlerContext) {
+func StoreRole(ctx *app.ControllerContext) {
 	req := &RoleRequest{}
 	if err := app.GetRequest(ctx, req, http.MethodPost); err != nil {
 		err.WriteResponse(ctx.Writer)

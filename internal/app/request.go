@@ -11,7 +11,7 @@ type Request interface {
 	Validate(language string) map[string][]string
 }
 
-func AllowedMethod(ctx *HandlerContext, method string) *ErrorJSON {
+func AllowedMethod(ctx *ControllerContext, method string) *ErrorJSON {
 
 	if method == ctx.Request.Method {
 		return nil
@@ -24,7 +24,7 @@ func AllowedMethod(ctx *HandlerContext, method string) *ErrorJSON {
 	}
 }
 
-func AllowedMethods(ctx *HandlerContext, methods ...string) *ErrorJSON {
+func AllowedMethods(ctx *ControllerContext, methods ...string) *ErrorJSON {
 
 	// if slices.Contains(methods, ctx.Request.Method) {
 	// 	return nil
@@ -42,7 +42,7 @@ func AllowedMethods(ctx *HandlerContext, methods ...string) *ErrorJSON {
 	}
 }
 
-func GetBodyRequest(ctx *HandlerContext, request any) *ErrorJSON {
+func GetBodyRequest(ctx *ControllerContext, request any) *ErrorJSON {
 	decoder := json.NewDecoder(ctx.Request.Body)
 	if err := decoder.Decode(request); err != nil {
 		return &ErrorJSON{
@@ -55,7 +55,7 @@ func GetBodyRequest(ctx *HandlerContext, request any) *ErrorJSON {
 	return nil
 }
 
-func GetRequest(ctx *HandlerContext, request Request, methods ...string) *ErrorJSON {
+func GetRequest(ctx *ControllerContext, request Request, methods ...string) *ErrorJSON {
 
 	if err := AllowedMethods(ctx, methods...); err != nil {
 		return err

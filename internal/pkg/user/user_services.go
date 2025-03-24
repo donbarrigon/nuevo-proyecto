@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func storeService(ctx *app.HandlerContext, req *UserRequest) (*model.User, *model.Token, *app.ErrorJSON) {
+func storeService(ctx *app.ControllerContext, req *UserRequest) (*model.User, *model.Token, *app.ErrorJSON) {
 	userModel := model.NewUser()
 	fillModel(userModel, req)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -40,7 +40,7 @@ func storeService(ctx *app.HandlerContext, req *UserRequest) (*model.User, *mode
 	return userModel, tokenModel, nil
 }
 
-func tokenService(ctx *app.HandlerContext, userModel *model.User) (*model.Token, *app.ErrorJSON) {
+func tokenService(ctx *app.ControllerContext, userModel *model.User) (*model.Token, *app.ErrorJSON) {
 	tokenModel := model.NewToken()
 	tokenModel.UserID = userModel.ID
 	if _, err := app.Mongo.Create(tokenModel); err != nil {
@@ -54,7 +54,7 @@ func tokenService(ctx *app.HandlerContext, userModel *model.User) (*model.Token,
 	return tokenModel, nil
 }
 
-func updateService(ctx *app.HandlerContext, req *UserRequest) (*model.User, *app.ErrorJSON) {
+func updateService(ctx *app.ControllerContext, req *UserRequest) (*model.User, *app.ErrorJSON) {
 	entity := &model.User{}
 	if err := app.Mongo.FindByHexID(entity, req.ID); err != nil {
 		return nil, &app.ErrorJSON{
@@ -94,7 +94,7 @@ func updateService(ctx *app.HandlerContext, req *UserRequest) (*model.User, *app
 	return entity, nil
 }
 
-func loginService(ctx *app.HandlerContext, req *LoginRequest) (*model.User, *model.Token, *app.ErrorJSON) {
+func loginService(ctx *app.ControllerContext, req *LoginRequest) (*model.User, *model.Token, *app.ErrorJSON) {
 	entity := &model.User{}
 	if validate.Email(req.User) {
 		if err := app.Mongo.FindOneByField(entity, "email", req.User); err != nil {
@@ -131,7 +131,7 @@ func loginService(ctx *app.HandlerContext, req *LoginRequest) (*model.User, *mod
 	return entity, tokenModel, nil
 }
 
-func deleteService(ctx *app.HandlerContext) *app.ErrorJSON {
+func deleteService(ctx *app.ControllerContext) *app.ErrorJSON {
 	entity := &model.User{}
 	id := ctx.Request.URL.Query().Get("u")
 	if id == "" {
