@@ -1,9 +1,9 @@
-package user
+package resource
 
 import (
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app/user/model"
 )
 
 type TokenResource struct {
@@ -27,19 +27,19 @@ func NewTokenResource(t *model.Token) *TokenResource {
 type UserLoginResource struct {
 	ID        string         `json:"id"`
 	Name      string         `json:"name"`
-	Email     *string        `json:"email,omitempty"`
-	Phone     *string        `json:"phone,omitempty"`
+	Email     string         `json:"email,omitempty"`
+	Phone     string         `json:"phone,omitempty"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
-	DeletedAt *time.Time     `json:"deletedAt,omitempty"`
+	DeletedAt time.Time      `json:"deletedAt,omitempty"`
 	Token     *TokenResource `json:"token,omitempty"`
 }
 
 func NewUserLoginResource(u *model.User, t *model.Token) *UserLoginResource {
 	var token *TokenResource
-	if t != nil {
-		token = NewTokenResource(t)
-	}
+	// if t != nil {
+	// 	token = NewTokenResource(t)
+	// }
 	return &UserLoginResource{
 		ID:        u.ID.Hex(),
 		Name:      u.Name,

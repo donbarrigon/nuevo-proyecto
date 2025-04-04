@@ -1,4 +1,4 @@
-package com
+package core
 
 import (
 	"context"
@@ -164,6 +164,7 @@ func toSlice[T any](v T) []T {
 }
 
 func (db *ConexionMongoDB) Create(model Model) (*mongo.InsertOneResult, Error) {
+
 	collection := db.Database.Collection(model.CollectionName())
 	result, err := collection.InsertOne(context.TODO(), model)
 	if err != nil {

@@ -1,4 +1,4 @@
-package com
+package core
 
 var MONGO_URI string
 var DB_NAME string

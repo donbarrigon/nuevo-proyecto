@@ -6,15 +6,16 @@ import (
 	"log"
 	"time"
 
+	"github.com/donbarrigon/nuevo-proyecto/internal/core"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Token struct {
 	ID        bson.ObjectID `bson:"_id"`
-	UserID    bson.ObjectID `bson:"userId"`
+	UserID    bson.ObjectID `bson:"user_id"`
 	Token     string        `bson:"token"`
-	CreatedAt time.Time     `bson:"createdAt"`
-	ExpiresAt time.Time     `bson:"expiresAt"`
+	CreatedAt time.Time     `bson:"created_at"`
+	ExpiresAt time.Time     `bson:"expires_at"`
 }
 
 func NewToken() *Token {
@@ -44,9 +45,12 @@ func (t *Token) GetID() bson.ObjectID {
 	return t.ID
 }
 
-func (t *Token) Index() map[string]string {
-	return map[string]string{
-		"token":     "unique",
-		"expiresAt": "index",
+func (t *Token) Validate(ctx *core.Context) core.Error {
+	if t.UserID.IsZero() {
+		return &core.Err{
+			Message: ctx.TT("Usuario invalido"),
+			Err:     ctx.TT("El id de usuario esta vacio"),
+		}
 	}
+	return nil
 }

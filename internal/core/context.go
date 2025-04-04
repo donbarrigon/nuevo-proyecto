@@ -1,15 +1,17 @@
-package com
+package core
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type Context struct {
 	Writer  http.ResponseWriter
 	Request *http.Request
 	User    Model
+	Token   Model
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request) *Context {
@@ -44,6 +46,29 @@ func (ctx *Context) Get(param string, defaultValue string) string {
 	return value
 }
 
+func (ctx *Context) GetParam() string {
+	sections := strings.Split(strings.Trim(ctx.Request.URL.Path, "/"), "/")
+	return sections[len(sections)-1]
+}
+
+func (ctx *Context) GetParams(params ...string) (map[string]string, Error) {
+	sections := strings.Split(strings.Trim(ctx.Request.URL.Path, "/"), "/")
+	numberOfSections := len(sections)
+	numberOfParams := len(params)
+	result := make(map[string]string, 0)
+	if numberOfSections < numberOfParams {
+		return nil, &Err{
+			Status:  http.StatusBadRequest,
+			Message: TT(ctx.Lang(), "Solicitud incorrecta"),
+			Err:     TT(ctx.Lang(), "Faltan parámetros en la solicitud"),
+		}
+	}
+	for i := 0; i < numberOfParams; i++ {
+		result[params[i]] = sections[numberOfSections-(numberOfParams-i)]
+	}
+	return result, nil
+}
+
 func (ctx *Context) WriteJSON(status int, data any) {
 	ctx.Writer.Header().Set("Content-Type", "application/json")
 	ctx.Writer.WriteHeader(status)
@@ -57,4 +82,8 @@ func (ctx *Context) WriteJSON(status int, data any) {
 
 func (ctx *Context) WriteError(err Error) {
 	ctx.WriteJSON(err.GetStatus(), err)
+}
+
+func (ctx *Context) TT(s string, v ...any) string {
+	return TT(ctx.Lang(), s, v...)
 }

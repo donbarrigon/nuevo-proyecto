@@ -1,4 +1,4 @@
-package com
+package core
 
 import "fmt"
 
@@ -7,7 +7,6 @@ type Error interface {
 	GetStatus() int
 	GetMessage() string
 	GetErr() any
-	TraslateError(lang string) string
 }
 
 type Err struct {
@@ -25,7 +24,7 @@ func NewError(status int, message string, err any) Error {
 }
 
 func (e *Err) Error() string {
-	return e.TraslateError(LANG)
+	return fmt.Sprintf("%v: %v", e.Message, e.Err)
 }
 
 func (e *Err) GetStatus() int {
@@ -38,8 +37,4 @@ func (e *Err) GetMessage() string {
 
 func (e *Err) GetErr() any {
 	return e.Err
-}
-
-func (e *Err) TraslateError(lang string) string {
-	return fmt.Sprintf(`{"message":"%s","error":"%v"}`, TT(lang, e.Message), e.Err)
 }

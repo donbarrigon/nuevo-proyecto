@@ -3,7 +3,7 @@ package server
 import (
 	"net/http"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/pkg/user"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app/user"
 )
 
 func NewRouter() *http.ServeMux {
