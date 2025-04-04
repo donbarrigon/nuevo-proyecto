@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	com "github.com/donbarrigon/nuevo-proyecto/internal/common"
 )
 
 func NewHttpServer(port string) *http.Server {
@@ -52,7 +52,7 @@ func HttpServerGracefulShutdown(server *http.Server) {
 	}
 
 	// se cierra la conexion con mono db
-	if err := app.CloseMongoConnection(); err != nil {
+	if err := com.CloseMongoConnection(); err != nil {
 		log.Printf("Error al cerrar la conexión a MongoDB: %v\n", err)
 	} else {
 		log.Println("Conexión a MongoDB cerrada correctamente")
