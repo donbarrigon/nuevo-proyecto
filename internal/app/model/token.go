@@ -1,0 +1,62 @@
+package model
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"log"
+	"time"
+
+	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+type Token struct {
+	ID        bson.ObjectID `bson:"_id,omitempty"`
+	UserID    bson.ObjectID `bson:"user_id"`
+	Token     string        `bson:"token"`
+	CreatedAt time.Time     `bson:"created_at"`
+	ExpiresAt time.Time     `bson:"expires_at"`
+}
+
+func NewToken(userID bson.ObjectID) *Token {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		log.Println("No se creo el token: " + err.Error())
+	}
+	token := hex.EncodeToString(bytes)
+	tokenModel := &Token{
+		//ID:        bson.NewObjectID(),
+		UserID:    userID,
+		Token:     token,
+		CreatedAt: time.Now(),
+	}
+	return tokenModel
+}
+
+func (t *Token) CollectionName() string {
+	return "tokens"
+}
+
+func (t *Token) GetID() bson.ObjectID {
+	return t.ID
+}
+
+func (t *Token) SetID(id bson.ObjectID) {
+	t.ID = id
+}
+
+func (t *Token) Default() {
+	if t.CreatedAt.IsZero() {
+		t.CreatedAt = time.Now()
+	}
+	t.ExpiresAt = time.Now().Add(10 * time.Hour)
+}
+
+func (t *Token) Validate(l string) errors.Error {
+	err := &errors.Err{}
+	if t.UserID.IsZero() {
+		err.Append("user_id", lang.TT(l, "Este campo es requerido"))
+	}
+	return err.Errors()
+}
