@@ -16,6 +16,7 @@ type User struct {
 	Email     string        `bson:"email,omitempty" json:"email"`
 	Phone     string        `bson:"phone,omitempty" json:"phone"`
 	Password  string        `bson:"password" json:"password"`
+	Tokens    *[]Token      `bson:"tokens" json:"tokens"`
 	CreatedAt time.Time     `bson:"created_at" json:"-"`
 	UpdatedAt time.Time     `bson:"updated_at" json:"-"`
 	DeletedAt *time.Time    `bson:"deleted_at,omitempty" json:"-"`
