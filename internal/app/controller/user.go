@@ -11,10 +11,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct{}
-
-func (u *User) Show(ctx *Context) {
-	id := ctx.GetParam()
+func UserShow(ctx *Context) {
+	id := ctx.LastParam()
 
 	user := &model.User{}
 	if err := db.Mongo.FindByHexID(user, id); err != nil {
@@ -25,7 +23,7 @@ func (u *User) Show(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, resource.NewUserLoginResource(user, nil))
 }
 
-func (u *User) Store(ctx *Context) {
+func UserStore(ctx *Context) {
 
 	user := &model.User{}
 	if err := ctx.GetBody(user); err != nil {
@@ -42,20 +40,20 @@ func (u *User) Store(ctx *Context) {
 	if err != nil {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusInternalServerError,
-			Message: ctx.TT("No se logro encriptar la contraseña"),
+			Message: "No se logro encriptar la contraseña",
 			Err:     err.Error(),
 		})
 		return
 	}
 	user.Password = string(hashedPassword)
 
-	if _, err := db.Mongo.Create(user); err != nil {
+	if err := db.Mongo.Create(user); err != nil {
 		ctx.WriteError(err)
 		return
 	}
 
 	token := model.NewToken(user.ID)
-	if _, err := db.Mongo.Create(token); err != nil {
+	if err := db.Mongo.Create(token); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -64,10 +62,10 @@ func (u *User) Store(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func (u *User) Update(ctx *Context) {
+func UserUpdate(ctx *Context) {
 
 	user := &model.User{}
-	id := ctx.GetParam()
+	id := ctx.LastParam()
 
 	if err := db.Mongo.FindByHexID(user, id); err != nil {
 		ctx.WriteError(err)
@@ -88,7 +86,7 @@ func (u *User) Update(ctx *Context) {
 	if user.ID != ctx.User.GetID() {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusUnauthorized,
-			Message: ctx.TT("No autorizado"),
+			Message: "No autorizado",
 			Err:     ctx.TT("No esta autorizado para realizar esta accion"),
 		})
 		return
@@ -98,7 +96,7 @@ func (u *User) Update(ctx *Context) {
 	if err != nil {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusInternalServerError,
-			Message: ctx.TT("No se logro encriptar la contraseña"),
+			Message: "No se logro encriptar la contraseña",
 			Err:     err.Error(),
 		})
 		return
@@ -114,9 +112,9 @@ func (u *User) Update(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func (u *User) Destroy(ctx *Context) {
+func UserDestroy(ctx *Context) {
 
-	id := ctx.GetParam()
+	id := ctx.LastParam()
 	user := &model.User{}
 	if err := db.Mongo.FindByHexID(user, id); err != nil {
 		ctx.WriteError(err)
@@ -127,7 +125,7 @@ func (u *User) Destroy(ctx *Context) {
 	if user.ID != ctx.User.GetID() {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusUnauthorized,
-			Message: ctx.TT("No autorizado"),
+			Message: "No autorizado",
 			Err:     ctx.TT("No esta autorizado para realizar esta accion"),
 		})
 		return
@@ -141,7 +139,7 @@ func (u *User) Destroy(ctx *Context) {
 	ctx.Writer.WriteHeader(http.StatusOK)
 }
 
-func (u *User) Login(ctx *Context) {
+func Login(ctx *Context) {
 
 	var req map[string]string
 	if err := ctx.GetBody(req); err != nil {
@@ -154,7 +152,7 @@ func (u *User) Login(ctx *Context) {
 		if err := db.Mongo.FindOneByField(user, "email", req["user"]); err != nil {
 			ctx.WriteError(&errors.Err{
 				Status:  http.StatusUnauthorized,
-				Message: ctx.TT("No autorizado"),
+				Message: "No autorizado",
 				Err:     ctx.TT("No autorizado"),
 			})
 			return
@@ -163,7 +161,7 @@ func (u *User) Login(ctx *Context) {
 		if err := db.Mongo.FindOneByField(user, "phone", req["user"]); err != nil {
 			ctx.WriteError(&errors.Err{
 				Status:  http.StatusUnauthorized,
-				Message: ctx.TT("No autorizado"),
+				Message: "No autorizado",
 				Err:     ctx.TT("No autorizado"),
 			})
 			return
@@ -172,14 +170,14 @@ func (u *User) Login(ctx *Context) {
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req["password"])); err != nil {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusUnauthorized,
-			Message: ctx.TT("No autorizado"),
+			Message: "No autorizado",
 			Err:     ctx.TT("No autorizado"),
 		})
 		return
 	}
 
 	token := model.NewToken(user.ID)
-	if _, err := db.Mongo.Create(token); err != nil {
+	if err := db.Mongo.Create(token); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -187,12 +185,12 @@ func (u *User) Login(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func (u *User) Logout(ctx *Context) {
+func Logout(ctx *Context) {
 
 	if ctx.Token == nil {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusUnauthorized,
-			Message: ctx.TT("No autorizado"),
+			Message: "No autorizado",
 			Err:     ctx.TT("Token Invalido"),
 		})
 		return
@@ -202,4 +200,14 @@ func (u *User) Logout(ctx *Context) {
 		return
 	}
 	ctx.Writer.WriteHeader(http.StatusOK)
+}
+
+func IndexDashboardRole(ctx *Context) {
+	var roles *[]model.Role
+	err := db.Mongo.FindAll(&model.Role{}, roles)
+	if err != nil {
+		ctx.WriteError(err)
+		return
+	}
+	ctx.WriteJSON(http.StatusOK, roles)
 }

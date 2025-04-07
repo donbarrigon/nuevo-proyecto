@@ -2,14 +2,13 @@ package db
 
 import (
 	"context"
+	goerrors "errors"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/config"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -34,26 +33,11 @@ func (db *ConexionMongoDB) FindByHexID(model MongoModel, id string) errors.Error
 
 	objectId, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return &errors.Err{
-			Status:  http.StatusBadRequest,
-			Message: lang.TT(config.LANG, "El id [%v] no es un hexadecimal válido", id),
-			Err:     err.Error(),
-		}
+		return errors.HexID(err)
 	}
 	filter := bson.D{bson.E{Key: "_id", Value: objectId}}
 	if err := db.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return &errors.Err{
-				Status:  http.StatusNotFound,
-				Message: lang.TT(config.LANG, "No se encontró el registro [%v]", id),
-				Err:     err.Error(),
-			}
-		}
-		return &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al buscar el registro [%v]", id),
-			Err:     err.Error(),
-		}
+		return errors.Mongo(err)
 	}
 	return nil
 }
@@ -61,140 +45,76 @@ func (db *ConexionMongoDB) FindByHexID(model MongoModel, id string) errors.Error
 func (db *ConexionMongoDB) FindByID(model MongoModel, id bson.ObjectID) errors.Error {
 	filter := bson.D{bson.E{Key: "_id", Value: id}}
 	if err := db.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return &errors.Err{
-				Status:  http.StatusNotFound,
-				Message: lang.TT(config.LANG, "No se encontró el registro [%v]", id.String()),
-				Err:     err.Error(),
-			}
-		}
-		return &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al buscar el registro [%v]", id.String()),
-			Err:     err.Error(),
-		}
+		return errors.Mongo(err)
 	}
 	return nil
 }
 
-func (db *ConexionMongoDB) FindManyByField(model MongoModel, field string, value any) (*[]MongoModel, errors.Error) {
+func (db *ConexionMongoDB) FindManyByField(model MongoModel, result any, field string, value any) errors.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	cursor, err := db.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, &errors.Err{
-				Status:  http.StatusNotFound,
-				Message: lang.TT(config.LANG, "No se encontraron registros con el campo [%v]: %v", field, value),
-				Err:     err.Error(),
-			}
-		}
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al buscar el registro por el campo [%v]: %v", field, value),
-			Err:     err.Error(),
-		}
+		return errors.Mongo(err)
 	}
-	results := toSlice(model)
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al recuperar los resultados de la búsqueda por el campo [%v]: %v", field, value),
-			Err:     err.Error(),
-		}
+	if err = cursor.All(context.TODO(), result); err != nil {
+		return errors.Mongo(err)
 	}
-	return &results, nil
+	return nil
 }
 
 func (db *ConexionMongoDB) FindOneByField(model MongoModel, field string, value any) errors.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	if err := db.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return &errors.Err{
-				Status:  http.StatusNotFound,
-				Message: lang.TT(config.LANG, "No se encontró el registro con el campo [%v]: %v", field, value),
-				Err:     err.Error(),
-			}
-		}
-		return &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al buscar el registro con el campo [%v]: %v", field, value),
-			Err:     err.Error(),
-		}
+		return errors.Mongo(err)
 	}
 	return nil
+}
+
+func (db *ConexionMongoDB) FindAll(model MongoModel, result any) errors.Error {
+
+	cursor, err := db.Database.Collection(model.CollectionName()).Find(context.TODO(), bson.D{})
+	if err != nil {
+		return errors.Mongo(err)
+	}
+	if err = cursor.All(context.TODO(), result); err != nil {
+		return errors.Mongo(err)
+	}
+	return nil
+
 }
 
 func (db *ConexionMongoDB) FindOne(model MongoModel, filter bson.D) errors.Error {
 	err := db.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return &errors.Err{
-				Status:  http.StatusNotFound,
-				Message: lang.TT(config.LANG, "No se encontró el registro"),
-				Err:     err.Error(),
-			}
-		}
-		return &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al buscar el registro"),
-			Err:     err.Error(),
-		}
+		return errors.Mongo(err)
 	}
 	return nil
 }
 
-func (db *ConexionMongoDB) FindMany(model MongoModel, filter bson.D) (*[]MongoModel, errors.Error) {
+func (db *ConexionMongoDB) FindMany(model MongoModel, result any, filter bson.D) errors.Error {
 	cursor, err := db.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, &errors.Err{
-				Status:  http.StatusNotFound,
-				Message: lang.TT(config.LANG, "No se encontraron registros"),
-				Err:     err.Error(),
-			}
-		}
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al buscar los registros"),
-			Err:     err.Error(),
-		}
+		return errors.Mongo(err)
 	}
-	results := toSlice(model)
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al recuperar los resultados de la búsqueda"),
-			Err:     err.Error(),
-		}
+	if err = cursor.All(context.TODO(), result); err != nil {
+		return errors.Mongo(err)
 	}
-	return &results, nil
+	return nil
 }
 
-func toSlice[T any](v T) []T {
-	return make([]T, 0)
-}
-
-func (db *ConexionMongoDB) Create(model MongoModel) (*mongo.InsertOneResult, errors.Error) {
+func (db *ConexionMongoDB) Create(model MongoModel) errors.Error {
 	model.Default()
 	collection := db.Database.Collection(model.CollectionName())
 	result, err := collection.InsertOne(context.TODO(), model)
 	if err != nil {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al insertar el registro"),
-			Err:     err.Error(),
-		}
+		return errors.Mongo(err)
 	}
 	id, ok := result.InsertedID.(bson.ObjectID)
 	if !ok {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al obtener el ID del registro insertado"),
-			Err:     lang.TT(config.LANG, "No se logro hacer la conversion a bson.ObjectID [%v]", result.InsertedID),
-		}
+		return errors.Unknown(goerrors.New("No se logro hacer la conversion a bson.ObjectID"))
 	}
 	model.SetID(id)
-	return result, nil
+	return nil
 }
 
 func (db *ConexionMongoDB) Update(model MongoModel) (*mongo.UpdateResult, errors.Error) {
@@ -204,11 +124,7 @@ func (db *ConexionMongoDB) Update(model MongoModel) (*mongo.UpdateResult, errors
 	update := bson.D{bson.E{Key: "$set", Value: model}}
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al actualizar el registro"),
-			Err:     err.Error(),
-		}
+		return result, errors.Mongo(err)
 	}
 	return result, nil
 }
@@ -218,11 +134,7 @@ func (db *ConexionMongoDB) Delete(model MongoModel) (*mongo.UpdateResult, errors
 	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deletedAt", Value: time.Now()}}}}
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al eliminar el registro"),
-			Err:     err.Error(),
-		}
+		return result, errors.Mongo(err)
 	}
 	return result, nil
 }
@@ -233,11 +145,7 @@ func (db *ConexionMongoDB) Restore(model MongoModel) (*mongo.UpdateResult, error
 	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deletedAt", Value: nil}}}}
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al restaurar el registro"),
-			Err:     err.Error(),
-		}
+		return result, errors.Mongo(err)
 	}
 	return result, nil
 }
@@ -247,11 +155,7 @@ func (db *ConexionMongoDB) ForceDelete(model MongoModel) (*mongo.DeleteResult, e
 	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
 	result, err := collection.DeleteOne(context.TODO(), filter)
 	if err != nil {
-		return nil, &errors.Err{
-			Status:  http.StatusInternalServerError,
-			Message: lang.TT(config.LANG, "Error al eliminar permanentemente el registro"),
-			Err:     err.Error(),
-		}
+		return result, errors.Mongo(err)
 	}
 	return result, nil
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/donbarrigon/nuevo-proyecto/internal/config"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
 )
 
@@ -22,7 +24,7 @@ func NewHttpServer(port string) *http.Server {
 	}
 
 	go func() {
-		log.Printf("Server starting on port %s", port)
+		startMessage()
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Could not start server: %v\n", err)
 		}
@@ -59,4 +61,17 @@ func HttpServerGracefulShutdown(server *http.Server) {
 	}
 
 	log.Println("Apagado controlado completado")
+}
+
+func startMessage() {
+	log.Println(fmt.Sprintf(`
+   ____   ___  ____  ____  ___  ___  _   _ ____   ___
+  / ___| / _ \|  _ \|  _ \|_ _|| __|| \ | |  _ \ / _ \
+ | |    | | | | |_) | |_) || ||||__ |  \| | | | | | | |
+ | |___ | |_| |  _ <|  _ < | ||||__ | |\  | |_| | |_| |
+  \____(_)___/|_| \_\_| \_\___||___||_| \_|____/ \___/
+
+ 🚀 Servidor corriendo en http://localhost:%v
+ 🌱 Entorno: DESARROLLO
+	`, config.SERVER_PORT))
 }

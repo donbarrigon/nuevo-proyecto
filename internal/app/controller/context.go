@@ -50,7 +50,7 @@ func (ctx *Context) Get(param string, defaultValue string) string {
 	return value
 }
 
-func (ctx *Context) GetParam() string {
+func (ctx *Context) LastParam() string {
 	sections := strings.Split(strings.Trim(ctx.Request.URL.Path, "/"), "/")
 	return sections[len(sections)-1]
 }
@@ -85,15 +85,12 @@ func (ctx *Context) WriteJSON(status int, data any) {
 }
 
 func (ctx *Context) WriteError(err errors.Error) {
+	err.Traslate(ctx.Lang())
 	ctx.WriteJSON(err.GetStatus(), err)
 }
 
 func (ctx *Context) NotFound() {
-	ctx.WriteError(&errors.Err{
-		Status:  http.StatusNotFound,
-		Message: lang.TT(ctx.Lang(), "Recurso no encontrado"),
-		Err:     lang.TT(ctx.Lang(), "El recurso [%v-%v] no existe", ctx.Request.Method, ctx.Request.URL.Path),
-	})
+	ctx.WriteError(errors.NotFound(errors.New(lang.TT(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path))))
 }
 
 func (ctx *Context) TT(s string, v ...any) string {
