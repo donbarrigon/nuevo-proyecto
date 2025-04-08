@@ -9,9 +9,9 @@ import (
 )
 
 type Role struct {
-	ID          bson.ObjectID `bson:"_id"`
-	Name        string        `bson:"name"`
-	Permissions []string      `bson:"permissions"`
+	ID          bson.ObjectID `bson:"_id,omitempty" json:"-"`
+	Name        string        `bson:"name" json:"name"`
+	Permissions []*Permission `bson:"permissions" json:"-"`
 }
 
 func NewRole() *Role {

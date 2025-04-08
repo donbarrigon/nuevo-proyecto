@@ -34,7 +34,7 @@ func (ctx *Context) GetBody(request any) errors.Error {
 	if err := decoder.Decode(request); err != nil {
 		return &errors.Err{
 			Status:  http.StatusBadRequest,
-			Message: lang.TT(ctx.Lang(), "Solicitud incorrecta"),
+			Message: "El cuerpo de la solicitud es incorrecto",
 			Err:     lang.TT(ctx.Lang(), "No se pudo decodificar el cuerpo de la solicitud") + ": " + err.Error(),
 		}
 	}
@@ -89,8 +89,12 @@ func (ctx *Context) WriteError(err errors.Error) {
 	ctx.WriteJSON(err.GetStatus(), err)
 }
 
-func (ctx *Context) NotFound() {
+func (ctx *Context) WriteNotFound() {
 	ctx.WriteError(errors.NotFound(errors.New(lang.TT(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path))))
+}
+
+func (ctx *Context) WriteNoContent() {
+	ctx.Writer.WriteHeader(http.StatusNoContent)
 }
 
 func (ctx *Context) TT(s string, v ...any) string {

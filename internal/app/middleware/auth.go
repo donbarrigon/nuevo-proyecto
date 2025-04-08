@@ -42,7 +42,7 @@ func Auth(next ControllerFun) ControllerFun {
 		authToken := parts[1]
 		tokenModel := &model.Token{}
 
-		if err := db.Mongo.FindOneByField(tokenModel, "token", authToken); err != nil {
+		if err := db.FindOneByField(tokenModel, "token", authToken); err != nil {
 			ctx.WriteError(&errors.Err{
 				Status:  http.StatusUnauthorized,
 				Message: ctx.TT("app.unauthorized"),
@@ -59,12 +59,12 @@ func Auth(next ControllerFun) ControllerFun {
 			})
 			return
 		}
-		if _, err := db.Mongo.Update(tokenModel); err != nil {
+		if err := db.Update(tokenModel); err != nil {
 			log.Println("[" + tokenModel.Token + "] " + err.Error())
 		}
 
 		userModel := &model.User{}
-		if err := db.Mongo.FindByID(userModel, tokenModel.UserID); err != nil {
+		if err := db.FindByID(userModel, tokenModel.UserID); err != nil {
 			ctx.WriteError(&errors.Err{
 				Status:  http.StatusUnauthorized,
 				Message: ctx.TT("app.unauthorized"),

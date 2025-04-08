@@ -15,7 +15,7 @@ func UserShow(ctx *Context) {
 	id := ctx.LastParam()
 
 	user := &model.User{}
-	if err := db.Mongo.FindByHexID(user, id); err != nil {
+	if err := db.FindByHexID(user, id); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -47,13 +47,13 @@ func UserStore(ctx *Context) {
 	}
 	user.Password = string(hashedPassword)
 
-	if err := db.Mongo.Create(user); err != nil {
+	if err := db.Create(user); err != nil {
 		ctx.WriteError(err)
 		return
 	}
 
 	token := model.NewToken(user.ID)
-	if err := db.Mongo.Create(token); err != nil {
+	if err := db.Create(token); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -64,10 +64,10 @@ func UserStore(ctx *Context) {
 
 func UserUpdate(ctx *Context) {
 
-	user := &model.User{}
 	id := ctx.LastParam()
 
-	if err := db.Mongo.FindByHexID(user, id); err != nil {
+	user := &model.User{}
+	if err := db.FindByHexID(user, id); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -103,7 +103,7 @@ func UserUpdate(ctx *Context) {
 	}
 	user.Password = string(hashedPassword)
 
-	if _, err := db.Mongo.Update(user); err != nil {
+	if err := db.Update(user); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -116,7 +116,7 @@ func UserDestroy(ctx *Context) {
 
 	id := ctx.LastParam()
 	user := &model.User{}
-	if err := db.Mongo.FindByHexID(user, id); err != nil {
+	if err := db.FindByHexID(user, id); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -131,7 +131,7 @@ func UserDestroy(ctx *Context) {
 		return
 	}
 
-	if _, err := db.Mongo.Delete(user); err != nil {
+	if err := db.Delete(user); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -149,7 +149,7 @@ func Login(ctx *Context) {
 
 	user := &model.User{}
 	if validate.Email(req["user"]) {
-		if err := db.Mongo.FindOneByField(user, "email", req["user"]); err != nil {
+		if err := db.FindOneByField(user, "email", req["user"]); err != nil {
 			ctx.WriteError(&errors.Err{
 				Status:  http.StatusUnauthorized,
 				Message: "No autorizado",
@@ -158,7 +158,7 @@ func Login(ctx *Context) {
 			return
 		}
 	} else {
-		if err := db.Mongo.FindOneByField(user, "phone", req["user"]); err != nil {
+		if err := db.FindOneByField(user, "phone", req["user"]); err != nil {
 			ctx.WriteError(&errors.Err{
 				Status:  http.StatusUnauthorized,
 				Message: "No autorizado",
@@ -177,7 +177,7 @@ func Login(ctx *Context) {
 	}
 
 	token := model.NewToken(user.ID)
-	if err := db.Mongo.Create(token); err != nil {
+	if err := db.Create(token); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -195,19 +195,9 @@ func Logout(ctx *Context) {
 		})
 		return
 	}
-	if _, err := db.Mongo.Delete(ctx.Token); err != nil {
+	if err := db.ForceDelete(ctx.Token); err != nil {
 		ctx.WriteError(err)
 		return
 	}
-	ctx.Writer.WriteHeader(http.StatusOK)
-}
-
-func IndexDashboardRole(ctx *Context) {
-	var roles *[]model.Role
-	err := db.Mongo.FindAll(&model.Role{}, roles)
-	if err != nil {
-		ctx.WriteError(err)
-		return
-	}
-	ctx.WriteJSON(http.StatusOK, roles)
+	ctx.WriteNoContent()
 }

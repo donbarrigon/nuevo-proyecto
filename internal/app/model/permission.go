@@ -7,8 +7,8 @@ import (
 )
 
 type Permission struct {
-	ID   bson.ObjectID `bson:"_id"`
-	Name string        `bson:"name"`
+	ID   bson.ObjectID `bson:"_id,omitempty" json:"-"`
+	Name string        `bson:"name" json:"name"`
 }
 
 func NewPermission() *Permission {
@@ -34,6 +34,10 @@ func (p *Permission) Validate(l string) errors.Error {
 
 	if len(p.Name) > 255 {
 		err.Append("name", lang.TT(l, "Maximo %v caracteres", 255))
+	}
+
+	if p.Name == "" {
+		err.Append("name", lang.TT(l, "Este campo es requerido"))
 	}
 	return err.Errors()
 }

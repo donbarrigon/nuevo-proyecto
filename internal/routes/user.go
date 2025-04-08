@@ -43,5 +43,5 @@ func User(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx.NotFound()
+	ctx.WriteNotFound()
 }

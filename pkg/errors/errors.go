@@ -101,6 +101,38 @@ func Write(err error) Error {
 	}
 }
 
+func Update(err error) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al modificar el registro",
+		Err:     err.Error(),
+	}
+}
+
+func Delete(err error) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al eliminar el registro",
+		Err:     err.Error(),
+	}
+}
+
+func Restore(err error) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al restaurar el registro",
+		Err:     err.Error(),
+	}
+}
+
+func ForceDelete(err error) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al eliminar el registro permanentemente",
+		Err:     err.Error(),
+	}
+}
+
 func Command(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
