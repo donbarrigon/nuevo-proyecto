@@ -12,11 +12,11 @@ import (
 func RoleIndex(ctx *Context) {
 	var roles []*model.Role
 
-	err := db.FindAll(&model.Role{}, &roles)
-	if err != nil {
+	if err := db.FindAll(&model.Role{}, &roles); err != nil {
 		ctx.WriteError(err)
 		return
 	}
+
 	ctx.WriteJSON(http.StatusOK, &roles)
 }
 
