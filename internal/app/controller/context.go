@@ -8,46 +8,10 @@ import (
 	"strings"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 )
-
-type Filter struct {
-	Key    string
-	Filter string
-	Value  string
-}
-
-type Sort struct {
-	Field     string
-	Direction int // 1 para asc, -1 para desc (Mongo style)
-}
-
-type QueryFilter struct {
-	Filters         []*Filter
-	Sort            []*Sort
-	Page            int
-	PerPage         int
-	Cursor          string
-	CursorDirection int // 1 para asc, -1 para desc (Mongo style)
-
-}
-
-var allFilters = []string{
-	"eq",      // Igual a
-	"ne",      // Distinto de (not equal)
-	"gt",      // Mayor que (greater than)
-	"gte",     // Mayor o igual que (greater than or equal)
-	"lt",      // Menor que (less than)
-	"lte",     // Menor o igual que (less than or equal)
-	"lk",      // Contiene (similar a SQL LIKE, puede ser case insensitive)
-	"ilk",     // LIKE sin distinción entre mayúsculas/minúsculas (PostgreSQL style)
-	"in",      // Dentro de una lista de valores
-	"nin",     // No dentro de una lista de valores (not in)
-	"null",    // Es nulo
-	"nnull",   // No es nulo
-	"between", // Entre dos valores
-}
 
 type Context struct {
 	Writer  http.ResponseWriter
@@ -139,95 +103,138 @@ func (ctx *Context) TT(s string, v ...any) string {
 	return lang.TT(ctx.Lang(), s, v...)
 }
 
-func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *QueryFilter {
+func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *db.QueryFilter {
 	query := ctx.Request.URL.Query()
 
-	qf := &QueryFilter{
-		Filters:         []*Filter{},
-		Sort:            []*Sort{},
-		Page:            1,
-		PerPage:         15,
-		Cursor:          "",
-		CursorDirection: 1,
-	}
+	qf := db.NewQueryFilter()
 
 	for rawKey, values := range query {
 		if len(values) == 0 {
 			continue
 		}
-		value := values[0]
 
 		// --------------------
-		// 1. Paginación
+		// Paginación normal: ej. GET /api/ventas?page=123&per_page=50
 		// --------------------
 		if rawKey == "page" {
-			if page, err := strconv.Atoi(value); err == nil && page > 0 {
+			if page, err := strconv.Atoi(values[0]); err == nil && page > 0 {
 				qf.Page = page
-				continue
 			}
+			continue
 		}
 
 		if rawKey == "per_page" {
-			if perPage, err := strconv.Atoi(value); err == nil && perPage > 0 {
+			if perPage, err := strconv.Atoi(values[0]); err == nil && perPage > 0 {
 				qf.PerPage = perPage
 			}
+			continue
 		}
 
 		// --------------------
-		// Cursor
+		// Cursor normal:    ej. GET /api/ventas?cursor=643a1f2e5c8e4d3a7b2f1a9b
+		// Cursor normal:    ej. GET /api/ventas?cursor[asc]=643a1f2e5c8e4d3a7b2f1a9b
+		// Cursor invertido: ej. GET /api/ventas?cursor[desc]=643a1f2e5c8e4d3a7b2f1a9b
 		// --------------------
 		if rawKey == "cursor[asc]" || rawKey == "cursor" {
-			qf.Cursor = value
+			qf.Cursor = values[0]
 			qf.CursorDirection = 1
 			continue
 		}
 
 		if rawKey == "cursor[desc]" {
-			qf.Cursor = value
+			qf.Cursor = values[0]
 			qf.CursorDirection = -1
 			continue
 		}
 
 		// --------------------
-		// Sort
+		// Sort normal: ej. GET /api/ventas?sort=cliente_id,producto_id
+		// Sort multi:  ej. GET /api/ventas?sort=cliente_id&sort=producto_id
+		// Sort bad but it works:  ej. GET /api/ventas?sort=cliente&sort=producto,category
 		// --------------------
 		if rawKey == "sort" {
-			fields := strings.Split(value, ",")
-			for _, f := range fields {
-				f = strings.TrimSpace(f)
-				if f == "" {
-					continue
+			for _, value := range values {
+				fields := strings.Split(value, ",")
+				for _, field := range fields {
+					field = strings.TrimSpace(field)
+					if field == "" {
+						continue
+					}
+					direction := 1
+					if strings.HasPrefix(field, "-") {
+						direction = -1
+						field = field[1:]
+					} else if strings.HasPrefix(field, "+") {
+						field = field[1:]
+					} else if strings.HasPrefix(field, "[asc]") {
+						field = field[5:]
+					} else if strings.HasPrefix(field, "[desc]") {
+						direction = -1
+						field = field[6:]
+					} else if strings.HasSuffix(field, ":asc") {
+						field = field[:4]
+					} else if strings.HasSuffix(field, ":desc") {
+						direction = -1
+						field = field[:5]
+					}
+					allowed := allowFilters[field]
+					// if slices.Contains(allow, "sortable") {
+					// 	qf.AppendGrouBy(field)
+					// }
+					for _, allow := range allowed {
+						if allow == "sortable" {
+							qf.AppendSort(field, direction)
+							break
+						}
+					}
 				}
-				direction := 1
-				if strings.HasPrefix(f, "-") {
-					direction = -1
-					f = f[1:]
-				} else if strings.HasPrefix(f, "+") {
-					f = f[1:]
-				} else if strings.HasPrefix(f, "[asc]") {
-					f = f[5:]
-				} else if strings.HasPrefix(f, "[desc]") {
-					direction = -1
-					f = f[6:]
-				} else if strings.HasSuffix(f, ":asc") {
-					f = f[:4]
-				} else if strings.HasSuffix(f, ":desc") {
-					direction = -1
-					f = f[:5]
-				}
-				qf.Sort = append(qf.Sort, &Sort{
-					Field:     f,
-					Direction: direction,
-				})
 			}
 			continue
 		}
 
 		// --------------------
-		// Filtros
-		// Filtro normal: ej. name[eq]=John
+		// GroupBy normal: ej. GET /api/ventas?groupby=cliente_id,producto_id
+		// GroupBy multi:  ej. GET /api/ventas?groupby=cliente_id&groupby=producto_id
+		// GroupBy bad but it works:  ej. GET /api/ventas?groupby=cliente_id&groupby=producto_id,category_id
 		// --------------------
-		var key, filter string
+		if rawKey == "groupby" {
+			for _, value := range values {
+				fields := strings.Split(value, ",")
+				for _, field := range fields {
+					allowed := allowFilters[field]
+					// if slices.Contains(allow, "groupable") {
+					// 	qf.AppendGrouBy(field)
+					// }
+					for _, allow := range allowed {
+						if allow == "groupable" {
+							qf.AppendGrouBy(field)
+							break
+						}
+					}
+				}
+			}
+			continue
+		}
+		// --------------------
+		// trash normal:  ej. GET /api/ventas?trash=only
+		// trash normal:  ej. GET /api/ventas?trash=with
+		// trash default: ej. GET /api/ventas?trash=without
+		// --------------------
+		if rawKey == "trash" {
+			if values[0] == "without" || values[0] == "0" {
+				qf.Trash = 0
+			} else if values[0] == "with" || values[0] == "1" {
+				qf.Trash = 1
+			} else if values[0] == "only" || values[0] == "2" {
+				qf.Trash = 2
+			}
+			continue
+		}
+		// --------------------
+		// Filtro normal:  ej. GET /api/ventas?name[lk]=Andres
+		// Filtro default: ej. GET /api/ventas?name=Andres -> GET /api/ventas?name[eq]=Andres
+		// --------------------
+		var key, filter, value string
 		if strings.Contains(rawKey, "[") && strings.HasSuffix(rawKey, "]") {
 			parts := strings.SplitN(rawKey, "[", 2)
 			if len(parts) != 2 {
@@ -249,22 +256,12 @@ func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *QueryFilte
 			continue
 		}
 
-		isValid := false
 		for _, af := range allowed {
 			if af == filter {
-				isValid = true
+				qf.AppendFilter(key, filter, value)
 				break
 			}
 		}
-		if !isValid {
-			continue
-		}
-
-		qf.Filters = append(qf.Filters, &Filter{
-			Key:    key,
-			Filter: filter,
-			Value:  value,
-		})
 	}
 
 	return qf

@@ -90,7 +90,7 @@ func FindOne(model MongoModel, filter bson.D) errors.Error {
 	return nil
 }
 
-func FindMany(model MongoModel, result any, filter bson.D) errors.Error {
+func Find(model MongoModel, result any, filter bson.D) errors.Error {
 	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
 	if err != nil {
 		return errors.Mongo(err)
