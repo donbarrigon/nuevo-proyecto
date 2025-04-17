@@ -101,6 +101,17 @@ func Find(model MongoModel, result any, filter bson.D) errors.Error {
 	return nil
 }
 
+func FindByPipeline(model MongoModel, result any, pipeline any) errors.Error {
+	cursor, err := Mongo.Database.Collection(model.CollectionName()).Aggregate(context.TODO(), pipeline)
+	if err != nil {
+		return errors.Mongo(err)
+	}
+	if err = cursor.All(context.TODO(), result); err != nil {
+		return errors.Mongo(err)
+	}
+	return nil
+}
+
 func Create(model MongoModel) errors.Error {
 	model.Default()
 	collection := Mongo.Database.Collection(model.CollectionName())

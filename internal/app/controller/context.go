@@ -1,11 +1,15 @@
 package controller
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
@@ -107,6 +111,8 @@ func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *db.QueryFi
 	query := ctx.Request.URL.Query()
 
 	qf := db.NewQueryFilter()
+
+	qf.Path = ctx.Request.URL.Path
 
 	for rawKey, values := range query {
 		if len(values) == 0 {
@@ -265,4 +271,139 @@ func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *db.QueryFi
 	}
 
 	return qf
+}
+
+func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
+	val := reflect.ValueOf(data)
+
+	if val.Kind() != reflect.Slice {
+		err := errors.NewError(
+			http.StatusInternalServerError,
+			"Error al escribir el csv",
+			errors.New(lang.TT(ctx.Lang(), "Los datos no son un slice de structs")),
+		)
+		ctx.WriteError(err)
+		return
+	}
+
+	var buffer bytes.Buffer
+	writer := csv.NewWriter(&buffer)
+
+	del := ';'
+	if len(comma) > 0 {
+		del = comma[0]
+	}
+	writer.Comma = del
+
+	if val.Len() == 0 {
+		err := errors.NoDocuments(errors.New(lang.TT(ctx.Lang(), "No hay datos")))
+		ctx.WriteError(err)
+		return
+	}
+
+	first := val.Index(0)
+	elemType := first.Type()
+
+	var headers []string
+	var fields []int // Índices de campos válidos
+
+	// Encabezados filtrando por tag json
+	for i := 0; i < elemType.NumField(); i++ {
+		field := elemType.Field(i)
+		tag := field.Tag.Get("json")
+		if tag == "" || tag == "-" {
+			continue
+		}
+		// Cortar por coma por si hay `json:"name,omitempty"`
+		tag = strings.Split(tag, ",")[0]
+		headers = append(headers, tag)
+		fields = append(fields, i)
+	}
+	writer.Write(headers)
+
+	// Datos
+	for i := 0; i < val.Len(); i++ {
+		var record []string
+		elem := val.Index(i)
+
+		for _, j := range fields {
+			fieldVal := elem.Field(j)
+			switch fieldVal.Kind() {
+			case reflect.String:
+				record = append(record, fieldVal.String())
+			case reflect.Int, reflect.Int64:
+				record = append(record, fmt.Sprintf("%d", fieldVal.Int()))
+			case reflect.Float64:
+				record = append(record, fmt.Sprintf("%f", fieldVal.Float()))
+			case reflect.Bool:
+				record = append(record, fmt.Sprintf("%t", fieldVal.Bool()))
+			case reflect.Struct:
+				if t, ok := fieldVal.Interface().(time.Time); ok {
+					record = append(record, t.Format(time.RFC3339))
+				} else {
+					jsonVal, _ := json.Marshal(fieldVal.Interface())
+					record = append(record, string(jsonVal))
+				}
+			case reflect.Slice, reflect.Map, reflect.Array:
+				jsonVal, _ := json.Marshal(fieldVal.Interface())
+				record = append(record, string(jsonVal))
+			default:
+				record = append(record, fmt.Sprintf("%v", fieldVal.Interface()))
+				// Para cualquier otro tipo (interface, pointer, etc.)
+				// jsonVal, _ := json.Marshal(fieldVal.Interface())
+				// record = append(record, string(jsonVal))
+			}
+		}
+		writer.Write(record)
+	}
+	writer.Flush()
+
+	ctx.Writer.Header().Set("Content-Type", "text/csv")
+	ctx.Writer.Header().Set("Content-Disposition", "attachment;filename="+fileName+".csv")
+	ctx.Writer.Write(buffer.Bytes())
+}
+
+func Fill(model any, request any) {
+	modelVal := reflect.ValueOf(model)
+	requestVal := reflect.ValueOf(request)
+
+	// Deben ser punteros a structs
+	if modelVal.Kind() != reflect.Ptr || requestVal.Kind() != reflect.Ptr {
+		return
+	}
+
+	modelVal = modelVal.Elem()
+	requestVal = requestVal.Elem()
+
+	if modelVal.Kind() != reflect.Struct || requestVal.Kind() != reflect.Struct {
+		return
+	}
+
+	modelType := modelVal.Type()
+
+	for i := 0; i < modelType.NumField(); i++ {
+		field := modelType.Field(i)
+		jsonTag := field.Tag.Get("json")
+
+		// Ignorar si no tiene tag json o si es '-'
+		if jsonTag == "" || jsonTag == "-" {
+			continue
+		}
+		jsonName := strings.Split(jsonTag, ",")[0]
+		if jsonName == "" || jsonName == "-" {
+			continue
+		}
+
+		// Buscar el campo en request por el mismo nombre
+		reqField := requestVal.FieldByName(field.Name)
+		if !reqField.IsValid() {
+			continue
+		}
+
+		// Solo si el campo es asignable y compatible
+		modelField := modelVal.Field(i)
+		if modelField.CanSet() && reqField.Type().AssignableTo(modelField.Type()) {
+			modelField.Set(reqField)
+		}
+	}
 }

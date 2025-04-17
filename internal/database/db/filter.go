@@ -57,11 +57,12 @@ type QueryFilter struct {
 	Filters         []Filter
 	Sort            []Sort
 	GroupBy         []string
-	Page            int
+	Page            int // si es cero la paginacion es por cursor
 	PerPage         int
 	Cursor          string
-	CursorDirection int // 1 para asc, -1 para desc (Mongo style)
-	Trash           int // 0 para without(default) 1 para with y 2 only
+	CursorDirection int    // 1 para asc, -1 para desc (Mongo style)
+	Trash           int    // 0 para without(default) 1 para with y 2 only
+	Path            string // ruta del path para la paginacion
 }
 
 func NewQueryFilter() *QueryFilter {
@@ -170,7 +171,10 @@ func (qf *QueryFilter) CursorPaginate() {
 }
 
 func (qf *QueryFilter) All() {
+	qf.Page = 0
 	qf.PerPage = 0
+	qf.Cursor = ""
+	qf.CursorDirection = 0
 }
 
 func (qf *QueryFilter) Pipeline() *mongo.Pipeline {
