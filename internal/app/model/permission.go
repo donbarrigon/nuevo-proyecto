@@ -19,12 +19,7 @@ func NewPermission() *Permission {
 func (p *Permission) CollectionName() string {
 	return "permissions"
 }
-func (p *Permission) GetID() bson.ObjectID {
-	return p.ID
-}
-func (p *Permission) SetID(id bson.ObjectID) {
-	p.ID = id
-}
+
 func (p *Permission) Default() {
 	//...
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/config"
@@ -17,8 +19,6 @@ var Mongo *ConexionMongoDB
 
 type MongoModel interface {
 	CollectionName() string
-	GetID() bson.ObjectID
-	SetID(id bson.ObjectID)
 	Default()
 	Validate(lang string) errors.Error
 }
@@ -70,7 +70,6 @@ func FindOneByField(model MongoModel, field string, value any) errors.Error {
 }
 
 func FindAll(model MongoModel, result any) errors.Error {
-
 	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), bson.D{})
 	if err != nil {
 		return errors.Mongo(err)
@@ -79,7 +78,6 @@ func FindAll(model MongoModel, result any) errors.Error {
 		return errors.Mongo(err)
 	}
 	return nil
-
 }
 
 func FindOne(model MongoModel, filter bson.D) errors.Error {
@@ -119,18 +117,18 @@ func Create(model MongoModel) errors.Error {
 	if err != nil {
 		return errors.Mongo(err)
 	}
-	id, ok := result.InsertedID.(bson.ObjectID)
-	if !ok {
-		return errors.Unknown(errors.New("No se logro hacer la conversion a bson.ObjectID"))
+
+	if err := setID(model, result.InsertedID); err != nil {
+		return errors.Unknown(err)
 	}
-	model.SetID(id)
+
 	return nil
 }
 
 func Update(model MongoModel) errors.Error {
 	model.Default()
 	collection := Mongo.Database.Collection(model.CollectionName())
-	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 	update := bson.D{bson.E{Key: "$set", Value: model}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
@@ -150,7 +148,7 @@ func Update(model MongoModel) errors.Error {
 }
 func Delete(model MongoModel) errors.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
-	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deletedAt", Value: time.Now()}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
@@ -170,7 +168,7 @@ func Delete(model MongoModel) errors.Error {
 
 func Restore(model MongoModel) errors.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
-	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deletedAt", Value: nil}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
@@ -190,7 +188,7 @@ func Restore(model MongoModel) errors.Error {
 
 func ForceDelete(model MongoModel) errors.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
-	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 
 	result, err := collection.DeleteOne(context.TODO(), filter)
 	if err != nil {
@@ -200,6 +198,75 @@ func ForceDelete(model MongoModel) errors.Error {
 	if result.DeletedCount == 0 {
 		return errors.ForceDelete(errors.New("mongo.DeleteResult.DeletedCount == 0"))
 	}
+	return nil
+}
+
+func setID(model MongoModel, id any) error {
+	val := reflect.ValueOf(model)
+	if val.Kind() != reflect.Ptr || val.IsNil() {
+		return fmt.Errorf("el modelo debe ser un puntero no nulo")
+	}
+	val = val.Elem()
+
+	typ := val.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("bson")
+		if strings.Split(tag, ",")[0] == "_id" {
+			fieldVal := val.Field(i)
+			if !fieldVal.CanSet() {
+				return fmt.Errorf("no se puede asignar el campo _id")
+			}
+
+			idVal := reflect.ValueOf(id)
+
+			// Si el tipo es exactamente igual
+			if fieldVal.Type() == idVal.Type() {
+				fieldVal.Set(idVal)
+				return nil
+			}
+
+			// Si el campo es string y el id es bson.ObjectID
+			if fieldVal.Kind() == reflect.String && idVal.Type().String() == "primitive.ObjectID" {
+				method := idVal.MethodByName("Hex")
+				if method.IsValid() && method.Type().NumIn() == 0 {
+					hexVal := method.Call(nil)[0]
+					fieldVal.SetString(hexVal.String())
+					return nil
+				}
+			}
+
+			return fmt.Errorf("no se pudo asignar el ID: tipos incompatibles")
+		}
+	}
+	return fmt.Errorf("no se encontró el campo con tag bson:\"_id\"")
+}
+
+func getID(model MongoModel) any {
+	val := reflect.ValueOf(model)
+
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return nil
+		}
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct {
+		return nil
+	}
+
+	typ := val.Type()
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("bson")
+		tagParts := strings.Split(tag, ",")
+		if len(tagParts) > 0 && tagParts[0] == "_id" {
+			return val.Field(i).Interface()
+		}
+	}
+
 	return nil
 }
 

@@ -38,14 +38,6 @@ func (t *Token) CollectionName() string {
 	return "tokens"
 }
 
-func (t *Token) GetID() bson.ObjectID {
-	return t.ID
-}
-
-func (t *Token) SetID(id bson.ObjectID) {
-	t.ID = id
-}
-
 func (t *Token) Default() {
 	if t.CreatedAt.IsZero() {
 		t.CreatedAt = time.Now()
@@ -59,4 +51,16 @@ func (t *Token) Validate(l string) errors.Error {
 		err.Append("user_id", lang.TT(l, "Este campo es requerido"))
 	}
 	return err.Errors()
+}
+
+func (t *Token) Anonymous() *Token {
+	var id bson.ObjectID // zero value: "000000000000000000000000"
+	var timeZero time.Time
+	return &Token{
+		ID:        id,
+		UserID:    id,
+		Token:     id.Hex(),
+		CreatedAt: timeZero,
+		ExpiresAt: timeZero,
+	}
 }

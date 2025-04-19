@@ -83,7 +83,7 @@ func UserUpdate(ctx *Context) {
 	}
 
 	// esto es para que el usuario solo pueda modificarse asi mismo
-	if user.ID != ctx.User.GetID() {
+	if user.ID != ctx.User.ID {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",
@@ -122,7 +122,7 @@ func UserDestroy(ctx *Context) {
 	}
 
 	// esto espara que el usuario solo pueda eliminarse asi mismo
-	if user.ID != ctx.User.GetID() {
+	if user.ID != ctx.User.ID {
 		ctx.WriteError(&errors.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",

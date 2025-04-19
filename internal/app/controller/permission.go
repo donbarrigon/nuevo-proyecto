@@ -32,10 +32,10 @@ func PermissionExport(ctx *Context) {
 		return
 	}
 
-	ctx.WriteCSV("bd", permissions)
+	ctx.WriteCSV("db", permissions)
 }
 
-func PremissionShow(ctx *Context) {
+func PermissionShow(ctx *Context) {
 	id := ctx.LastParam()
 
 	permission := &model.Permission{}
@@ -66,17 +66,12 @@ func PermissionStore(ctx *Context) {
 	}
 
 	res := resource.NewPermission(permission)
-	ctx.WriteJSON(http.StatusOK, res)
+	ctx.WriteCreated(res)
 }
 
 func PermissionUpdate(ctx *Context) {
 	req := &model.Permission{}
 	if err := ctx.GetBody(req); err != nil {
-		ctx.WriteError(err)
-		return
-	}
-
-	if err := req.Validate(ctx.Lang()); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -90,16 +85,21 @@ func PermissionUpdate(ctx *Context) {
 
 	Fill(permission, req)
 
+	if err := permission.Validate(ctx.Lang()); err != nil {
+		ctx.WriteError(err)
+		return
+	}
+
 	if err := db.Update(permission); err != nil {
 		ctx.WriteError(err)
 		return
 	}
 
 	res := resource.NewPermission(permission)
-	ctx.WriteJSON(http.StatusOK, res)
+	ctx.WriteUpdated(res)
 }
 
-func PermissionDelete(ctx *Context) {
+func PermissionDestroy(ctx *Context) {
 	id := ctx.LastParam()
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
@@ -112,7 +112,7 @@ func PermissionDelete(ctx *Context) {
 		return
 	}
 
-	ctx.WriteNoContent()
+	ctx.WriteDeleted(nil)
 }
 
 func PermissionRestore(ctx *Context) {
@@ -129,10 +129,10 @@ func PermissionRestore(ctx *Context) {
 	}
 
 	res := resource.NewPermission(permission)
-	ctx.WriteJSON(http.StatusOK, res)
+	ctx.WriteRestored(res)
 }
 
-func ForceDelete(ctx *Context) {
+func PermissionForceDelete(ctx *Context) {
 	id := ctx.LastParam()
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
@@ -145,5 +145,5 @@ func ForceDelete(ctx *Context) {
 		return
 	}
 
-	ctx.WriteNoContent()
+	ctx.WriteForceDeleted(nil)
 }

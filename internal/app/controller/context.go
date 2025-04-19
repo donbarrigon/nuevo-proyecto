@@ -17,6 +17,11 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 )
 
+type MessageResource struct {
+	Message string `json:"message"`
+	Data    any    `json:"data"`
+}
+
 type Context struct {
 	Writer  http.ResponseWriter
 	Request *http.Request
@@ -97,6 +102,55 @@ func (ctx *Context) WriteError(err errors.Error) {
 
 func (ctx *Context) WriteNotFound() {
 	ctx.WriteError(errors.NotFound(errors.New(lang.TT(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path))))
+}
+
+func (ctx *Context) WriteMessage(code int, data any, message string, v ...any) {
+	ctx.WriteJSON(code, &MessageResource{
+		Message: lang.TT(ctx.Lang(), message, v...),
+		Data:    data,
+	})
+}
+
+func (ctx *Context) WriteSuccess(data any) {
+	ctx.WriteJSON(http.StatusOK, &MessageResource{
+		Message: lang.TT(ctx.Lang(), "Solicitud procesada con éxito"),
+		Data:    data,
+	})
+}
+
+func (ctx *Context) WriteCreated(data any) {
+	ctx.WriteJSON(http.StatusCreated, &MessageResource{
+		Message: lang.TT(ctx.Lang(), "Recurso creado exitosamente"),
+		Data:    data,
+	})
+}
+
+func (ctx *Context) WriteUpdated(data any) {
+	ctx.WriteJSON(http.StatusOK, &MessageResource{
+		Message: lang.TT(ctx.Lang(), "Recurso actualizado exitosamente"),
+		Data:    data,
+	})
+}
+
+func (ctx *Context) WriteDeleted(data any) {
+	ctx.WriteJSON(http.StatusOK, &MessageResource{
+		Message: lang.TT(ctx.Lang(), "Recurso eliminado exitosamente"),
+		Data:    data,
+	})
+}
+
+func (ctx *Context) WriteRestored(data any) {
+	ctx.WriteJSON(http.StatusOK, &MessageResource{
+		Message: lang.TT(ctx.Lang(), "Recurso restaurado exitosamente"),
+		Data:    data,
+	})
+}
+
+func (ctx *Context) WriteForceDeleted(data any) {
+	ctx.WriteJSON(http.StatusOK, &MessageResource{
+		Message: lang.TT(ctx.Lang(), "Recurso eliminado permanentemente"),
+		Data:    data,
+	})
 }
 
 func (ctx *Context) WriteNoContent() {

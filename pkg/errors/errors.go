@@ -165,10 +165,106 @@ func Unknown(err error) Error {
 	}
 }
 
+func Unauthorized(err error) Error {
+	return &Err{
+		Status:  http.StatusUnauthorized,
+		Message: "No autorizado",
+		Err:     err.Error(),
+	}
+}
+
 func HexID(err error) Error {
 	return &Err{
 		Status:  http.StatusBadRequest,
 		Message: "El id no es un hexadecimal válido",
 		Err:     err.Error(),
+	}
+}
+
+func SWrite(text string) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al escribir el registro",
+		Err:     text,
+	}
+}
+
+func SUpdate(text string) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al modificar el registro",
+		Err:     text,
+	}
+}
+
+func SDelete(text string) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al eliminar el registro",
+		Err:     text,
+	}
+}
+
+func SRestore(text string) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al restaurar el registro",
+		Err:     text,
+	}
+}
+
+func SForceDelete(text string) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error al eliminar el registro permanentemente",
+		Err:     text,
+	}
+}
+
+func SCommand(text string) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error de comando",
+		Err:     text,
+	}
+}
+
+func SBulkWrite(text string) Error {
+	return &Err{
+		Status:  http.StatusBadRequest,
+		Message: "Error en escritura masiva",
+		Err:     text,
+	}
+}
+
+func SDriver(text string) Error {
+	return &Err{
+		Status:  http.StatusBadGateway,
+		Message: "Error del driver",
+		Err:     text,
+	}
+}
+
+func SUnknown(text string) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Error inesperado",
+		Err:     text,
+	}
+}
+
+func SUnauthorized(text string) Error {
+	return &Err{
+		Status:  http.StatusUnauthorized,
+		Message: "No autorizado",
+		Err:     text,
+	}
+}
+
+func SHexID(text string) Error {
+	return &Err{
+		Status:  http.StatusBadRequest,
+		Message: "El id no es un hexadecimal válido",
+		Err:     text,
 	}
 }

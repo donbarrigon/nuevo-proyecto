@@ -22,13 +22,6 @@ func NewRole() *Role {
 func (r *Role) CollectionName() string {
 	return "roles"
 }
-func (r *Role) GetID() bson.ObjectID {
-	return r.ID
-}
-
-func (r *Role) SetID(id bson.ObjectID) {
-	r.ID = id
-}
 
 func (r *Role) Default() {
 	//...

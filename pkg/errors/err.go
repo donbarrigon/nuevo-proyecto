@@ -25,8 +25,8 @@ type Err struct {
 	errors  map[string][]string
 }
 
-func New(err string) error {
-	return errors.New(err)
+func New(text string) error {
+	return errors.New(text)
 }
 
 func NewError(status int, message string, err any) Error {

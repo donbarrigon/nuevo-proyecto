@@ -34,14 +34,6 @@ func (u *User) CollectionName() string {
 	return "users"
 }
 
-func (u *User) GetID() bson.ObjectID {
-	return u.ID
-}
-
-func (u *User) SetID(id bson.ObjectID) {
-	u.ID = id
-}
-
 func (u *User) Default() {
 	if u.CreatedAt.IsZero() {
 		u.CreatedAt = time.Now()
@@ -98,4 +90,20 @@ func (u *User) Validate(l string) errors.Error {
 	}
 
 	return err.Errors()
+}
+
+func (u *User) Anonymous() *User {
+	var id bson.ObjectID // zero value: "000000000000000000000000"
+	var timeZero time.Time
+
+	return &User{
+		ID:        id,
+		Name:      "Anonymous",
+		Email:     "anonymous@gmail.com",
+		Phone:     "+57 320 000 0000",
+		Password:  "anonymous",
+		CreatedAt: timeZero,
+		UpdatedAt: timeZero,
+		DeletedAt: &timeZero,
+	}
 }
