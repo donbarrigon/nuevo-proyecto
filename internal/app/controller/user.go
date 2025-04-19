@@ -12,7 +12,7 @@ import (
 )
 
 func UserShow(ctx *Context) {
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 
 	user := &model.User{}
 	if err := db.FindByHexID(user, id); err != nil {
@@ -64,7 +64,7 @@ func UserStore(ctx *Context) {
 
 func UserUpdate(ctx *Context) {
 
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 
 	user := &model.User{}
 	if err := db.FindByHexID(user, id); err != nil {
@@ -114,7 +114,7 @@ func UserUpdate(ctx *Context) {
 
 func UserDestroy(ctx *Context) {
 
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 	user := &model.User{}
 	if err := db.FindByHexID(user, id); err != nil {
 		ctx.WriteError(err)

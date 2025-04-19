@@ -45,6 +45,14 @@ func NotFound(err error) Error {
 	}
 }
 
+func SNotFound(text string) Error {
+	return &Err{
+		Status:  http.StatusNotFound,
+		Message: "El recurso no existe",
+		Err:     text,
+	}
+}
+
 func NoDocuments(err error) Error {
 	return &Err{
 		Status:  http.StatusNotFound,

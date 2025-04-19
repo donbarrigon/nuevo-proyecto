@@ -1,15 +1,18 @@
 package resource
 
-import "github.com/donbarrigon/nuevo-proyecto/internal/app/model"
+import (
+	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
 
 type Permission struct {
-	ID   string `bson:"_id" json:"id"`
-	Name string `bson:"name" json:"name"`
+	ID   bson.ObjectID `bson:"_id" json:"id"`
+	Name string        `bson:"name" json:"name"`
 }
 
 func NewPermission(permission *model.Permission) *Permission {
 	return &Permission{
-		ID:   permission.ID.Hex(),
+		ID:   permission.ID,
 		Name: permission.Name,
 	}
 }

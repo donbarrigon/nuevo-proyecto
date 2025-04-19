@@ -27,7 +27,7 @@ func PermissionExport(ctx *Context) {
 	qf.All()
 
 	var permissions []resource.Permission
-	if err := db.FindByPipeline(&model.Permission{}, permissions, qf.Pipeline()); err != nil {
+	if err := db.FindByPipeline(&model.Permission{}, &permissions, qf.Pipeline()); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -36,7 +36,7 @@ func PermissionExport(ctx *Context) {
 }
 
 func PermissionShow(ctx *Context) {
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
@@ -76,7 +76,7 @@ func PermissionUpdate(ctx *Context) {
 		return
 	}
 
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
 		ctx.WriteError(err)
@@ -100,7 +100,7 @@ func PermissionUpdate(ctx *Context) {
 }
 
 func PermissionDestroy(ctx *Context) {
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
 		ctx.WriteError(err)
@@ -116,7 +116,7 @@ func PermissionDestroy(ctx *Context) {
 }
 
 func PermissionRestore(ctx *Context) {
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
 		ctx.WriteError(err)
@@ -133,7 +133,7 @@ func PermissionRestore(ctx *Context) {
 }
 
 func PermissionForceDelete(ctx *Context) {
-	id := ctx.LastParam()
+	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
 		ctx.WriteError(err)

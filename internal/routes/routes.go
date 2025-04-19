@@ -10,13 +10,6 @@ import (
 type ControllerFun func(ctx *controller.Context)
 type MiddlewareFun func(func(ctx *controller.Context)) func(ctx *controller.Context)
 
-func Use(function ControllerFun, middlewares ...MiddlewareFun) ControllerFun {
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		function = middlewares[i](function)
-	}
-	return function
-}
-
 var Routes []Route
 
 type Route struct {
@@ -25,6 +18,7 @@ type Route struct {
 	IsVar      []bool
 	Controller ControllerFun
 	Middleware []MiddlewareFun
+	Name       string
 }
 
 func init() {
@@ -85,4 +79,8 @@ func registerRoute(method, path string, ctrl ControllerFun, middlewares ...Middl
 		Controller: ctrl,
 		Middleware: middlewares,
 	})
+}
+
+func Name(name string) {
+	Routes[len(Routes)-1].Name = name
 }

@@ -177,7 +177,7 @@ func (qf *QueryFilter) All() {
 	qf.CursorDirection = 0
 }
 
-func (qf *QueryFilter) Pipeline() *mongo.Pipeline {
+func (qf *QueryFilter) Pipeline() mongo.Pipeline {
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: qf.BsonD()}},
 	}
@@ -212,7 +212,7 @@ func (qf *QueryFilter) Pipeline() *mongo.Pipeline {
 		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: qf.PerPage}})
 	}
 
-	return &pipeline
+	return pipeline
 }
 
 func (qf *QueryFilter) BsonD() *bson.D {

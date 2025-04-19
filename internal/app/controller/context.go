@@ -23,10 +23,11 @@ type MessageResource struct {
 }
 
 type Context struct {
-	Writer  http.ResponseWriter
-	Request *http.Request
-	User    *model.User
-	Token   *model.Token
+	Writer     http.ResponseWriter
+	Request    *http.Request
+	PathParams map[string]string
+	User       *model.User
+	Token      *model.Token
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request) *Context {
@@ -53,35 +54,17 @@ func (ctx *Context) GetBody(request any) errors.Error {
 	return nil
 }
 
-func (ctx *Context) Get(param string, defaultValue string) string {
+func (ctx *Context) Get(param string, defaultValue ...string) string {
+	if value := ctx.PathParams["id"]; value != "" {
+		return value
+	}
 	value := ctx.Request.URL.Query().Get(param)
 	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
-func (ctx *Context) LastParam() string {
-	sections := strings.Split(strings.Trim(ctx.Request.URL.Path, "/"), "/")
-	return sections[len(sections)-1]
-}
-
-func (ctx *Context) GetParams(params ...string) (map[string]string, errors.Error) {
-	sections := strings.Split(strings.Trim(ctx.Request.URL.Path, "/"), "/")
-	numberOfSections := len(sections)
-	numberOfParams := len(params)
-	result := make(map[string]string, 0)
-	if numberOfSections < numberOfParams {
-		return nil, &errors.Err{
-			Status:  http.StatusBadRequest,
-			Message: lang.TT(ctx.Lang(), "Solicitud incorrecta"),
-			Err:     lang.TT(ctx.Lang(), "Faltan parámetros en la solicitud"),
+		if len(defaultValue) > 0 {
+			return defaultValue[0]
 		}
 	}
-	for i := 0; i < numberOfParams; i++ {
-		result[params[i]] = sections[numberOfSections-(numberOfParams-i)]
-	}
-	return result, nil
+	return value
 }
 
 func (ctx *Context) WriteJSON(status int, data any) {
@@ -101,7 +84,7 @@ func (ctx *Context) WriteError(err errors.Error) {
 }
 
 func (ctx *Context) WriteNotFound() {
-	ctx.WriteError(errors.NotFound(errors.New(lang.TT(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path))))
+	ctx.WriteError(errors.SNotFound(lang.TT(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path)))
 }
 
 func (ctx *Context) WriteMessage(code int, data any, message string, v ...any) {
