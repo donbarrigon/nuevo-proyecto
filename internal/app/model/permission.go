@@ -1,14 +1,17 @@
 package model
 
 import (
+	"time"
+
 	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Permission struct {
-	ID   bson.ObjectID `bson:"_id,omitempty" json:"-"`
-	Name string        `bson:"name" json:"name"`
+	ID        bson.ObjectID `bson:"_id,omitempty" json:"-"`
+	Name      string        `bson:"name" json:"name"`
+	DeletedAt *time.Time    `bson:"deleted_at,omitempty" json:"-"`
 }
 
 func NewPermission() *Permission {

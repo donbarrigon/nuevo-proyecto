@@ -238,7 +238,8 @@ func (qf *QueryFilter) BsonD() *bson.D {
 			if qf.CursorDirection == -1 {
 				cursorOp = "$lt"
 			}
-			filters = append(filters, bson.E{Key: "_id", Value: bson.M{cursorOp: qf.Cursor}})
+			id, _ := bson.ObjectIDFromHex(qf.Cursor)
+			filters = append(filters, bson.E{Key: "_id", Value: bson.M{cursorOp: id}})
 		}
 	}
 

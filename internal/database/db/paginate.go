@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type PaginateResource struct {
@@ -100,7 +101,7 @@ func Paginate(model MongoModel, result any, qf *QueryFilter) (*PaginateResource,
 	} else {
 		// Paginación por cursor
 
-		sortField := "_id"
+		sortField := "id"
 		if len(qf.Sort) > 0 {
 			sortField = qf.Sort[0].Field
 		}
@@ -110,7 +111,13 @@ func Paginate(model MongoModel, result any, qf *QueryFilter) (*PaginateResource,
 			next := val.Index(result_length - 1).Interface()
 
 			prevVal := getFieldValueByJSONTag(prev, sortField)
+			if objID, ok := prevVal.(bson.ObjectID); ok {
+				prevVal = objID.Hex()
+			}
 			nextVal := getFieldValueByJSONTag(next, sortField)
+			if objID, ok := nextVal.(bson.ObjectID); ok {
+				nextVal = objID.Hex()
+			}
 
 			if prevVal != nil {
 				meta["prev_cursor"] = fmt.Sprintf("%v", prevVal)

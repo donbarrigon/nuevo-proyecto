@@ -149,7 +149,7 @@ func Update(model MongoModel) errors.Error {
 func Delete(model MongoModel) errors.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
-	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deletedAt", Value: time.Now()}}}}
+	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deleted_at", Value: time.Now()}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
@@ -169,7 +169,7 @@ func Delete(model MongoModel) errors.Error {
 func Restore(model MongoModel) errors.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
-	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deletedAt", Value: nil}}}}
+	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
