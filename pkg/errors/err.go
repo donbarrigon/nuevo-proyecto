@@ -61,7 +61,9 @@ func (e *Err) Append(field string, err string) {
 	if e.errors == nil {
 		e.errors = make(map[string][]string)
 	}
-	e.errors[field] = append(e.errors[field], err)
+	if err != "" {
+		e.errors[field] = append(e.errors[field], err)
+	}
 }
 
 func (e *Err) Errors() Error {

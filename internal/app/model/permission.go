@@ -3,8 +3,6 @@ package model
 import (
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -25,17 +23,4 @@ func (p *Permission) CollectionName() string {
 
 func (p *Permission) Default() {
 	//...
-}
-
-func (p *Permission) Validate(l string) errors.Error {
-	err := &errors.Err{}
-
-	if len(p.Name) > 255 {
-		err.Append("name", lang.TT(l, "Maximo %v caracteres", 255))
-	}
-
-	if p.Name == "" {
-		err.Append("name", lang.TT(l, "Este campo es requerido"))
-	}
-	return err.Errors()
 }

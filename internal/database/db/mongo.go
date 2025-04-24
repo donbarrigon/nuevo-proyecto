@@ -20,7 +20,6 @@ var Mongo *ConexionMongoDB
 type MongoModel interface {
 	CollectionName() string
 	Default()
-	Validate(lang string) errors.Error
 }
 
 type ConexionMongoDB struct {
