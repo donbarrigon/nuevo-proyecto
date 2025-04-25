@@ -11,10 +11,9 @@ type Permission struct {
 func (p *Permission) Validate(l string) errors.Error {
 	err := &errors.Err{}
 
-	err.Append("name", MaxString(l, p.Name, 255))
 	err.Append("name", Required(l, p.Name))
-
-	p.Name.IsZero()
+	err.Append("name", MaxString(l, p.Name, 255))
+	err.Append("name", AlphaSpaces(l, p.Name))
 
 	return err.Errors()
 }

@@ -18,6 +18,10 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+type Request interface {
+	Validate(lang string) errors.Error
+}
+
 type MessageResource struct {
 	Message string `json:"message"`
 	Data    any    `json:"data"`
@@ -52,6 +56,16 @@ func (ctx *Context) GetBody(request any) errors.Error {
 		}
 	}
 	defer ctx.Request.Body.Close()
+	return nil
+}
+
+func (ctx *Context) ValidateBody(req Request) errors.Error {
+	if err := ctx.GetBody(req); err != nil {
+		return err
+	}
+	if err := req.Validate(ctx.Lang()); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -492,47 +506,41 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 // 	ctx.Writer.Write(buffer.Bytes())
 // }
 
-func Fill(model any, request any) {
-	modelVal := reflect.ValueOf(model)
-	requestVal := reflect.ValueOf(request)
+// Fill llena los campos del modelo con los valores del request,
+// pero solo si el campo del modelo tiene la etiqueta fillable
+func Fill(model any, request any) errors.Error {
+	modelValue := reflect.ValueOf(model)
+	requestValue := reflect.ValueOf(request)
 
-	// Deben ser punteros a structs
-	if modelVal.Kind() != reflect.Ptr || requestVal.Kind() != reflect.Ptr {
-		return
+	if modelValue.Kind() != reflect.Ptr || requestValue.Kind() != reflect.Ptr {
+		return errors.SUnknown("Los parámetros model y request deben ser punteros")
 	}
 
-	modelVal = modelVal.Elem()
-	requestVal = requestVal.Elem()
+	modelValue = modelValue.Elem()
+	requestValue = requestValue.Elem()
 
-	if modelVal.Kind() != reflect.Struct || requestVal.Kind() != reflect.Struct {
-		return
+	if modelValue.Kind() != reflect.Struct || requestValue.Kind() != reflect.Struct {
+		return errors.SUnknown("Los parámetros model y request deben ser estructuras")
 	}
 
-	modelType := modelVal.Type()
+	modelType := modelValue.Type()
 
 	for i := 0; i < modelType.NumField(); i++ {
 		field := modelType.Field(i)
-		jsonTag := field.Tag.Get("json")
 
-		// Ignorar si no tiene tag json o si es '-'
-		if jsonTag == "" || jsonTag == "-" {
-			continue
-		}
-		jsonName := strings.Split(jsonTag, ",")[0]
-		if jsonName == "" || jsonName == "-" {
-			continue
-		}
+		// if fillable, ok := field.Tag.Lookup("fillable"); ok && fillable == "true" {
+		if _, ok := field.Tag.Lookup("fillable"); ok {
+			fieldName := field.Name
 
-		// Buscar el campo en request por el mismo nombre
-		reqField := requestVal.FieldByName(field.Name)
-		if !reqField.IsValid() {
-			continue
-		}
+			requestField := requestValue.FieldByName(fieldName)
 
-		// Solo si el campo es asignable y compatible
-		modelField := modelVal.Field(i)
-		if modelField.CanSet() && reqField.Type().AssignableTo(modelField.Type()) {
-			modelField.Set(reqField)
+			if requestField.IsValid() && requestField.Type().AssignableTo(field.Type) {
+				modelField := modelValue.Field(i)
+				if modelField.CanSet() {
+					modelField.Set(requestField)
+				}
+			}
 		}
 	}
+	return nil
 }

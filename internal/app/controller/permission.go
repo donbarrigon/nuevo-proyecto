@@ -4,14 +4,14 @@ import (
 	"net/http"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/resource"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app/request"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
 )
 
 func PermissionIndex(ctx *Context) {
 	allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
 
-	var permissions []resource.Permission
+	var permissions []model.Permission
 	res, err := db.Paginate(&model.Permission{}, &permissions, ctx.GetQueryFilter(allowFilters))
 	if err != nil {
 		ctx.WriteError(err)
@@ -26,7 +26,7 @@ func PermissionExport(ctx *Context) {
 	qf := ctx.GetQueryFilter(allowFilters)
 	qf.All()
 
-	var permissions []resource.Permission
+	var permissions []model.Permission
 	if err := db.FindByPipeline(&model.Permission{}, &permissions, qf.Pipeline()); err != nil {
 		ctx.WriteError(err)
 		return
@@ -44,34 +44,30 @@ func PermissionShow(ctx *Context) {
 		return
 	}
 
-	res := resource.NewPermission(permission)
-	ctx.WriteJSON(http.StatusOK, res)
+	ctx.WriteJSON(http.StatusOK, permission)
 }
 
 func PermissionStore(ctx *Context) {
-	permission := &model.Permission{}
-	if err := ctx.GetBody(permission); err != nil {
+	req := &request.Permission{}
+	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
 		return
 	}
 
-	if err := permission.Validate(ctx.Lang()); err != nil {
-		ctx.WriteError(err)
-		return
-	}
+	permission := &model.Permission{}
+	Fill(permission, req)
 
 	if err := db.Create(permission); err != nil {
 		ctx.WriteError(err)
 		return
 	}
 
-	res := resource.NewPermission(permission)
-	ctx.WriteCreated(res)
+	ctx.WriteCreated(permission)
 }
 
 func PermissionUpdate(ctx *Context) {
-	req := &model.Permission{}
-	if err := ctx.GetBody(req); err != nil {
+	req := &request.Permission{}
+	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -85,18 +81,12 @@ func PermissionUpdate(ctx *Context) {
 
 	Fill(permission, req)
 
-	if err := permission.Validate(ctx.Lang()); err != nil {
-		ctx.WriteError(err)
-		return
-	}
-
 	if err := db.Update(permission); err != nil {
 		ctx.WriteError(err)
 		return
 	}
 
-	res := resource.NewPermission(permission)
-	ctx.WriteUpdated(res)
+	ctx.WriteUpdated(permission)
 }
 
 func PermissionDestroy(ctx *Context) {
@@ -112,7 +102,7 @@ func PermissionDestroy(ctx *Context) {
 		return
 	}
 
-	ctx.WriteDeleted(nil)
+	ctx.WriteDeleted(permission)
 }
 
 func PermissionRestore(ctx *Context) {
@@ -128,8 +118,7 @@ func PermissionRestore(ctx *Context) {
 		return
 	}
 
-	res := resource.NewPermission(permission)
-	ctx.WriteRestored(res)
+	ctx.WriteRestored(permission)
 }
 
 func PermissionForceDelete(ctx *Context) {
@@ -145,5 +134,5 @@ func PermissionForceDelete(ctx *Context) {
 		return
 	}
 
-	ctx.WriteForceDeleted(nil)
+	ctx.WriteForceDeleted(permission)
 }

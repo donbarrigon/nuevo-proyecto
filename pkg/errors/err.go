@@ -22,7 +22,7 @@ type Err struct {
 	Status  int    `json:"-"`
 	Message string `json:"message"`
 	Err     any    `json:"error"`
-	errors  map[string][]string
+	ErrMap  map[string][]string
 }
 
 func New(text string) error {
@@ -57,21 +57,21 @@ func (e *Err) Traslate(l string, v ...any) {
 	e.Message = lang.TT(l, e.Message, v...)
 }
 
-func (e *Err) Append(field string, err string) {
-	if e.errors == nil {
-		e.errors = make(map[string][]string)
-	}
-	if err != "" {
-		e.errors[field] = append(e.errors[field], err)
+func (e *Err) Append(field string, text string) {
+	// if e.ErrMap == nil {
+	// 	e.ErrMap = make(map[string][]string)
+	// }
+	if text != "" {
+		e.ErrMap[field] = append(e.ErrMap[field], text)
 	}
 }
 
 func (e *Err) Errors() Error {
-	if e.errors == nil {
+	if e.ErrMap == nil {
 		return nil
 	}
 	e.Status = http.StatusUnprocessableEntity
 	e.Message = "Error de validación"
-	e.Err = e.errors
+	e.Err = e.ErrMap
 	return e
 }

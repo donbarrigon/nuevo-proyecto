@@ -7,9 +7,9 @@ import (
 )
 
 type Permission struct {
-	ID        bson.ObjectID `bson:"_id,omitempty" json:"-"`
-	Name      string        `bson:"name" json:"name"`
-	DeletedAt *time.Time    `bson:"deleted_at,omitempty" json:"-"`
+	ID        bson.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name      string        `bson:"name" json:"name" fillable`
+	DeletedAt *time.Time    `bson:"deleted_at,omitempty" json:"deletedAt,omitempty"`
 }
 
 func NewPermission() *Permission {
