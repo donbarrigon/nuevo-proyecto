@@ -1,7 +1,10 @@
 package request
 
 import (
+	"encoding/base32"
 	"encoding/json"
+	"fmt"
+	"net"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -116,16 +119,96 @@ func Validate(l string, req any, rules map[string][]string) errors.Error {
 				case reflect.Slice, reflect.Array:
 					err.Append(key, MaxSlice(l, value.Interface().([]any), limit))
 				}
+			case "required_if":
+				otherValue := getOtherFieldValueFromParam(val, param)
+				err.Append(key, RequiredIf(l, value.Interface(), otherValue, param))
+			case "required_unless":
+				otherValue := getOtherFieldValueFromParam(val, param)
+				err.Append(key, RequiredUnless(l, value.Interface(), otherValue, param))
+			case "withoutAll", "without", "withAll", "with", "without_all", "with_all", "required_without", "required_with", "required_without_all", "required_with_all":
+				otherKeys := strings.Split(param, ",")
+				otherFields := make([]any, 0, len(otherKeys))
+				for _, k := range otherKeys {
+					otherFields = append(otherFields, getOtherFieldValueFromParam(val, k))
+				}
+
+				switch rule {
+				case "withoutAll", "without_all", "required_without_all":
+					err.Append(key, WithoutAll(l, value.Interface(), otherKeys, otherFields...))
+				case "without", "required_without":
+					err.Append(key, Without(l, value.Interface(), otherKeys, otherFields...))
+				case "withAll", "with_all", "required_with_all":
+					err.Append(key, WithAll(l, value.Interface(), otherKeys, otherFields...))
+				case "with", "required_with":
+					err.Append(key, With(l, value.Interface(), otherKeys, otherFields...))
+				}
+			case "same":
+				otherValue := getOtherFieldValueFromParam(val, param)
+				err.Append(key, Same(l, value.Interface(), param, otherValue))
+
+			case "different":
+				otherValue := getOtherFieldValueFromParam(val, param)
+				err.Append(key, Different(l, value.Interface(), param, otherValue))
+
+			case "confirmed":
+				confirmationField := key + "_confirmation"
+				confirmationValue := getOtherFieldValueFromParam(val, confirmationField)
+				msg := Confirmed(l, value.Interface(), confirmationValue)
+				err.Append(key, msg)
+				err.Append(confirmationField, msg)
+			case "accepted":
+				err.Append(key, Accepted(l, value.Interface()))
+
+			case "declined":
+				err.Append(key, Declined(l, value.Interface()))
+
+			case "digits":
+				limit, _ := strconv.Atoi(param)
+				err.Append(key, Digits(l, value.Interface(), limit))
+
+			case "digits_between":
+				rangeParts := strings.Split(param, ",")
+				if len(rangeParts) == 2 {
+					min, _ := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
+					max, _ := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
+					err.Append(key, DigitsBetween(l, value.Interface(), min, max))
+				} else {
+					err.Append(key, lang.TT(l, "Error inesperado: Parámetros inválidos para digits_between"))
+				}
 			case "email":
 				err.Append(key, Email(l, value.String()))
 			case "url":
 				err.Append(key, URL(l, value.String()))
 			case "uuid":
 				err.Append(key, UUID(l, value.String()))
+			case "ulid":
+				err.Append(key, ULID(l, value.String()))
+			case "ip":
+				err.Append(key, IP(l, value.String()))
+			case "ipv4":
+				err.Append(key, IPv4(l, value.String()))
+			case "ipv6":
+				err.Append(key, IPv6(l, value.String()))
+			case "mac", "mac_address":
+				err.Append(key, MACAddress(l, value.String()))
+			case "ascii":
+				err.Append(key, ASCII(l, value.String()))
+			case "lowercase":
+				err.Append(key, Lowercase(l, value.String()))
+			case "uppercase":
+				err.Append(key, Uppercase(l, value.String()))
+			case "hex":
+				err.Append(key, Hex(l, value.String()))
+			case "hexColor", "hex_color":
+				err.Append(key, HexColor(l, value.String()))
 			case "json":
 				err.Append(key, JSON(l, value.String()))
 			case "slug":
 				err.Append(key, Slug(l, value.String()))
+			case "regex":
+				err.Append(key, Regex(l, value.String(), param))
+			case "notRegex", "not_regex":
+				err.Append(key, NotRegex(l, value.String(), param))
 			case "alpha":
 				err.Append(key, Alpha(l, value.String()))
 			case "alphaDash", "alpha_dash":
@@ -284,41 +367,36 @@ func Validate(l string, req any, rules map[string][]string) errors.Error {
 						err.Append(key, lang.TT(l, "Error inesperado: formato de fecha inválido %v", errEnd.Error()))
 					}
 				}
-			case "withoutall", "without", "withall", "with":
-				otherKeys := strings.Split(param, ",")
-				otherFields := make([]any, 0, len(otherKeys))
-				for _, k := range otherKeys {
-					foundOther := false
-					for i := 0; i < typ.NumField(); i++ {
-						otherField := typ.Field(i)
-						tag := otherField.Tag.Get("json")
-						tagName := strings.Split(tag, ",")[0]
-						if tagName == k {
-							otherFields = append(otherFields, val.Field(i).Interface())
-							foundOther = true
-							break
-						}
-					}
-					if !foundOther {
-						// Si no se encontró el campo, se agrega nil para mantener el orden
-						otherFields = append(otherFields, nil)
-					}
-				}
-
-				switch rule {
-				case "withoutall":
-					err.Append(key, WithoutAll(l, value.Interface(), otherKeys, otherFields...))
-				case "without":
-					err.Append(key, Without(l, value.Interface(), otherKeys, otherFields...))
-				case "withall":
-					err.Append(key, WithAll(l, value.Interface(), otherKeys, otherFields...))
-				case "with":
-					err.Append(key, With(l, value.Interface(), otherKeys, otherFields...))
-				}
 			}
 		}
 	}
 	return err.Errors()
+}
+
+// getOtherFieldValueFromParam es una funcion auxiliar no hace parte de las validaciones
+func getOtherFieldValueFromParam(val reflect.Value, param string) any {
+	fieldKey := param
+	for _, op := range []string{">=", "<=", "!=", "==", ">", "<"} {
+		if strings.Contains(param, op) {
+			parts := strings.SplitN(param, op, 2)
+			fieldKey = strings.TrimSpace(parts[0])
+			break
+		}
+	}
+	if parts := strings.Split(param, ","); len(parts) > 1 {
+		fieldKey = strings.TrimSpace(parts[0])
+	}
+	fieldKey = strings.TrimSpace(fieldKey)
+
+	t := val.Type()
+	for i := 0; i < t.NumField(); i++ {
+		jsonTag := t.Field(i).Tag.Get("json")
+		tagName := strings.Split(jsonTag, ",")[0]
+		if tagName == fieldKey {
+			return val.Field(i).Interface()
+		}
+	}
+	return nil
 }
 
 func MinNumber[T constraints.Integer | constraints.Float](l string, value T, limit T) string {
@@ -398,8 +476,114 @@ func Required(l string, value any) string {
 	return ""
 }
 
+func RequiredIf[T comparable](l string, value any, other T, param string) string {
+	comparisons := []string{">=", "<=", "!=", ">", "<", "=="}
+	for _, op := range comparisons {
+		if strings.Contains(param, op) {
+			parts := strings.SplitN(param, op, 2)
+			if len(parts) != 2 {
+				return lang.TT(l, "Error inesperado: Parámetro inválido para required_if")
+			}
+			expected := strings.TrimSpace(parts[1])
+			actual := fmt.Sprintf("%v", other)
+
+			switch op {
+			case "==":
+				if actual == expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido porque %v es %v", lang.TT(l, parts[0]), expected)
+				}
+			case "!=":
+				if actual != expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido porque %v no es %v", lang.TT(l, parts[0]), expected)
+				}
+			case ">":
+				if actual > expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido porque %v mayor que %v", lang.TT(l, parts[0]), expected)
+				}
+			case "<":
+				if actual < expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido porque %v menor que %v", lang.TT(l, parts[0]), expected)
+				}
+			case ">=":
+				if actual >= expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido porque %v mayor o igual que %v", lang.TT(l, parts[0]), expected)
+				}
+			case "<=":
+				if actual <= expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido porque %v menor o igual que %v", lang.TT(l, parts[0]), expected)
+				}
+			}
+			return ""
+		}
+	}
+
+	parts := strings.Split(param, ",")
+	if len(parts) < 2 {
+		return lang.TT(l, "Error inesperado: Parámetro inválido para required_if")
+	}
+	for _, expected := range parts[1:] {
+		if fmt.Sprintf("%v", other) == strings.TrimSpace(expected) && isEmpty(value) {
+			return lang.TT(l, "Es requerido porque %v es %v", lang.TT(l, parts[0]), expected)
+		}
+	}
+	return ""
+}
+
+func RequiredUnless[T comparable](l string, value any, other T, param string) string {
+	comparisons := []string{">=", "<=", "!=", ">", "<", "=="}
+	for _, op := range comparisons {
+		if strings.Contains(param, op) {
+			parts := strings.SplitN(param, op, 2)
+			if len(parts) != 2 {
+				return lang.TT(l, "Error inesperado: Parámetro inválido para required_unless")
+			}
+			expected := strings.TrimSpace(parts[1])
+			actual := fmt.Sprintf("%v", other)
+
+			switch op {
+			case "==":
+				if actual != expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido a menos que %v sea %v", lang.TT(l, parts[0]), expected)
+				}
+			case "!=":
+				if actual == expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido a menos que %v no sea %v", lang.TT(l, parts[0]), expected)
+				}
+			case ">":
+				if actual <= expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido a menos que %v sea mayor que %v", lang.TT(l, parts[0]), expected)
+				}
+			case "<":
+				if actual >= expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido a menos que %v sea menor que %v", lang.TT(l, parts[0]), expected)
+				}
+			case ">=":
+				if actual < expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido a menos que %v sea mayor o igual que %v", lang.TT(l, parts[0]), expected)
+				}
+			case "<=":
+				if actual > expected && isEmpty(value) {
+					return lang.TT(l, "Es requerido a menos que %v sea menor o igual que %v", lang.TT(l, parts[0]), expected)
+				}
+			}
+			return ""
+		}
+	}
+
+	parts := strings.Split(param, ",")
+	if len(parts) < 2 {
+		return lang.TT(l, "Error inesperado: Parámetro inválido para required_unless")
+	}
+	for _, expected := range parts[1:] {
+		if fmt.Sprintf("%v", other) != strings.TrimSpace(expected) && isEmpty(value) {
+			return lang.TT(l, "Es requerido a menos que %v sea %v", lang.TT(l, parts[0]), expected)
+		}
+	}
+	return ""
+}
+
 // WithoutAll verifica si el campo debe estar presente cuando todos los otros campos están vacíos
-func WithoutAll(l string, field any, otherFieldsNames []string, otherFields ...any) string {
+func WithoutAll(l string, value any, otherFieldsNames []string, otherFields ...any) string {
 	allEmpty := true
 	for _, otherField := range otherFields {
 		if !isEmpty(otherField) {
@@ -408,18 +592,22 @@ func WithoutAll(l string, field any, otherFieldsNames []string, otherFields ...a
 		}
 	}
 
-	if allEmpty && isEmpty(field) {
-		if len(otherFieldsNames) > 1 {
-			return lang.TT(l, "Este campo es requerido cuando [%v] están vacíos", otherFieldsNames)
+	if allEmpty && isEmpty(value) {
+		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		for i, otherFieldName := range otherFieldsNames {
+			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
 		}
-		return lang.TT(l, "Este campo es requerido cuando %v está vacío", otherFieldsNames)
+		if len(otherFieldsNames) > 1 {
+			return lang.TT(l, "Es requerido cuando [%v] están vacíos", otherFieldsNamesTraslate)
+		}
+		return lang.TT(l, "Es requerido cuando %v está vacío", otherFieldsNamesTraslate)
 	}
 
 	return ""
 }
 
 // Without verifica si el campo debe estar presente cuando cualquiera de los otros campos está vacío
-func Without(l string, field any, otherFieldsNames []string, otherFields ...any) string {
+func Without(l string, value any, otherFieldsNames []string, otherFields ...any) string {
 	anyEmpty := false
 	for _, otherField := range otherFields {
 		if isEmpty(otherField) {
@@ -428,15 +616,22 @@ func Without(l string, field any, otherFieldsNames []string, otherFields ...any)
 		}
 	}
 
-	if anyEmpty && isEmpty(field) {
-		return lang.TT(l, "Este campo es requerido si algúno de estos [%v] está vacío", otherFieldsNames)
+	if anyEmpty && isEmpty(value) {
+		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		for i, otherFieldName := range otherFieldsNames {
+			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
+		}
+		if len(otherFieldsNames) > 1 {
+			return lang.TT(l, "Es requerido si algúno de estos [%v] está vacío", otherFieldsNamesTraslate)
+		}
+		return lang.TT(l, "Es requerido si [%v] está vacío", otherFieldsNamesTraslate)
 	}
 
 	return ""
 }
 
 // WithAll verifica si el campo debe estar presente cuando todos los otros campos tienen valor
-func WithAll(l string, field any, otherFieldsNames []string, otherFields ...any) string {
+func WithAll(l string, value any, otherFieldsNames []string, otherFields ...any) string {
 	allFilled := true
 	for _, otherField := range otherFields {
 		if isEmpty(otherField) {
@@ -445,18 +640,22 @@ func WithAll(l string, field any, otherFieldsNames []string, otherFields ...any)
 		}
 	}
 
-	if allFilled && isEmpty(field) {
-		if len(otherFieldsNames) > 1 {
-			return lang.TT(l, "Este campo es requerido si [%v] no estan vacios", otherFieldsNames)
+	if allFilled && isEmpty(value) {
+		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		for i, otherFieldName := range otherFieldsNames {
+			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
 		}
-		return lang.TT(l, "Este campo es requerido si %v no esta vacio", otherFieldsNames)
+		if len(otherFieldsNames) > 1 {
+			return lang.TT(l, "Es requerido si [%v] no estan vacios", otherFieldsNamesTraslate)
+		}
+		return lang.TT(l, "Es requerido si %v no esta vacio", otherFieldsNamesTraslate)
 	}
 
 	return ""
 }
 
 // With verifica si el campo debe estar presente cuando cualquiera de los otros campos tiene valor
-func With(l string, field any, otherFieldsNames []string, otherFields ...any) string {
+func With(l string, value any, otherFieldsNames []string, otherFields ...any) string {
 	anyFilled := false
 	for _, otherField := range otherFields {
 		if !isEmpty(otherField) {
@@ -465,13 +664,77 @@ func With(l string, field any, otherFieldsNames []string, otherFields ...any) st
 		}
 	}
 
-	if anyFilled && isEmpty(field) {
-		if len(otherFieldsNames) > 1 {
-			return lang.TT(l, "Este campo es requerido si alguno de estos [%v] no esta vacio", otherFieldsNames)
+	if anyFilled && isEmpty(value) {
+		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		for i, otherFieldName := range otherFieldsNames {
+			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
 		}
-		return lang.TT(l, "Este campo es requerido si %v no esta vacio", otherFieldsNames)
+		if len(otherFieldsNames) > 1 {
+			return lang.TT(l, "Es requerido si alguno de estos [%v] no esta vacio", otherFieldsNamesTraslate)
+		}
+		return lang.TT(l, "Es requerido si %v no esta vacio", otherFieldsNamesTraslate)
 	}
 
+	return ""
+}
+
+func Same[T comparable](l string, value T, otherName string, other T) string {
+	if value != other {
+		return lang.TT(l, "Este campo debe coincidir con el campo %v", lang.TT(l, "%v", otherName))
+	}
+	return ""
+}
+
+func Different[T comparable](l string, value T, fieldName string, other T) string {
+	if value == other {
+		return lang.TT(l, "Este campo debe ser diferente del campo %v", lang.TT(l, "%v", fieldName))
+	}
+	return ""
+}
+
+func Confirmed[T comparable](l string, value T, confirmation T) string {
+	if value != confirmation {
+		return lang.TT(l, "La confirmación no coincide")
+	}
+	return ""
+}
+
+func Accepted(l string, value any) string {
+	v := fmt.Sprintf("%v", value)
+	acceptedValues := []string{"yes", "on", "1", "true"}
+	for _, a := range acceptedValues {
+		if strings.EqualFold(v, a) {
+			return ""
+		}
+	}
+	return lang.TT(l, "Debe ser aceptado.")
+}
+
+func Declined(l string, value any) string {
+	v := fmt.Sprintf("%v", value)
+	declinedValues := []string{"no", "off", "0", "false"}
+	for _, d := range declinedValues {
+		if strings.EqualFold(v, d) {
+			return ""
+		}
+	}
+	return lang.TT(l, "Debe ser rechazado.")
+}
+
+func Digits(l string, value any, length int) string {
+	v := fmt.Sprintf("%v", value)
+	if len(v) != length || !regexp.MustCompile(`^\d+$`).MatchString(v) {
+		return lang.TT(l, "Este campo debe tener exactamente %v dígitos", length)
+	}
+	return ""
+}
+
+func DigitsBetween(l string, value any, min, max int) string {
+	v := fmt.Sprintf("%v", value)
+	length := len(v)
+	if length < min || length > max || !regexp.MustCompile(`^\d+$`).MatchString(v) {
+		return lang.TT(l, "Este campo debe tener entre %v y %v dígitos", min, max)
+	}
 	return ""
 }
 
@@ -499,6 +762,110 @@ func UUID(l string, value string) string {
 	return ""
 }
 
+func ULID(l string, value string) string {
+	// ULID: 26 caracteres en Crockford Base32 sin letras I, L, O, U
+	ulidRegex := regexp.MustCompile(`^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$`)
+	if !ulidRegex.MatchString(value) {
+		return lang.TT(l, "ULID inválido")
+	}
+
+	// Validar timestamp: los primeros 10 caracteres son el timestamp en milisegundos (base32)
+	tsStr := value[:10]
+	base32Decoder := base32.NewEncoding("0123456789ABCDEFGHJKMNPQRSTVWXYZ").WithPadding(base32.NoPadding)
+
+	decoded, err := base32Decoder.DecodeString(strings.ToUpper(tsStr))
+	if err != nil || len(decoded) < 6 {
+		return lang.TT(l, "ULID inválido: timestamp ilegible")
+	}
+
+	// Convertir los primeros 6 bytes del ULID a uint64 (48 bits = timestamp ms)
+	timestampMs := uint64(decoded[0])<<40 |
+		uint64(decoded[1])<<32 |
+		uint64(decoded[2])<<24 |
+		uint64(decoded[3])<<16 |
+		uint64(decoded[4])<<8 |
+		uint64(decoded[5])
+
+	// verificar que no sea un timestamp en el futuro
+	if timestampMs > uint64(time.Now().UnixMilli()) {
+		return lang.TT(l, "ULID inválido: timestamp en el futuro")
+	}
+
+	return ""
+}
+
+func IP(l string, value string) string {
+	if net.ParseIP(value) == nil {
+		return lang.TT(l, "Dirección IP inválida")
+	}
+	return ""
+}
+
+func IPv4(l string, value string) string {
+	ip := net.ParseIP(value)
+	if ip == nil || ip.To4() == nil {
+		return lang.TT(l, "Dirección IPv4 inválida")
+	}
+	return ""
+}
+
+func IPv6(l string, value string) string {
+	ip := net.ParseIP(value)
+	if ip == nil || ip.To4() != nil {
+		return lang.TT(l, "Dirección IPv6 inválida")
+	}
+	if strings.Contains(ip.String(), "::ffff:") {
+		return lang.TT(l, "Dirección IPv6 inválida (formato IPv4-mapped no permitido)")
+	}
+	return ""
+}
+
+func MACAddress(l string, value string) string {
+	_, err := net.ParseMAC(value)
+	if err != nil {
+		return lang.TT(l, "Dirección MAC inválida")
+	}
+	return ""
+}
+
+func ASCII(l string, value string) string {
+	asciiRegex := regexp.MustCompile(`^[\x00-\x7F]+$`)
+	if !asciiRegex.MatchString(value) {
+		return lang.TT(l, "El valor debe contener solo caracteres ASCII")
+	}
+	return ""
+}
+
+func Lowercase(l string, value string) string {
+	if value != strings.ToLower(value) {
+		return lang.TT(l, "El valor debe estar en minúsculas")
+	}
+	return ""
+}
+
+func Uppercase(l string, value string) string {
+	if value != strings.ToUpper(value) {
+		return lang.TT(l, "El valor debe estar en mayúsculas")
+	}
+	return ""
+}
+
+func Hex(l string, value string) string {
+	hexRegex := regexp.MustCompile(`^[0-9a-fA-F]+$`)
+	if !hexRegex.MatchString(value) {
+		return lang.TT(l, "Valor hexadecimal inválido")
+	}
+	return ""
+}
+
+func HexColor(l string, value string) string {
+	hexRegex := regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}){1,2}$`)
+	if !hexRegex.MatchString(value) {
+		return lang.TT(l, "Color hexadecimal inválido")
+	}
+	return ""
+}
+
 func JSON(l string, value string) string {
 	var js map[string]interface{}
 	if err := json.Unmarshal([]byte(value), &js); err != nil {
@@ -511,6 +878,28 @@ func Slug(l string, value string) string {
 	slugRegex := regexp.MustCompile(`^[a-z0-9]+(?:[-_][a-z0-9]+)*$`)
 	if !slugRegex.MatchString(value) {
 		return lang.TT(l, "Solo se permiten letras minúsculas, números, guiones y guiones bajos (sin empezar o terminar con ellos)")
+	}
+	return ""
+}
+
+func Regex(l string, value string, pattern string) string {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return lang.TT(l, "Patrón de expresión regular inválido")
+	}
+	if !re.MatchString(value) {
+		return lang.TT(l, "El valor no coincide con el patrón requerido")
+	}
+	return ""
+}
+
+func NotRegex(l string, value string, pattern string) string {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return lang.TT(l, "Patrón de expresión regular inválido")
+	}
+	if re.MatchString(value) {
+		return lang.TT(l, "El valor no debe coincidir con el patrón especificado")
 	}
 	return ""
 }
