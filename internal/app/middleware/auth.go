@@ -31,7 +31,6 @@ func Auth(next func(ctx *controller.Context)) func(ctx *controller.Context) {
 
 		authToken := parts[1]
 		tokenModel := &model.Token{}
-
 		if err := db.FindOneByField(tokenModel, "token", authToken); err != nil {
 			ctx.WriteError(errors.SUnauthorized(lang.TT(ctx.Lang(), "El token no existe o no es válido. Verifique su autenticación.")))
 			return

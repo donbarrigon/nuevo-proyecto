@@ -29,11 +29,9 @@ func New(text string) error {
 	return errors.New(text)
 }
 
-func NewError(status int, message string, err any) Error {
+func NewError() Error {
 	return &Err{
-		Status:  status,
-		Message: message,
-		Err:     err,
+		ErrMap: make(map[string][]string),
 	}
 }
 

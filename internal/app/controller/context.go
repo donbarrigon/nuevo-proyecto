@@ -329,11 +329,11 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Slice {
-		err := errors.NewError(
-			http.StatusInternalServerError,
-			"Error al escribir el csv",
-			errors.New(lang.TT(ctx.Lang(), "Los datos no son un slice de structs")),
-		)
+		err := &errors.Err{
+			Status:  http.StatusInternalServerError,
+			Message: "Error al escribir el csv",
+			Err:     errors.New(lang.TT(ctx.Lang(), "Los datos no son un slice de structs")),
+		}
 		ctx.WriteError(err)
 		return
 	}
