@@ -16,7 +16,32 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func Validate(l string, req any, rules map[string][]string) errors.Error {
+func Validate(label string, req any) errors.Error {
+	rulesMap := make(map[string][]string)
+
+	v := reflect.ValueOf(req)
+	t := reflect.TypeOf(req)
+
+	// Si es un puntero, desreferencia
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		v = v.Elem()
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		ruleTag := field.Tag.Get("rules")
+
+		if ruleTag != "" {
+			rules := strings.Split(ruleTag, "|")
+			rulesMap[field.Name] = rules
+		}
+	}
+
+	return ValidateRules(label, req, rulesMap)
+}
+
+func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
 	err := errors.NewError()
 
 	val := reflect.ValueOf(req)
@@ -158,15 +183,12 @@ func Validate(l string, req any, rules map[string][]string) errors.Error {
 				err.Append(confirmationField, msg)
 			case "accepted":
 				err.Append(key, Accepted(l, value.Interface()))
-
 			case "declined":
 				err.Append(key, Declined(l, value.Interface()))
-
 			case "digits":
 				limit, _ := strconv.Atoi(param)
 				err.Append(key, Digits(l, value.Interface(), limit))
-
-			case "digits_between":
+			case "digitsBetween", "digits_between":
 				rangeParts := strings.Split(param, ",")
 				if len(rangeParts) == 2 {
 					min, _ := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
@@ -189,7 +211,7 @@ func Validate(l string, req any, rules map[string][]string) errors.Error {
 				err.Append(key, IPv4(l, value.String()))
 			case "ipv6":
 				err.Append(key, IPv6(l, value.String()))
-			case "mac", "mac_address":
+			case "mac", "macAddress", "mac_address":
 				err.Append(key, MACAddress(l, value.String()))
 			case "ascii":
 				err.Append(key, ASCII(l, value.String()))
@@ -347,11 +369,11 @@ func Validate(l string, req any, rules map[string][]string) errors.Error {
 					continue
 				}
 				err.Append(key, After(l, value.Interface().(time.Time), t))
-			case "beforenow":
+			case "beforeNow", "before_now":
 				err.Append(key, BeforeNow(l, value.Interface().(time.Time)))
-			case "afternow":
+			case "afterNow", "after_now":
 				err.Append(key, AfterNow(l, value.Interface().(time.Time)))
-			case "datebetween":
+			case "dateBetween", "date_between":
 				rangeVals := strings.Split(param, ",")
 				if len(rangeVals) == 2 {
 					start, errStart := time.Parse(time.RFC3339, rangeVals[0])

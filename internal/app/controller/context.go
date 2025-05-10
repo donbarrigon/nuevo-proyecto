@@ -12,15 +12,12 @@ import (
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app/request"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
-
-type Request interface {
-	Validate(lang string) errors.Error
-}
 
 type MessageResource struct {
 	Message string `json:"message"`
@@ -51,22 +48,241 @@ func (ctx *Context) GetBody(request any) errors.Error {
 	if err := decoder.Decode(request); err != nil {
 		return &errors.Err{
 			Status:  http.StatusBadRequest,
-			Message: "El cuerpo de la solicitud es incorrecto",
-			Err:     lang.TT(ctx.Lang(), "No se pudo decodificar el cuerpo de la solicitud") + ": " + err.Error(),
+			Message: lang.TT(ctx.Lang(), "El cuerpo de la solicitud es incorrecto"),
+			Err:     lang.TT(ctx.Lang(), "No se pudo decodificar el cuerpo de la solicitud: %v", err.Error()),
 		}
 	}
 	defer ctx.Request.Body.Close()
 	return nil
 }
 
-func (ctx *Context) ValidateBody(req Request) errors.Error {
+func (ctx *Context) GetMultiPartForm(req any) errors.Error {
+	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB
+	if err != nil {
+		return &errors.Err{
+			Status:  http.StatusBadRequest,
+			Message: lang.TT(ctx.Lang(), "El formulario no se pudo procesar"),
+			Err:     lang.TT(ctx.Lang(), "Error al analizar el formulario: %v", err.Error()),
+		}
+	}
+
+	form := ctx.Request.MultipartForm
+	if form == nil {
+		return &errors.Err{
+			Status:  http.StatusBadRequest,
+			Message: lang.TT(ctx.Lang(), "Formulario no válido"),
+			Err:     lang.TT(ctx.Lang(), "No se encontró un formulario multipart válido"),
+		}
+	}
+
+	v := reflect.ValueOf(req)
+	t := reflect.TypeOf(req)
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		v = v.Elem()
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldValue := v.Field(i)
+
+		tag := field.Tag.Get("json")
+		if tag == "-" {
+			continue
+		}
+
+		var formKey string
+		if tag != "" {
+			formKey = strings.Split(tag, ",")[0]
+		}
+		if formKey == "" {
+			formKey = field.Name
+		}
+
+		values := form.Value[formKey]
+		if len(values) == 0 || !fieldValue.CanSet() {
+			continue
+		}
+
+		switch field.Type.Kind() {
+		case reflect.String:
+			fieldValue.SetString(values[0])
+
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if intVal, err := strconv.ParseInt(values[0], 10, 64); err == nil {
+				fieldValue.SetInt(intVal)
+			}
+
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			if uintVal, err := strconv.ParseUint(values[0], 10, 64); err == nil {
+				fieldValue.SetUint(uintVal)
+			}
+
+		case reflect.Float32, reflect.Float64:
+			if floatVal, err := strconv.ParseFloat(values[0], 64); err == nil {
+				fieldValue.SetFloat(floatVal)
+			}
+
+		case reflect.Bool:
+			if boolVal, err := strconv.ParseBool(values[0]); err == nil {
+				fieldValue.SetBool(boolVal)
+			}
+
+		case reflect.Slice:
+			elemKind := field.Type.Elem().Kind()
+			slice := reflect.MakeSlice(field.Type, 0, len(values))
+
+			for _, val := range values {
+				var converted reflect.Value
+				switch elemKind {
+				case reflect.String:
+					converted = reflect.ValueOf(val)
+
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					if intVal, err := strconv.ParseInt(val, 10, 64); err == nil {
+						converted = reflect.ValueOf(intVal).Convert(field.Type.Elem())
+					}
+
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					if uintVal, err := strconv.ParseUint(val, 10, 64); err == nil {
+						converted = reflect.ValueOf(uintVal).Convert(field.Type.Elem())
+					}
+
+				case reflect.Float32, reflect.Float64:
+					if floatVal, err := strconv.ParseFloat(val, 64); err == nil {
+						converted = reflect.ValueOf(floatVal).Convert(field.Type.Elem())
+					}
+
+				case reflect.Bool:
+					if boolVal, err := strconv.ParseBool(val); err == nil {
+						converted = reflect.ValueOf(boolVal).Convert(field.Type.Elem())
+					}
+				}
+
+				if converted.IsValid() {
+					slice = reflect.Append(slice, converted)
+				}
+			}
+
+			fieldValue.Set(slice)
+		}
+	}
+
+	return nil
+}
+
+// GetMultiPartForm analiza multipart/form-data y asigna los valores al struct `req`
+// func (ctx *Context) GetMultiPartForm(req any) errors.Error {
+// 	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB por defecto
+// 	if err != nil {
+// 		return &errors.Err{
+// 			Status:  http.StatusBadRequest,
+// 			Message: "El formulario no se pudo procesar",
+// 			Err:     lang.TT(ctx.Lang(), "Error al analizar el formulario") + ": " + err.Error(),
+// 		}
+// 	}
+
+// 	form := ctx.Request.MultipartForm
+// 	if form == nil {
+// 		return &errors.Err{
+// 			Status:  http.StatusBadRequest,
+// 			Message: "Formulario no válido",
+// 			Err:     lang.TT(ctx.Lang(), "No se encontró un formulario multipart válido"),
+// 		}
+// 	}
+
+// 	v := reflect.ValueOf(req)
+// 	t := reflect.TypeOf(req)
+
+// 	// Si es puntero, desreferenciar
+// 	if t.Kind() == reflect.Ptr {
+// 		t = t.Elem()
+// 		v = v.Elem()
+// 	}
+
+// 	for i := 0; i < t.NumField(); i++ {
+// 		field := t.Field(i)
+// 		formKey := field.Tag.Get("form")
+// 		if formKey == "" {
+// 			formKey = field.Name
+// 		}
+
+// 		values := form.Value[formKey]
+// 		if len(values) == 0 {
+// 			continue // No hay valor para este campo
+// 		}
+
+// 		fieldValue := v.Field(i)
+// 		if !fieldValue.CanSet() {
+// 			continue
+// 		}
+
+// 		// Solo manejamos string por simplicidad aquí
+// 		if field.Type.Kind() == reflect.String {
+// 			fieldValue.SetString(values[0])
+// 		}
+// 		// Puedes extender esto para otros tipos si lo necesitas
+// 	}
+
+// 	return nil
+// }
+
+func (ctx *Context) ValidateBody(req any) errors.Error {
 	if err := ctx.GetBody(req); err != nil {
 		return err
 	}
-	if err := req.Validate(ctx.Lang()); err != nil {
+
+	v := reflect.ValueOf(req)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			item := v.Index(i).Interface()
+			if err := request.Validate(ctx.Lang(), item); err != nil {
+				return err
+			}
+		}
+	default:
+		if err := request.Validate(ctx.Lang(), req); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (ctx *Context) ValidateMultiPartForm(req any) errors.Error {
+	if err := ctx.GetMultiPartForm(req); err != nil {
+		return err
+	}
+	if err := request.Validate(ctx.Lang(), req); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (ctx *Context) ValidateRequest(req any) errors.Error {
+	contentType := ctx.Request.Header.Get("Content-Type")
+
+	switch {
+	case strings.HasPrefix(contentType, "multipart/form-data"):
+		return ctx.ValidateMultiPartForm(req)
+
+	case strings.HasPrefix(contentType, "application/json"),
+		strings.HasPrefix(contentType, "application/*+json"):
+		return ctx.ValidateBody(req)
+
+	default:
+		return &errors.Err{
+			Status:  http.StatusUnsupportedMediaType,
+			Message: lang.TT(ctx.Lang(), "Tipo de contenido no soportado"),
+			Err:     lang.TT(ctx.Lang(), "Tipo de contenido no soportado: %v", contentType),
+		}
+	}
 }
 
 func (ctx *Context) Get(param string, defaultValue ...string) string {
