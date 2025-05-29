@@ -5,12 +5,11 @@ import (
 	"strings"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/controller"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app/middleware"
 )
 
 type ControllerFun func(ctx *controller.Context)
 type MiddlewareFun func(func(ctx *controller.Context)) func(ctx *controller.Context)
-
-var Routes []Route
 
 type Route struct {
 	Method     string
@@ -21,10 +20,19 @@ type Route struct {
 	Name       string
 }
 
+var Routes []Route
+var routesPrefix string
+var namePrefix string
+var middlewaresPrefix []MiddlewareFun
+
 func init() {
 	Routes = make([]Route, 0)
 	// aca todas las funciones que crean rutas
-	permission()
+	user()
+
+	Prefix("/dashboard", func() {
+		permission()
+	}, middleware.Auth)
 
 }
 
@@ -56,7 +64,34 @@ func Head(path string, ctrl ControllerFun, middlewares ...MiddlewareFun) {
 	registerRoute(http.MethodHead, path, ctrl, middlewares...)
 }
 
+func Prefix(prefix string, callback func(), middlewares ...MiddlewareFun) {
+
+	routesPrefix = prefix
+	namePrefix = strings.Replace(prefix, "/", ".", -1)
+
+	if !strings.HasPrefix(routesPrefix, "/") {
+		routesPrefix = "/" + routesPrefix
+	}
+	routesPrefix = strings.TrimSuffix(routesPrefix, "/")
+
+	namePrefix = strings.TrimPrefix(namePrefix, ".")
+	if !strings.HasSuffix(namePrefix, ".") {
+		namePrefix = namePrefix + "."
+	}
+
+	middlewaresPrefix = middlewares
+
+	callback()
+
+	routesPrefix = ""
+	namePrefix = ""
+}
+
 func registerRoute(method, path string, ctrl ControllerFun, middlewares ...MiddlewareFun) {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	path = routesPrefix + path
 	segments := strings.Split(strings.Trim(path, "/"), "/")
 	var pathParts []string
 	var isVars []bool
@@ -77,10 +112,10 @@ func registerRoute(method, path string, ctrl ControllerFun, middlewares ...Middl
 		Path:       pathParts,
 		IsVar:      isVars,
 		Controller: ctrl,
-		Middleware: middlewares,
+		Middleware: append(middlewaresPrefix, middlewares...),
 	})
 }
 
 func Name(name string) {
-	Routes[len(Routes)-1].Name = name
+	Routes[len(Routes)-1].Name = namePrefix + name
 }

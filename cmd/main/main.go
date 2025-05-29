@@ -13,7 +13,7 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	log.Println("Iniciando el servidor")
 
-	config.LoadConfig()
+	config.Load()
 	db.InitMongoDB()
 
 	httpServer := server.NewHttpServer(config.SERVER_PORT)

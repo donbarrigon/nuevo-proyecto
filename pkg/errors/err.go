@@ -19,10 +19,10 @@ type Error interface {
 }
 
 type Err struct {
-	Status  int    `json:"-"`
-	Message string `json:"message"`
-	Err     any    `json:"error"`
-	ErrMap  map[string][]string
+	Status  int                 `json:"-"`
+	Message string              `json:"message"`
+	Err     any                 `json:"error"`
+	ErrMap  map[string][]string `json:"-"`
 }
 
 func New(text string) error {

@@ -1,47 +1,26 @@
 package routes
 
 import (
-	"net/http"
-
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/controller"
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/middleware"
 )
 
-func User(w http.ResponseWriter, r *http.Request) {
+func user() {
+	Get("/users/{id}", controller.UserShow)
+	Name("users.show")
 
-	ctx := controller.NewContext(w, r)
+	Post("/users", controller.UserStore, middleware.Auth)
+	Name("users.store")
 
-	if r.Method == http.MethodGet {
+	Patch("/users/{id}", controller.UserUpdate, middleware.Auth)
+	Name("users.update")
 
-		if r.URL.Path == "/user/loguot" {
-			middleware.Auth(controller.Logout)(ctx)
-			return
-		}
+	Delete("/users/{id}", controller.PermissionDestroy, middleware.Auth)
+	Name("users.destroy")
 
-		middleware.Auth(controller.UserShow)(ctx)
-		return
-	}
+	Post("/users/login", controller.Login)
+	Name("users.login")
 
-	if r.Method == http.MethodPost {
-
-		if r.URL.Path == "/user/login" {
-			controller.Login(ctx)
-			return
-		}
-
-		controller.UserStore(ctx)
-		return
-	}
-
-	if r.Method == http.MethodPatch {
-		middleware.Auth(controller.UserUpdate)(ctx)
-		return
-	}
-
-	if r.Method == http.MethodDelete {
-		middleware.Auth(controller.UserDestroy)(ctx)
-		return
-	}
-
-	ctx.WriteNotFound()
+	Post("/users/logout", controller.Logout, middleware.Auth)
+	Name("users.logout")
 }

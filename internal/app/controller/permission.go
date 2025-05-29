@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
@@ -10,15 +11,17 @@ import (
 
 func PermissionIndex(ctx *Context) {
 	allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
-
+	log.Println("index 1")
 	var permissions []model.Permission
 	res, err := db.Paginate(&model.Permission{}, &permissions, ctx.GetQueryFilter(allowFilters))
+	log.Println("index 2")
 	if err != nil {
 		ctx.WriteError(err)
 		return
 	}
-
+	log.Println("index 3")
 	ctx.WriteJSON(http.StatusOK, res)
+	log.Println("index 4")
 }
 
 func PermissionExport(ctx *Context) {

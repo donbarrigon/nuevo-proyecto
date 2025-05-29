@@ -16,7 +16,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func Validate(label string, req any) errors.Error {
+func Validate(l string, req any) errors.Error {
 	rulesMap := make(map[string][]string)
 
 	v := reflect.ValueOf(req)
@@ -38,7 +38,7 @@ func Validate(label string, req any) errors.Error {
 		}
 	}
 
-	return ValidateRules(label, req, rulesMap)
+	return ValidateRules(l, req, rulesMap)
 }
 
 func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
