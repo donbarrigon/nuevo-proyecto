@@ -10,17 +10,19 @@ import (
 )
 
 func PermissionIndex(ctx *Context) {
-	allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
+	//allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
 	log.Println("index 1")
 	var permissions []model.Permission
-	res, err := db.Paginate(&model.Permission{}, &permissions, ctx.GetQueryFilter(allowFilters))
+	//res, err := db.Paginate(&model.Permission{}, &permissions, ctx.GetQueryFilter(allowFilters))
+
+	err := db.FindAll(&model.Permission{}, permissions)
 	log.Println("index 2")
 	if err != nil {
 		ctx.WriteError(err)
 		return
 	}
 	log.Println("index 3")
-	ctx.WriteJSON(http.StatusOK, res)
+	ctx.WriteJSON(http.StatusOK, permissions)
 	log.Println("index 4")
 }
 
@@ -51,7 +53,7 @@ func PermissionShow(ctx *Context) {
 }
 
 func PermissionStore(ctx *Context) {
-	req := &request.Permission{}
+	req := &request.StorePermission{}
 	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
 		return
@@ -69,7 +71,7 @@ func PermissionStore(ctx *Context) {
 }
 
 func PermissionUpdate(ctx *Context) {
-	req := &request.Permission{}
+	req := &request.StorePermission{}
 	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
 		return

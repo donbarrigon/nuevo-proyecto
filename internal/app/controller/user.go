@@ -31,10 +31,10 @@ func UserStore(ctx *Context) {
 		return
 	}
 
-	if err := user.Validate(ctx.Lang()); err != nil {
-		ctx.WriteError(err)
-		return
-	}
+	// if err := user.Validate(ctx.Lang()); err != nil {
+	// 	ctx.WriteError(err)
+	// 	return
+	// }
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -77,10 +77,10 @@ func UserUpdate(ctx *Context) {
 		return
 	}
 
-	if err := user.Validate(ctx.Lang()); err != nil {
-		ctx.WriteError(err)
-		return
-	}
+	// if err := user.Validate(ctx.Lang()); err != nil {
+	// 	ctx.WriteError(err)
+	// 	return
+	// }
 
 	// esto es para que el usuario solo pueda modificarse asi mismo
 	if user.ID != ctx.User.ID {

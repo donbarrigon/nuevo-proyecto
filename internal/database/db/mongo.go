@@ -271,7 +271,7 @@ func getID(model MongoModel) any {
 
 func InitMongoDB() error {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	clientOptions := options.Client().ApplyURI(config.MONGO_URI).SetServerAPIOptions(serverAPI)
+	clientOptions := options.Client().ApplyURI(config.Env.DB_URI).SetServerAPIOptions(serverAPI)
 	clientOptions.SetMaxPoolSize(100)
 	clientOptions.SetMinPoolSize(5)
 	clientOptions.SetRetryWrites(true)
@@ -284,9 +284,9 @@ func InitMongoDB() error {
 		log.Fatalf("Error al conectar con mongodb: %v", err)
 		return err
 	}
-	Mongo.Database = Mongo.Client.Database(config.DB_NAME)
+	Mongo.Database = Mongo.Client.Database(config.Env.DB_DATABASE)
 
-	log.Printf("Conectado exitosamente a MongoDB: %s - Base de datos: %s", config.MONGO_URI, config.DB_NAME)
+	log.Printf("Conectado exitosamente a MongoDB: %s - Base de datos: %s", config.Env.DB_URI, config.Env.DB_DATABASE)
 	return nil
 }
 

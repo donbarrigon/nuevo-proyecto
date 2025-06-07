@@ -13,3 +13,9 @@ type UpdateUser struct {
 	Email string `json:"email" rules:"required_without:phone|email|max:255"`
 	Phone string `json:"phone" rules:"required_without:email|max:255"`
 }
+
+type UpdateUserPassword struct {
+	Password                string `json:"password" rules:"reqired"`
+	NewPassword             string `json:"new_password" rules:"reqired|confirmed|min:8|max:32"`
+	NewPasswordConfirmation string `json:"new_password_confirmation"`
+}

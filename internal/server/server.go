@@ -73,5 +73,5 @@ func startMessage() {
 
  🚀 Servidor corriendo en http://localhost:%v
  🌱 Entorno: DESARROLLO
-	`, config.SERVER_PORT))
+	`, config.Env.SERVER_PORT))
 }
