@@ -6,8 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -34,7 +33,7 @@ func NewToken(userID bson.ObjectID) *Token {
 	return tokenModel
 }
 
-func (t *Token) CollectionName() string {
+func (t *Token) TableName() string {
 	return "tokens"
 }
 
@@ -45,10 +44,10 @@ func (t *Token) Default() {
 	t.ExpiresAt = time.Now().Add(10 * time.Hour)
 }
 
-func (t *Token) Validate(l string) errors.Error {
-	err := &errors.Err{}
+func (t *Token) Validate(l string) system.Error {
+	err := system.Errors.New()
 	if t.UserID.IsZero() {
-		err.Append("user_id", lang.TT(l, "Este campo es requerido"))
+		err.Append("user_id", system.Translate(l, "Este campo es requerido"))
 	}
 	return err.Errors()
 }

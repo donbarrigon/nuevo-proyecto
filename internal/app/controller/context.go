@@ -14,8 +14,7 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
 	"github.com/donbarrigon/nuevo-proyecto/internal/app/request"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -43,35 +42,35 @@ func (ctx *Context) Lang() string {
 	return ctx.Request.Header.Get("Accept-Language")
 }
 
-func (ctx *Context) GetBody(request any) errors.Error {
+func (ctx *Context) GetBody(request any) system.Error {
 	decoder := json.NewDecoder(ctx.Request.Body)
 	if err := decoder.Decode(request); err != nil {
-		return &errors.Err{
+		return &system.Err{
 			Status:  http.StatusBadRequest,
-			Message: lang.TT(ctx.Lang(), "El cuerpo de la solicitud es incorrecto"),
-			Err:     lang.TT(ctx.Lang(), "No se pudo decodificar el cuerpo de la solicitud: %v", err.Error()),
+			Message: system.Translate(ctx.Lang(), "El cuerpo de la solicitud es incorrecto"),
+			Err:     system.Translate(ctx.Lang(), "No se pudo decodificar el cuerpo de la solicitud: %v", err.Error()),
 		}
 	}
 	defer ctx.Request.Body.Close()
 	return nil
 }
 
-func (ctx *Context) GetMultiPartForm(req any) errors.Error {
+func (ctx *Context) GetMultiPartForm(req any) system.Error {
 	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB
 	if err != nil {
-		return &errors.Err{
+		return &system.Err{
 			Status:  http.StatusBadRequest,
-			Message: lang.TT(ctx.Lang(), "El formulario no se pudo procesar"),
-			Err:     lang.TT(ctx.Lang(), "Error al analizar el formulario: %v", err.Error()),
+			Message: system.Translate(ctx.Lang(), "El formulario no se pudo procesar"),
+			Err:     system.Translate(ctx.Lang(), "Error al analizar el formulario: %v", err.Error()),
 		}
 	}
 
 	form := ctx.Request.MultipartForm
 	if form == nil {
-		return &errors.Err{
+		return &system.Err{
 			Status:  http.StatusBadRequest,
-			Message: lang.TT(ctx.Lang(), "Formulario no válido"),
-			Err:     lang.TT(ctx.Lang(), "No se encontró un formulario multipart válido"),
+			Message: system.Translate(ctx.Lang(), "Formulario no válido"),
+			Err:     system.Translate(ctx.Lang(), "No se encontró un formulario multipart válido"),
 		}
 	}
 
@@ -173,22 +172,22 @@ func (ctx *Context) GetMultiPartForm(req any) errors.Error {
 }
 
 // GetMultiPartForm analiza multipart/form-data y asigna los valores al struct `req`
-// func (ctx *Context) GetMultiPartForm(req any) errors.Error {
+// func (ctx *Context) GetMultiPartForm(req any) system.Error {
 // 	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB por defecto
 // 	if err != nil {
-// 		return &errors.Err{
+// 		return &system.Err{
 // 			Status:  http.StatusBadRequest,
 // 			Message: "El formulario no se pudo procesar",
-// 			Err:     lang.TT(ctx.Lang(), "Error al analizar el formulario") + ": " + err.Error(),
+// 			Err:     system.Translate(ctx.Lang(), "Error al analizar el formulario") + ": " + err.Error(),
 // 		}
 // 	}
 
 // 	form := ctx.Request.MultipartForm
 // 	if form == nil {
-// 		return &errors.Err{
+// 		return &system.Err{
 // 			Status:  http.StatusBadRequest,
 // 			Message: "Formulario no válido",
-// 			Err:     lang.TT(ctx.Lang(), "No se encontró un formulario multipart válido"),
+// 			Err:     system.Translate(ctx.Lang(), "No se encontró un formulario multipart válido"),
 // 		}
 // 	}
 
@@ -228,7 +227,7 @@ func (ctx *Context) GetMultiPartForm(req any) errors.Error {
 // 	return nil
 // }
 
-func (ctx *Context) ValidateBody(req any) errors.Error {
+func (ctx *Context) ValidateBody(req any) system.Error {
 	if err := ctx.GetBody(req); err != nil {
 		return err
 	}
@@ -255,7 +254,7 @@ func (ctx *Context) ValidateBody(req any) errors.Error {
 	return nil
 }
 
-func (ctx *Context) ValidateMultiPartForm(req any) errors.Error {
+func (ctx *Context) ValidateMultiPartForm(req any) system.Error {
 	if err := ctx.GetMultiPartForm(req); err != nil {
 		return err
 	}
@@ -265,7 +264,7 @@ func (ctx *Context) ValidateMultiPartForm(req any) errors.Error {
 	return nil
 }
 
-func (ctx *Context) ValidateRequest(req any) errors.Error {
+func (ctx *Context) ValidateRequest(req any) system.Error {
 	contentType := ctx.Request.Header.Get("Content-Type")
 
 	switch {
@@ -277,10 +276,10 @@ func (ctx *Context) ValidateRequest(req any) errors.Error {
 		return ctx.ValidateBody(req)
 
 	default:
-		return &errors.Err{
+		return &system.Err{
 			Status:  http.StatusUnsupportedMediaType,
-			Message: lang.TT(ctx.Lang(), "Tipo de contenido no soportado"),
-			Err:     lang.TT(ctx.Lang(), "Tipo de contenido no soportado: %v", contentType),
+			Message: system.Translate(ctx.Lang(), "Tipo de contenido no soportado"),
+			Err:     system.Translate(ctx.Lang(), "Tipo de contenido no soportado: %v", contentType),
 		}
 	}
 }
@@ -305,64 +304,64 @@ func (ctx *Context) WriteJSON(status int, data any) {
 	if err := json.NewEncoder(ctx.Writer).Encode(data); err != nil {
 		ctx.Writer.WriteHeader(http.StatusInternalServerError)
 		ctx.Writer.WriteHeader(500)
-		ctx.Writer.Write([]byte(fmt.Sprintf(`{"message":"Error","error":"%s"}`, lang.TT(ctx.Lang(), "No se pudo codificar la respuesta"))))
+		ctx.Writer.Write([]byte(fmt.Sprintf(`{"message":"Error","error":"%s"}`, system.Translate(ctx.Lang(), "No se pudo codificar la respuesta"))))
 	}
 }
 
-func (ctx *Context) WriteError(err errors.Error) {
-	err.Traslate(ctx.Lang())
+func (ctx *Context) WriteError(err system.Error) {
+	err.Translate(ctx.Lang())
 	ctx.WriteJSON(err.GetStatus(), err)
 }
 
 func (ctx *Context) WriteNotFound() {
-	ctx.WriteError(errors.SNotFound(lang.TT(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path)))
+	ctx.WriteError(system.Errors.NotFoundf(system.Translate(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path)))
 }
 
 func (ctx *Context) WriteMessage(code int, data any, message string, v ...any) {
 	ctx.WriteJSON(code, &MessageResource{
-		Message: lang.TT(ctx.Lang(), message, v...),
+		Message: system.Translate(ctx.Lang(), message, v...),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteSuccess(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: lang.TT(ctx.Lang(), "Solicitud procesada con éxito"),
+		Message: system.Translate(ctx.Lang(), "Solicitud procesada con éxito"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteCreated(data any) {
 	ctx.WriteJSON(http.StatusCreated, &MessageResource{
-		Message: lang.TT(ctx.Lang(), "Recurso creado exitosamente"),
+		Message: system.Translate(ctx.Lang(), "Recurso creado exitosamente"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteUpdated(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: lang.TT(ctx.Lang(), "Recurso actualizado exitosamente"),
+		Message: system.Translate(ctx.Lang(), "Recurso actualizado exitosamente"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteDeleted(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: lang.TT(ctx.Lang(), "Recurso eliminado exitosamente"),
+		Message: system.Translate(ctx.Lang(), "Recurso eliminado exitosamente"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteRestored(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: lang.TT(ctx.Lang(), "Recurso restaurado exitosamente"),
+		Message: system.Translate(ctx.Lang(), "Recurso restaurado exitosamente"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteForceDeleted(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: lang.TT(ctx.Lang(), "Recurso eliminado permanentemente"),
+		Message: system.Translate(ctx.Lang(), "Recurso eliminado permanentemente"),
 		Data:    data,
 	})
 }
@@ -372,7 +371,7 @@ func (ctx *Context) WriteNoContent() {
 }
 
 func (ctx *Context) TT(s string, v ...any) string {
-	return lang.TT(ctx.Lang(), s, v...)
+	return system.Translate(ctx.Lang(), s, v...)
 }
 
 func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *db.QueryFilter {
@@ -545,10 +544,10 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Slice {
-		err := &errors.Err{
+		err := &system.Err{
 			Status:  http.StatusInternalServerError,
 			Message: "Error al escribir el csv",
-			Err:     errors.New(lang.TT(ctx.Lang(), "Los datos no son un slice de structs")),
+			Err:     system.Translate(ctx.Lang(), "Los datos no son un slice de structs"),
 		}
 		ctx.WriteError(err)
 		return
@@ -564,7 +563,7 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 	writer.Comma = del
 
 	if val.Len() == 0 {
-		err := errors.NoDocuments(errors.New(lang.TT(ctx.Lang(), "No hay datos")))
+		err := system.Errors.NoDocumentsf(system.Translate(ctx.Lang(), "No hay datos"))
 		ctx.WriteError(err)
 		return
 	}
@@ -639,7 +638,7 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 // 		err := errors.NewError(
 // 			http.StatusInternalServerError,
 // 			"Error al escribir el csv",
-// 			errors.New(lang.TT(ctx.Lang(), "Los datos no son un slice de structs")),
+// 			errors.New(system.Translate(ctx.Lang(), "Los datos no son un slice de structs")),
 // 		)
 // 		ctx.WriteError(err)
 // 		return
@@ -655,7 +654,7 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 // 	writer.Comma = del
 
 // 	if val.Len() == 0 {
-// 		err := errors.NoDocuments(errors.New(lang.TT(ctx.Lang(), "No hay datos")))
+// 		err := errors.NoDocuments(errors.New(system.Translate(ctx.Lang(), "No hay datos")))
 // 		ctx.WriteError(err)
 // 		return
 // 	}
@@ -724,19 +723,19 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 
 // Fill llena los campos del modelo con los valores del request,
 // pero solo si el campo del modelo tiene la etiqueta fillable
-func Fill(model any, request any) errors.Error {
+func Fill(model any, request any) system.Error {
 	modelValue := reflect.ValueOf(model)
 	requestValue := reflect.ValueOf(request)
 
 	if modelValue.Kind() != reflect.Ptr || requestValue.Kind() != reflect.Ptr {
-		return errors.SUnknown("Los parámetros model y request deben ser punteros")
+		return system.Errors.Unknownf("Los parámetros model y request deben ser punteros")
 	}
 
 	modelValue = modelValue.Elem()
 	requestValue = requestValue.Elem()
 
 	if modelValue.Kind() != reflect.Struct || requestValue.Kind() != reflect.Struct {
-		return errors.SUnknown("Los parámetros model y request deben ser estructuras")
+		return system.Errors.Unknownf("Los parámetros model y request deben ser estructuras")
 	}
 
 	modelType := modelValue.Type()

@@ -11,21 +11,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/lang"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 	"golang.org/x/exp/constraints"
 )
 
-func Validate(l string, req any) errors.Error {
+func Validate(l string, req any) system.Error {
 	rulesMap := make(map[string][]string)
 
-	v := reflect.ValueOf(req)
 	t := reflect.TypeOf(req)
 
 	// Si es un puntero, desreferencia
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
-		v = v.Elem()
 	}
 
 	for i := 0; i < t.NumField(); i++ {
@@ -34,15 +31,20 @@ func Validate(l string, req any) errors.Error {
 
 		if ruleTag != "" {
 			rules := strings.Split(ruleTag, "|")
-			rulesMap[field.Name] = rules
+			jsonTag := field.Tag.Get("json")
+			jsonName := strings.Split(jsonTag, ",")[0] // Por si el tag es "name,omitempty"
+			if jsonName == "" {
+				jsonName = field.Name // fallback al nombre del campo si no hay tag
+			}
+			rulesMap[jsonName] = rules
 		}
 	}
 
 	return ValidateRules(l, req, rulesMap)
 }
 
-func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
-	err := errors.NewError()
+func ValidateRules(l string, req any, rules map[string][]string) system.Error {
+	err := system.Errors.New()
 
 	val := reflect.ValueOf(req)
 	if val.Kind() == reflect.Ptr {
@@ -50,7 +52,7 @@ func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
 	}
 
 	if val.Kind() != reflect.Struct {
-		return errors.SUnknown("La request no es un struct válido")
+		return system.Errors.Unknownf("La request no es un struct válido")
 	}
 
 	typ := val.Type()
@@ -86,7 +88,7 @@ func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
 
 		if !found {
 			if isRequired {
-				err.Append(key, lang.TT(l, "Este campo es requerido"))
+				err.Append(key, system.Translate(l, "Este campo es requerido"))
 				continue
 			}
 			if isNullable {
@@ -195,7 +197,7 @@ func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
 					max, _ := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
 					err.Append(key, DigitsBetween(l, value.Interface(), min, max))
 				} else {
-					err.Append(key, lang.TT(l, "Error inesperado: Parámetros inválidos para digits_between"))
+					err.Append(key, system.Translate(l, "Error inesperado: Parámetros inválidos para digits_between"))
 				}
 			case "email":
 				err.Append(key, Email(l, value.String()))
@@ -358,14 +360,14 @@ func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
 			case "before":
 				t, e := time.Parse(time.RFC3339, param)
 				if e != nil {
-					err.Append(key, lang.TT(l, "Error inesperado: formato de fecha inválido %v", e.Error()))
+					err.Append(key, system.Translate(l, "Error inesperado: formato de fecha inválido %v", e.Error()))
 					continue
 				}
 				err.Append(key, Before(l, value.Interface().(time.Time), t))
 			case "after":
 				t, e := time.Parse(time.RFC3339, param)
 				if e != nil {
-					err.Append(key, lang.TT(l, "Error inesperado: formato de fecha inválido %v", e.Error()))
+					err.Append(key, system.Translate(l, "Error inesperado: formato de fecha inválido %v", e.Error()))
 					continue
 				}
 				err.Append(key, After(l, value.Interface().(time.Time), t))
@@ -383,10 +385,10 @@ func ValidateRules(l string, req any, rules map[string][]string) errors.Error {
 						continue
 					}
 					if errStart != nil {
-						err.Append(key, lang.TT(l, "Error inesperado: formato de fecha inválido %v", errStart.Error()))
+						err.Append(key, system.Translate(l, "Error inesperado: formato de fecha inválido %v", errStart.Error()))
 					}
 					if errEnd != nil {
-						err.Append(key, lang.TT(l, "Error inesperado: formato de fecha inválido %v", errEnd.Error()))
+						err.Append(key, system.Translate(l, "Error inesperado: formato de fecha inválido %v", errEnd.Error()))
 					}
 				}
 			}
@@ -423,42 +425,42 @@ func getOtherFieldValueFromParam(val reflect.Value, param string) any {
 
 func MinNumber[T constraints.Integer | constraints.Float](l string, value T, limit T) string {
 	if value < limit {
-		return lang.TT(l, "Mínimo %v", limit)
+		return system.Translate(l, "Mínimo %v", limit)
 	}
 	return ""
 }
 
 func MaxNumber[T constraints.Integer | constraints.Float](l string, value T, limit T) string {
 	if value > limit {
-		return lang.TT(l, "Máximo %v", limit)
+		return system.Translate(l, "Máximo %v", limit)
 	}
 	return ""
 }
 
 func MinString(l string, value string, limit int) string {
 	if len(value) > limit {
-		return lang.TT(l, "Minimo %v caracteres", limit)
+		return system.Translate(l, "Minimo %v caracteres", limit)
 	}
 	return ""
 }
 
 func MaxString(l string, value string, limit int) string {
 	if len(value) > limit {
-		return lang.TT(l, "Máximo %v caracteres", limit)
+		return system.Translate(l, "Máximo %v caracteres", limit)
 	}
 	return ""
 }
 
 func MinSlice(l string, value []any, limit int) string {
 	if len(value) < limit {
-		return lang.TT(l, "Minimo %v elementos", limit)
+		return system.Translate(l, "Minimo %v elementos", limit)
 	}
 	return ""
 }
 
 func MaxSlice(l string, value []any, limit int) string {
 	if len(value) > limit {
-		return lang.TT(l, "Máximo %v elementos", limit)
+		return system.Translate(l, "Máximo %v elementos", limit)
 	}
 	return ""
 }
@@ -493,7 +495,7 @@ func isEmpty(value any) bool {
 
 func Required(l string, value any) string {
 	if isEmpty(value) {
-		return lang.TT(l, "Este campo es requerido")
+		return system.Translate(l, "Este campo es requerido")
 	}
 	return ""
 }
@@ -504,7 +506,7 @@ func RequiredIf[T comparable](l string, value any, other T, param string) string
 		if strings.Contains(param, op) {
 			parts := strings.SplitN(param, op, 2)
 			if len(parts) != 2 {
-				return lang.TT(l, "Error inesperado: Parámetro inválido para required_if")
+				return system.Translate(l, "Error inesperado: Parámetro inválido para required_if")
 			}
 			expected := strings.TrimSpace(parts[1])
 			actual := fmt.Sprintf("%v", other)
@@ -512,27 +514,27 @@ func RequiredIf[T comparable](l string, value any, other T, param string) string
 			switch op {
 			case "==":
 				if actual == expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido porque %v es %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido porque %v es %v", system.Translate(l, parts[0]), expected)
 				}
 			case "!=":
 				if actual != expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido porque %v no es %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido porque %v no es %v", system.Translate(l, parts[0]), expected)
 				}
 			case ">":
 				if actual > expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido porque %v mayor que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido porque %v mayor que %v", system.Translate(l, parts[0]), expected)
 				}
 			case "<":
 				if actual < expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido porque %v menor que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido porque %v menor que %v", system.Translate(l, parts[0]), expected)
 				}
 			case ">=":
 				if actual >= expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido porque %v mayor o igual que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido porque %v mayor o igual que %v", system.Translate(l, parts[0]), expected)
 				}
 			case "<=":
 				if actual <= expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido porque %v menor o igual que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido porque %v menor o igual que %v", system.Translate(l, parts[0]), expected)
 				}
 			}
 			return ""
@@ -541,11 +543,11 @@ func RequiredIf[T comparable](l string, value any, other T, param string) string
 
 	parts := strings.Split(param, ",")
 	if len(parts) < 2 {
-		return lang.TT(l, "Error inesperado: Parámetro inválido para required_if")
+		return system.Translate(l, "Error inesperado: Parámetro inválido para required_if")
 	}
 	for _, expected := range parts[1:] {
 		if fmt.Sprintf("%v", other) == strings.TrimSpace(expected) && isEmpty(value) {
-			return lang.TT(l, "Es requerido porque %v es %v", lang.TT(l, parts[0]), expected)
+			return system.Translate(l, "Es requerido porque %v es %v", system.Translate(l, parts[0]), expected)
 		}
 	}
 	return ""
@@ -557,7 +559,7 @@ func RequiredUnless[T comparable](l string, value any, other T, param string) st
 		if strings.Contains(param, op) {
 			parts := strings.SplitN(param, op, 2)
 			if len(parts) != 2 {
-				return lang.TT(l, "Error inesperado: Parámetro inválido para required_unless")
+				return system.Translate(l, "Error inesperado: Parámetro inválido para required_unless")
 			}
 			expected := strings.TrimSpace(parts[1])
 			actual := fmt.Sprintf("%v", other)
@@ -565,27 +567,27 @@ func RequiredUnless[T comparable](l string, value any, other T, param string) st
 			switch op {
 			case "==":
 				if actual != expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido a menos que %v sea %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido a menos que %v sea %v", system.Translate(l, parts[0]), expected)
 				}
 			case "!=":
 				if actual == expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido a menos que %v no sea %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido a menos que %v no sea %v", system.Translate(l, parts[0]), expected)
 				}
 			case ">":
 				if actual <= expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido a menos que %v sea mayor que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido a menos que %v sea mayor que %v", system.Translate(l, parts[0]), expected)
 				}
 			case "<":
 				if actual >= expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido a menos que %v sea menor que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido a menos que %v sea menor que %v", system.Translate(l, parts[0]), expected)
 				}
 			case ">=":
 				if actual < expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido a menos que %v sea mayor o igual que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido a menos que %v sea mayor o igual que %v", system.Translate(l, parts[0]), expected)
 				}
 			case "<=":
 				if actual > expected && isEmpty(value) {
-					return lang.TT(l, "Es requerido a menos que %v sea menor o igual que %v", lang.TT(l, parts[0]), expected)
+					return system.Translate(l, "Es requerido a menos que %v sea menor o igual que %v", system.Translate(l, parts[0]), expected)
 				}
 			}
 			return ""
@@ -594,11 +596,11 @@ func RequiredUnless[T comparable](l string, value any, other T, param string) st
 
 	parts := strings.Split(param, ",")
 	if len(parts) < 2 {
-		return lang.TT(l, "Error inesperado: Parámetro inválido para required_unless")
+		return system.Translate(l, "Error inesperado: Parámetro inválido para required_unless")
 	}
 	for _, expected := range parts[1:] {
 		if fmt.Sprintf("%v", other) != strings.TrimSpace(expected) && isEmpty(value) {
-			return lang.TT(l, "Es requerido a menos que %v sea %v", lang.TT(l, parts[0]), expected)
+			return system.Translate(l, "Es requerido a menos que %v sea %v", system.Translate(l, parts[0]), expected)
 		}
 	}
 	return ""
@@ -615,14 +617,14 @@ func WithoutAll(l string, value any, otherFieldsNames []string, otherFields ...a
 	}
 
 	if allEmpty && isEmpty(value) {
-		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		otherFieldsNamesTranslate := make([]string, len(otherFieldsNames))
 		for i, otherFieldName := range otherFieldsNames {
-			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
+			otherFieldsNamesTranslate[i] = system.Translate(l, otherFieldName)
 		}
 		if len(otherFieldsNames) > 1 {
-			return lang.TT(l, "Es requerido cuando [%v] están vacíos", otherFieldsNamesTraslate)
+			return system.Translate(l, "Es requerido cuando [%v] están vacíos", otherFieldsNamesTranslate)
 		}
-		return lang.TT(l, "Es requerido cuando %v está vacío", otherFieldsNamesTraslate)
+		return system.Translate(l, "Es requerido cuando %v está vacío", otherFieldsNamesTranslate)
 	}
 
 	return ""
@@ -639,14 +641,14 @@ func Without(l string, value any, otherFieldsNames []string, otherFields ...any)
 	}
 
 	if anyEmpty && isEmpty(value) {
-		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		otherFieldsNamesTranslate := make([]string, len(otherFieldsNames))
 		for i, otherFieldName := range otherFieldsNames {
-			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
+			otherFieldsNamesTranslate[i] = system.Translate(l, otherFieldName)
 		}
 		if len(otherFieldsNames) > 1 {
-			return lang.TT(l, "Es requerido si algúno de estos [%v] está vacío", otherFieldsNamesTraslate)
+			return system.Translate(l, "Es requerido si algúno de estos [%v] está vacío", otherFieldsNamesTranslate)
 		}
-		return lang.TT(l, "Es requerido si [%v] está vacío", otherFieldsNamesTraslate)
+		return system.Translate(l, "Es requerido si [%v] está vacío", otherFieldsNamesTranslate)
 	}
 
 	return ""
@@ -663,14 +665,14 @@ func WithAll(l string, value any, otherFieldsNames []string, otherFields ...any)
 	}
 
 	if allFilled && isEmpty(value) {
-		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		otherFieldsNamesTranslate := make([]string, len(otherFieldsNames))
 		for i, otherFieldName := range otherFieldsNames {
-			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
+			otherFieldsNamesTranslate[i] = system.Translate(l, otherFieldName)
 		}
 		if len(otherFieldsNames) > 1 {
-			return lang.TT(l, "Es requerido si [%v] no estan vacios", otherFieldsNamesTraslate)
+			return system.Translate(l, "Es requerido si [%v] no estan vacios", otherFieldsNamesTranslate)
 		}
-		return lang.TT(l, "Es requerido si %v no esta vacio", otherFieldsNamesTraslate)
+		return system.Translate(l, "Es requerido si %v no esta vacio", otherFieldsNamesTranslate)
 	}
 
 	return ""
@@ -687,14 +689,14 @@ func With(l string, value any, otherFieldsNames []string, otherFields ...any) st
 	}
 
 	if anyFilled && isEmpty(value) {
-		otherFieldsNamesTraslate := make([]string, len(otherFieldsNames))
+		otherFieldsNamesTranslate := make([]string, len(otherFieldsNames))
 		for i, otherFieldName := range otherFieldsNames {
-			otherFieldsNamesTraslate[i] = lang.TT(l, otherFieldName)
+			otherFieldsNamesTranslate[i] = system.Translate(l, otherFieldName)
 		}
 		if len(otherFieldsNames) > 1 {
-			return lang.TT(l, "Es requerido si alguno de estos [%v] no esta vacio", otherFieldsNamesTraslate)
+			return system.Translate(l, "Es requerido si alguno de estos [%v] no esta vacio", otherFieldsNamesTranslate)
 		}
-		return lang.TT(l, "Es requerido si %v no esta vacio", otherFieldsNamesTraslate)
+		return system.Translate(l, "Es requerido si %v no esta vacio", otherFieldsNamesTranslate)
 	}
 
 	return ""
@@ -702,21 +704,21 @@ func With(l string, value any, otherFieldsNames []string, otherFields ...any) st
 
 func Same[T comparable](l string, value T, otherName string, other T) string {
 	if value != other {
-		return lang.TT(l, "Este campo debe coincidir con el campo %v", lang.TT(l, "%v", otherName))
+		return system.Translate(l, "Este campo debe coincidir con el campo %v", system.Translate(l, "%v", otherName))
 	}
 	return ""
 }
 
 func Different[T comparable](l string, value T, fieldName string, other T) string {
 	if value == other {
-		return lang.TT(l, "Este campo debe ser diferente del campo %v", lang.TT(l, "%v", fieldName))
+		return system.Translate(l, "Este campo debe ser diferente del campo %v", system.Translate(l, "%v", fieldName))
 	}
 	return ""
 }
 
 func Confirmed[T comparable](l string, value T, confirmation T) string {
 	if value != confirmation {
-		return lang.TT(l, "La confirmación no coincide")
+		return system.Translate(l, "La confirmación no coincide")
 	}
 	return ""
 }
@@ -729,7 +731,7 @@ func Accepted(l string, value any) string {
 			return ""
 		}
 	}
-	return lang.TT(l, "Debe ser aceptado.")
+	return system.Translate(l, "Debe ser aceptado.")
 }
 
 func Declined(l string, value any) string {
@@ -740,13 +742,13 @@ func Declined(l string, value any) string {
 			return ""
 		}
 	}
-	return lang.TT(l, "Debe ser rechazado.")
+	return system.Translate(l, "Debe ser rechazado.")
 }
 
 func Digits(l string, value any, length int) string {
 	v := fmt.Sprintf("%v", value)
 	if len(v) != length || !regexp.MustCompile(`^\d+$`).MatchString(v) {
-		return lang.TT(l, "Este campo debe tener exactamente %v dígitos", length)
+		return system.Translate(l, "Este campo debe tener exactamente %v dígitos", length)
 	}
 	return ""
 }
@@ -755,7 +757,7 @@ func DigitsBetween(l string, value any, min, max int) string {
 	v := fmt.Sprintf("%v", value)
 	length := len(v)
 	if length < min || length > max || !regexp.MustCompile(`^\d+$`).MatchString(v) {
-		return lang.TT(l, "Este campo debe tener entre %v y %v dígitos", min, max)
+		return system.Translate(l, "Este campo debe tener entre %v y %v dígitos", min, max)
 	}
 	return ""
 }
@@ -763,7 +765,7 @@ func DigitsBetween(l string, value any, min, max int) string {
 func Email(l string, value string) string {
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(value) {
-		return lang.TT(l, "Correo electrónico inválido")
+		return system.Translate(l, "Correo electrónico inválido")
 	}
 	return ""
 }
@@ -771,7 +773,7 @@ func Email(l string, value string) string {
 func URL(l string, value string) string {
 	urlRegex := regexp.MustCompile(`^(https?://)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(/[\w\-\./?%&=]*)?$`)
 	if !urlRegex.MatchString(value) {
-		return lang.TT(l, "URL inválida")
+		return system.Translate(l, "URL inválida")
 	}
 	return ""
 }
@@ -779,7 +781,7 @@ func URL(l string, value string) string {
 func UUID(l string, value string) string {
 	uuidRegex := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89ab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
 	if !uuidRegex.MatchString(value) {
-		return lang.TT(l, "UUID inválido (debe ser v4)")
+		return system.Translate(l, "UUID inválido (debe ser v4)")
 	}
 	return ""
 }
@@ -788,7 +790,7 @@ func ULID(l string, value string) string {
 	// ULID: 26 caracteres en Crockford Base32 sin letras I, L, O, U
 	ulidRegex := regexp.MustCompile(`^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$`)
 	if !ulidRegex.MatchString(value) {
-		return lang.TT(l, "ULID inválido")
+		return system.Translate(l, "ULID inválido")
 	}
 
 	// Validar timestamp: los primeros 10 caracteres son el timestamp en milisegundos (base32)
@@ -797,7 +799,7 @@ func ULID(l string, value string) string {
 
 	decoded, err := base32Decoder.DecodeString(strings.ToUpper(tsStr))
 	if err != nil || len(decoded) < 6 {
-		return lang.TT(l, "ULID inválido: timestamp ilegible")
+		return system.Translate(l, "ULID inválido: timestamp ilegible")
 	}
 
 	// Convertir los primeros 6 bytes del ULID a uint64 (48 bits = timestamp ms)
@@ -810,7 +812,7 @@ func ULID(l string, value string) string {
 
 	// verificar que no sea un timestamp en el futuro
 	if timestampMs > uint64(time.Now().UnixMilli()) {
-		return lang.TT(l, "ULID inválido: timestamp en el futuro")
+		return system.Translate(l, "ULID inválido: timestamp en el futuro")
 	}
 
 	return ""
@@ -818,7 +820,7 @@ func ULID(l string, value string) string {
 
 func IP(l string, value string) string {
 	if net.ParseIP(value) == nil {
-		return lang.TT(l, "Dirección IP inválida")
+		return system.Translate(l, "Dirección IP inválida")
 	}
 	return ""
 }
@@ -826,7 +828,7 @@ func IP(l string, value string) string {
 func IPv4(l string, value string) string {
 	ip := net.ParseIP(value)
 	if ip == nil || ip.To4() == nil {
-		return lang.TT(l, "Dirección IPv4 inválida")
+		return system.Translate(l, "Dirección IPv4 inválida")
 	}
 	return ""
 }
@@ -834,10 +836,10 @@ func IPv4(l string, value string) string {
 func IPv6(l string, value string) string {
 	ip := net.ParseIP(value)
 	if ip == nil || ip.To4() != nil {
-		return lang.TT(l, "Dirección IPv6 inválida")
+		return system.Translate(l, "Dirección IPv6 inválida")
 	}
 	if strings.Contains(ip.String(), "::ffff:") {
-		return lang.TT(l, "Dirección IPv6 inválida (formato IPv4-mapped no permitido)")
+		return system.Translate(l, "Dirección IPv6 inválida (formato IPv4-mapped no permitido)")
 	}
 	return ""
 }
@@ -845,7 +847,7 @@ func IPv6(l string, value string) string {
 func MACAddress(l string, value string) string {
 	_, err := net.ParseMAC(value)
 	if err != nil {
-		return lang.TT(l, "Dirección MAC inválida")
+		return system.Translate(l, "Dirección MAC inválida")
 	}
 	return ""
 }
@@ -853,21 +855,21 @@ func MACAddress(l string, value string) string {
 func ASCII(l string, value string) string {
 	asciiRegex := regexp.MustCompile(`^[\x00-\x7F]+$`)
 	if !asciiRegex.MatchString(value) {
-		return lang.TT(l, "El valor debe contener solo caracteres ASCII")
+		return system.Translate(l, "El valor debe contener solo caracteres ASCII")
 	}
 	return ""
 }
 
 func Lowercase(l string, value string) string {
 	if value != strings.ToLower(value) {
-		return lang.TT(l, "El valor debe estar en minúsculas")
+		return system.Translate(l, "El valor debe estar en minúsculas")
 	}
 	return ""
 }
 
 func Uppercase(l string, value string) string {
 	if value != strings.ToUpper(value) {
-		return lang.TT(l, "El valor debe estar en mayúsculas")
+		return system.Translate(l, "El valor debe estar en mayúsculas")
 	}
 	return ""
 }
@@ -875,7 +877,7 @@ func Uppercase(l string, value string) string {
 func Hex(l string, value string) string {
 	hexRegex := regexp.MustCompile(`^[0-9a-fA-F]+$`)
 	if !hexRegex.MatchString(value) {
-		return lang.TT(l, "Valor hexadecimal inválido")
+		return system.Translate(l, "Valor hexadecimal inválido")
 	}
 	return ""
 }
@@ -883,7 +885,7 @@ func Hex(l string, value string) string {
 func HexColor(l string, value string) string {
 	hexRegex := regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}){1,2}$`)
 	if !hexRegex.MatchString(value) {
-		return lang.TT(l, "Color hexadecimal inválido")
+		return system.Translate(l, "Color hexadecimal inválido")
 	}
 	return ""
 }
@@ -891,7 +893,7 @@ func HexColor(l string, value string) string {
 func JSON(l string, value string) string {
 	var js map[string]interface{}
 	if err := json.Unmarshal([]byte(value), &js); err != nil {
-		return lang.TT(l, "El formato JSON es inválido")
+		return system.Translate(l, "El formato JSON es inválido")
 	}
 	return ""
 }
@@ -899,7 +901,7 @@ func JSON(l string, value string) string {
 func Slug(l string, value string) string {
 	slugRegex := regexp.MustCompile(`^[a-z0-9]+(?:[-_][a-z0-9]+)*$`)
 	if !slugRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras minúsculas, números, guiones y guiones bajos (sin empezar o terminar con ellos)")
+		return system.Translate(l, "Solo se permiten letras minúsculas, números, guiones y guiones bajos (sin empezar o terminar con ellos)")
 	}
 	return ""
 }
@@ -907,10 +909,10 @@ func Slug(l string, value string) string {
 func Regex(l string, value string, pattern string) string {
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		return lang.TT(l, "Patrón de expresión regular inválido")
+		return system.Translate(l, "Patrón de expresión regular inválido")
 	}
 	if !re.MatchString(value) {
-		return lang.TT(l, "El valor no coincide con el patrón requerido")
+		return system.Translate(l, "El valor no coincide con el patrón requerido")
 	}
 	return ""
 }
@@ -918,10 +920,10 @@ func Regex(l string, value string, pattern string) string {
 func NotRegex(l string, value string, pattern string) string {
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		return lang.TT(l, "Patrón de expresión regular inválido")
+		return system.Translate(l, "Patrón de expresión regular inválido")
 	}
 	if re.MatchString(value) {
-		return lang.TT(l, "El valor no debe coincidir con el patrón especificado")
+		return system.Translate(l, "El valor no debe coincidir con el patrón especificado")
 	}
 	return ""
 }
@@ -929,7 +931,7 @@ func NotRegex(l string, value string, pattern string) string {
 func Alpha(l string, value string) string {
 	alphaRegex := regexp.MustCompile(`^[a-zA-Z]+$`)
 	if !alphaRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras")
+		return system.Translate(l, "Solo se permiten letras")
 	}
 	return ""
 }
@@ -937,7 +939,7 @@ func Alpha(l string, value string) string {
 func AlphaDash(l string, value string) string {
 	alphaDashRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 	if !alphaDashRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras, números, guiones y guiones bajos")
+		return system.Translate(l, "Solo se permiten letras, números, guiones y guiones bajos")
 	}
 	return ""
 }
@@ -945,7 +947,7 @@ func AlphaDash(l string, value string) string {
 func AlphaSpaces(l string, value string) string {
 	alphaSpacesRegex := regexp.MustCompile(`^[a-zA-Z\s]+$`)
 	if !alphaSpacesRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras y espacios")
+		return system.Translate(l, "Solo se permiten letras y espacios")
 	}
 	return ""
 }
@@ -953,7 +955,7 @@ func AlphaSpaces(l string, value string) string {
 func AlphaDashSpaces(l string, value string) string {
 	alphaDashSpacesRegex := regexp.MustCompile(`^[a-zA-Z0-9_\s-]+$`)
 	if !alphaDashSpacesRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras, números, guiones, guiones bajos y espacios")
+		return system.Translate(l, "Solo se permiten letras, números, guiones, guiones bajos y espacios")
 	}
 	return ""
 }
@@ -961,7 +963,7 @@ func AlphaDashSpaces(l string, value string) string {
 func AlphaNum(l string, value string) string {
 	alphaNumRegex := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 	if !alphaNumRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras y números")
+		return system.Translate(l, "Solo se permiten letras y números")
 	}
 	return ""
 }
@@ -969,7 +971,7 @@ func AlphaNum(l string, value string) string {
 func AlphaNumDash(l string, value string) string {
 	alphaNumDashRegex := regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 	if !alphaNumDashRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras, números y guiones")
+		return system.Translate(l, "Solo se permiten letras, números y guiones")
 	}
 	return ""
 }
@@ -977,7 +979,7 @@ func AlphaNumDash(l string, value string) string {
 func AlphaNumSpaces(l string, value string) string {
 	alphaNumSpacesRegex := regexp.MustCompile(`^[a-zA-Z0-9\s]+$`)
 	if !alphaNumSpacesRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras, números y espacios")
+		return system.Translate(l, "Solo se permiten letras, números y espacios")
 	}
 	return ""
 }
@@ -985,7 +987,7 @@ func AlphaNumSpaces(l string, value string) string {
 func AlphaNumDashSpaces(l string, value string) string {
 	alphaNumDashSpacesRegex := regexp.MustCompile(`^[a-zA-Z0-9_\s-]+$`)
 	if !alphaNumDashSpacesRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras, números, guiones, guiones bajos y espacios")
+		return system.Translate(l, "Solo se permiten letras, números, guiones, guiones bajos y espacios")
 	}
 	return ""
 }
@@ -993,7 +995,7 @@ func AlphaNumDashSpaces(l string, value string) string {
 func AlphaAccents(l string, value string) string {
 	alphaAccentsRegex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+$`)
 	if !alphaAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras, incluyendo tildes y eñes")
+		return system.Translate(l, "Solo se permiten letras, incluyendo tildes y eñes")
 	}
 	return ""
 }
@@ -1001,7 +1003,7 @@ func AlphaAccents(l string, value string) string {
 func AlphaDashAccents(l string, value string) string {
 	alphaDashAccentsRegex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ_-]+$`)
 	if !alphaDashAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras (con tildes), eñes, guiones y guiones bajos")
+		return system.Translate(l, "Solo se permiten letras (con tildes), eñes, guiones y guiones bajos")
 	}
 	return ""
 }
@@ -1009,7 +1011,7 @@ func AlphaDashAccents(l string, value string) string {
 func AlphaSpacesAccents(l string, value string) string {
 	alphaSpacesAccentsRegex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$`)
 	if !alphaSpacesAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras, tildes, eñes y espacios")
+		return system.Translate(l, "Solo se permiten letras, tildes, eñes y espacios")
 	}
 	return ""
 }
@@ -1017,7 +1019,7 @@ func AlphaSpacesAccents(l string, value string) string {
 func AlphaDashSpacesAccents(l string, value string) string {
 	alphaDashSpacesAccentsRegex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ_\s-]+$`)
 	if !alphaDashSpacesAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras (con tildes), eñes, guiones, guiones bajos y espacios")
+		return system.Translate(l, "Solo se permiten letras (con tildes), eñes, guiones, guiones bajos y espacios")
 	}
 	return ""
 }
@@ -1025,7 +1027,7 @@ func AlphaDashSpacesAccents(l string, value string) string {
 func AlphaNumAccents(l string, value string) string {
 	alphaNumAccentsRegex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ]+$`)
 	if !alphaNumAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras (con tildes), eñes y números")
+		return system.Translate(l, "Solo se permiten letras (con tildes), eñes y números")
 	}
 	return ""
 }
@@ -1033,7 +1035,7 @@ func AlphaNumAccents(l string, value string) string {
 func AlphaNumDashAccents(l string, value string) string {
 	alphaNumDashAccentsRegex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ_-]+$`)
 	if !alphaNumDashAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras (con tildes), eñes, números, guiones y guiones bajos")
+		return system.Translate(l, "Solo se permiten letras (con tildes), eñes, números, guiones y guiones bajos")
 	}
 	return ""
 }
@@ -1041,7 +1043,7 @@ func AlphaNumDashAccents(l string, value string) string {
 func AlphaNumSpacesAccents(l string, value string) string {
 	alphaNumSpacesAccentsRegex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s]+$`)
 	if !alphaNumSpacesAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras (con tildes), eñes, números y espacios")
+		return system.Translate(l, "Solo se permiten letras (con tildes), eñes, números y espacios")
 	}
 	return ""
 }
@@ -1049,7 +1051,7 @@ func AlphaNumSpacesAccents(l string, value string) string {
 func AlphaNumDashSpacesAccents(l string, value string) string {
 	alphaNumDashSpacesAccentsRegex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ_\s-]+$`)
 	if !alphaNumDashSpacesAccentsRegex.MatchString(value) {
-		return lang.TT(l, "Solo se permiten letras (con tildes), eñes, números, guiones, guiones bajos y espacios")
+		return system.Translate(l, "Solo se permiten letras (con tildes), eñes, números, guiones, guiones bajos y espacios")
 	}
 	return ""
 }
@@ -1057,7 +1059,7 @@ func AlphaNumDashSpacesAccents(l string, value string) string {
 //	func Username(l string, value string) string {
 //		usernameRegex := regexp.MustCompile(`^(?!.*[_.]{2})[a-zA-Z0-9](?:[a-zA-Z0-9._]*[a-zA-Z0-9])?$`)
 //		if !usernameRegex.MatchString(value) {
-//			return lang.TT(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
+//			return system.Translate(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
 //		}
 //		return ""
 //	}
@@ -1068,18 +1070,18 @@ func isAlphaNumeric(r rune) bool {
 }
 func Username(l string, value string) string {
 	if len(value) == 0 || !isAlphaNumeric(rune(value[0])) || !isAlphaNumeric(rune(value[len(value)-1])) {
-		return lang.TT(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
+		return system.Translate(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
 	}
 
 	for i := 0; i < len(value)-1; i++ {
 		if (value[i] == '.' || value[i] == '_') && (value[i+1] == '.' || value[i+1] == '_') {
-			return lang.TT(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
+			return system.Translate(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
 		}
 	}
 
 	for _, char := range value {
 		if !isAlphaNumeric(char) && char != '.' && char != '_' {
-			return lang.TT(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
+			return system.Translate(l, "Usuario inválido: solo letras, números, '.' o '_', sin empezar o terminar con ellos ni usarlos consecutivos")
 		}
 	}
 
@@ -1088,28 +1090,28 @@ func Username(l string, value string) string {
 
 func StartsWith(l string, value string, prefix string) string {
 	if !strings.HasPrefix(value, prefix) {
-		return lang.TT(l, "Debe comenzar con: %v", prefix)
+		return system.Translate(l, "Debe comenzar con: %v", prefix)
 	}
 	return ""
 }
 
 func EndsWith(l string, value string, suffix string) string {
 	if !strings.HasSuffix(value, suffix) {
-		return lang.TT(l, "Debe terminar con: %v", suffix)
+		return system.Translate(l, "Debe terminar con: %v", suffix)
 	}
 	return ""
 }
 
 func Contains(l string, value string, substr string) string {
 	if !strings.Contains(value, substr) {
-		return lang.TT(l, "Debe contener: %v", substr)
+		return system.Translate(l, "Debe contener: %v", substr)
 	}
 	return ""
 }
 
 func NotContains(l string, value string, substr string) string {
 	if strings.Contains(value, substr) {
-		return lang.TT(l, "No debe contener: %v", substr)
+		return system.Translate(l, "No debe contener: %v", substr)
 	}
 	return ""
 }
@@ -1120,13 +1122,13 @@ func In[T comparable](l string, value T, allowed ...T) string {
 			return ""
 		}
 	}
-	return lang.TT(l, "Valor no permitido, debe ser: %v", allowed)
+	return system.Translate(l, "Valor no permitido, debe ser: %v", allowed)
 }
 
 func Nin[T comparable](l string, value T, denied ...T) string {
 	for _, v := range denied {
 		if value == v {
-			return lang.TT(l, "Valor no permitido, no puede ser: %v", denied)
+			return system.Translate(l, "Valor no permitido, no puede ser: %v", denied)
 		}
 	}
 	return ""
@@ -1137,7 +1139,7 @@ func Unique[T comparable](l string, list []T) string {
 	seen := make(map[T]bool)
 	for _, item := range list {
 		if seen[item] {
-			return lang.TT(l, "el elemento [%v] esta duplicado", item)
+			return system.Translate(l, "el elemento [%v] esta duplicado", item)
 		}
 		seen[item] = true
 	}
@@ -1146,56 +1148,56 @@ func Unique[T comparable](l string, list []T) string {
 
 func Positive[T constraints.Integer | constraints.Float](l string, value T) string {
 	if value <= 0 {
-		return lang.TT(l, "Debe ser mayor que 0")
+		return system.Translate(l, "Debe ser mayor que 0")
 	}
 	return ""
 }
 
 func Negative[T constraints.Integer | constraints.Float](l string, value T) string {
 	if value >= 0 {
-		return lang.TT(l, "Debe ser menor que 0")
+		return system.Translate(l, "Debe ser menor que 0")
 	}
 	return ""
 }
 
 func Between[T constraints.Integer | constraints.Float](l string, value T, min T, max T) string {
 	if value < min || value > max {
-		return lang.TT(l, "Debe estar entre %v y %v", min, max)
+		return system.Translate(l, "Debe estar entre %v y %v", min, max)
 	}
 	return ""
 }
 
 func Before(l string, value time.Time, target time.Time) string {
 	if value.After(target) || value.Equal(target) {
-		return lang.TT(l, "Debe ser una fecha anterior a %v", target)
+		return system.Translate(l, "Debe ser una fecha anterior a %v", target)
 	}
 	return ""
 }
 
 func After(l string, value time.Time, target time.Time) string {
 	if value.Before(target) || value.Equal(target) {
-		return lang.TT(l, "Debe ser una fecha posterior a %v", target)
+		return system.Translate(l, "Debe ser una fecha posterior a %v", target)
 	}
 	return ""
 }
 
 func BeforeNow(l string, value time.Time) string {
 	if value.After(time.Now()) {
-		return lang.TT(l, "Debe ser una fecha anterior al momento actual")
+		return system.Translate(l, "Debe ser una fecha anterior al momento actual")
 	}
 	return ""
 }
 
 func AfterNow(l string, value time.Time) string {
 	if value.Before(time.Now()) {
-		return lang.TT(l, "Debe ser una fecha posterior al momento actual")
+		return system.Translate(l, "Debe ser una fecha posterior al momento actual")
 	}
 	return ""
 }
 
 func DateBetween(l string, value time.Time, start time.Time, end time.Time) string {
 	if value.Before(start) || value.After(end) {
-		return lang.TT(l, "Debe estar entre %v y %v", start, end)
+		return system.Translate(l, "Debe estar entre %v y %v", start, end)
 	}
 	return ""
 }

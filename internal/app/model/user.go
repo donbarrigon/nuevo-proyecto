@@ -26,7 +26,7 @@ func NewUser() *User {
 	}
 }
 
-func (u *User) CollectionName() string {
+func (u *User) TableName() string {
 	return "users"
 }
 

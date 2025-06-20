@@ -17,7 +17,7 @@ func NewPermission() *Permission {
 		ID: bson.NewObjectID(),
 	}
 }
-func (p *Permission) CollectionName() string {
+func (p *Permission) TableName() string {
 	return "permissions"
 }
 

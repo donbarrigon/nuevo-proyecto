@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/config"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 )
 
 func NewHttpServer(port string) *http.Server {
@@ -73,5 +73,5 @@ func startMessage() {
 
  🚀 Servidor corriendo en http://localhost:%v
  🌱 Entorno: DESARROLLO
-	`, config.Env.SERVER_PORT))
+	`, system.Env.SERVER_PORT))
 }

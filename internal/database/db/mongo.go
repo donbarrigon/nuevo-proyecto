@@ -2,14 +2,14 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/config"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -17,8 +17,8 @@ import (
 
 var Mongo *ConexionMongoDB
 
-type MongoModel interface {
-	CollectionName() string
+type Model interface {
+	TableName() string
 	Default()
 }
 
@@ -27,180 +27,180 @@ type ConexionMongoDB struct {
 	Database *mongo.Database
 }
 
-func FindByHexID(model MongoModel, id string) errors.Error {
+func FindByHexID(model Model, id string) system.Error {
 
 	objectId, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.HexID(err)
+		return system.Errors.HexID(err)
 	}
 	filter := bson.D{bson.E{Key: "_id", Value: objectId}}
-	if err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
-		return errors.Mongo(err)
+	if err := Mongo.Database.Collection(model.TableName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func FindByID(model MongoModel, id bson.ObjectID) errors.Error {
+func FindByID(model Model, id bson.ObjectID) system.Error {
 	filter := bson.D{bson.E{Key: "_id", Value: id}}
-	if err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
-		return errors.Mongo(err)
+	if err := Mongo.Database.Collection(model.TableName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func FindManyByField(model MongoModel, result any, field string, value any) errors.Error {
+func FindManyByField(model Model, result any, field string, value any) system.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
-	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
+	cursor, err := Mongo.Database.Collection(model.TableName()).Find(context.TODO(), filter)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	if err = cursor.All(context.TODO(), result); err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func FindOneByField(model MongoModel, field string, value any) errors.Error {
+func FindOneByField(model Model, field string, value any) system.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
-	if err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
-		return errors.Mongo(err)
+	if err := Mongo.Database.Collection(model.TableName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func FindAll(model MongoModel, result any) errors.Error {
-	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), bson.D{})
+func FindAll(model Model, result any) system.Error {
+	cursor, err := Mongo.Database.Collection(model.TableName()).Find(context.TODO(), bson.D{})
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	if err = cursor.All(context.TODO(), result); err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func FindOne(model MongoModel, filter bson.D) errors.Error {
-	err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model)
+func FindOne(model Model, filter bson.D) system.Error {
+	err := Mongo.Database.Collection(model.TableName()).FindOne(context.TODO(), filter).Decode(model)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func Find(model MongoModel, result any, filter bson.D) errors.Error {
-	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
+func Find(model Model, result any, filter bson.D) system.Error {
+	cursor, err := Mongo.Database.Collection(model.TableName()).Find(context.TODO(), filter)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	if err = cursor.All(context.TODO(), result); err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func FindByPipeline(model MongoModel, result any, pipeline any) errors.Error {
-	cursor, err := Mongo.Database.Collection(model.CollectionName()).Aggregate(context.TODO(), pipeline)
+func FindByPipeline(model Model, result any, pipeline any) system.Error {
+	cursor, err := Mongo.Database.Collection(model.TableName()).Aggregate(context.TODO(), pipeline)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	if err = cursor.All(context.TODO(), result); err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 	return nil
 }
 
-func Create(model MongoModel) errors.Error {
+func Create(model Model) system.Error {
 	model.Default()
-	collection := Mongo.Database.Collection(model.CollectionName())
+	collection := Mongo.Database.Collection(model.TableName())
 	result, err := collection.InsertOne(context.TODO(), model)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 
 	if err := setID(model, result.InsertedID); err != nil {
-		return errors.Unknown(err)
+		return system.Errors.Unknown(err)
 	}
 
 	return nil
 }
 
-func Update(model MongoModel) errors.Error {
+func Update(model Model) system.Error {
 	model.Default()
-	collection := Mongo.Database.Collection(model.CollectionName())
+	collection := Mongo.Database.Collection(model.TableName())
 	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 	update := bson.D{bson.E{Key: "$set", Value: model}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 
 	if result.MatchedCount == 0 {
-		return errors.NoDocuments(errors.New("mongo.UpdateResult.MatchedCount == 0"))
+		return system.Errors.NoDocuments(errors.New("mongo.UpdateResult.MatchedCount == 0"))
 	}
 
 	if result.ModifiedCount == 0 {
-		return errors.Update(errors.New("mongo.UpdateResult.ModifiedCount == 0"))
+		return system.Errors.Update(errors.New("mongo.UpdateResult.ModifiedCount == 0"))
 	}
 
 	return nil
 }
-func Delete(model MongoModel) errors.Error {
-	collection := Mongo.Database.Collection(model.CollectionName())
+func Delete(model Model) system.Error {
+	collection := Mongo.Database.Collection(model.TableName())
 	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deleted_at", Value: time.Now()}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 
 	if result.MatchedCount == 0 {
-		return errors.NoDocuments(errors.New("mongo.UpdateResult.MatchedCount == 0"))
+		return system.Errors.NoDocumentsf("mongo.UpdateResult.MatchedCount == 0")
 	}
 
 	if result.ModifiedCount == 0 {
-		return errors.Delete(errors.New("mongo.UpdateResult.ModifiedCount == 0"))
+		return system.Errors.Deletef("mongo.UpdateResult.ModifiedCount == 0")
 	}
 	return nil
 }
 
-func Restore(model MongoModel) errors.Error {
-	collection := Mongo.Database.Collection(model.CollectionName())
+func Restore(model Model) system.Error {
+	collection := Mongo.Database.Collection(model.TableName())
 	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 
 	if result.MatchedCount == 0 {
-		return errors.NoDocuments(errors.New("mongo.UpdateResult.MatchedCount == 0"))
+		return system.Errors.NoDocumentsf("mongo.UpdateResult.MatchedCount == 0")
 	}
 
 	if result.ModifiedCount == 0 {
-		return errors.Restore(errors.New("mongo.UpdateResult.ModifiedCount == 0"))
+		return system.Errors.Restoref("mongo.UpdateResult.ModifiedCount == 0")
 	}
 	return nil
 }
 
-func ForceDelete(model MongoModel) errors.Error {
-	collection := Mongo.Database.Collection(model.CollectionName())
+func ForceDelete(model Model) system.Error {
+	collection := Mongo.Database.Collection(model.TableName())
 	filter := bson.D{bson.E{Key: "_id", Value: getID(model)}}
 
 	result, err := collection.DeleteOne(context.TODO(), filter)
 	if err != nil {
-		return errors.Mongo(err)
+		return system.Errors.Mongo(err)
 	}
 
 	if result.DeletedCount == 0 {
-		return errors.ForceDelete(errors.New("mongo.DeleteResult.DeletedCount == 0"))
+		return system.Errors.ForceDeletef("mongo.DeleteResult.DeletedCount == 0")
 	}
 	return nil
 }
 
-func setID(model MongoModel, id any) error {
+func setID(model Model, id any) error {
 	val := reflect.ValueOf(model)
 	if val.Kind() != reflect.Ptr || val.IsNil() {
 		return fmt.Errorf("el modelo debe ser un puntero no nulo")
@@ -241,7 +241,7 @@ func setID(model MongoModel, id any) error {
 	return fmt.Errorf("no se encontró el campo con tag bson:\"_id\"")
 }
 
-func getID(model MongoModel) any {
+func getID(model Model) any {
 	val := reflect.ValueOf(model)
 
 	if val.Kind() == reflect.Ptr {
@@ -271,7 +271,7 @@ func getID(model MongoModel) any {
 
 func InitMongoDB() error {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	clientOptions := options.Client().ApplyURI(config.Env.DB_URI).SetServerAPIOptions(serverAPI)
+	clientOptions := options.Client().ApplyURI(system.Env.DB_URI).SetServerAPIOptions(serverAPI)
 	clientOptions.SetMaxPoolSize(100)
 	clientOptions.SetMinPoolSize(5)
 	clientOptions.SetRetryWrites(true)
@@ -284,9 +284,9 @@ func InitMongoDB() error {
 		log.Fatalf("Error al conectar con mongodb: %v", err)
 		return err
 	}
-	Mongo.Database = Mongo.Client.Database(config.Env.DB_DATABASE)
+	Mongo.Database = Mongo.Client.Database(system.Env.DB_DATABASE)
 
-	log.Printf("Conectado exitosamente a MongoDB: %s - Base de datos: %s", config.Env.DB_URI, config.Env.DB_DATABASE)
+	log.Printf("Conectado exitosamente a MongoDB: %s - Base de datos: %s", system.Env.DB_URI, system.Env.DB_DATABASE)
 	return nil
 }
 

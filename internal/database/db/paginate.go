@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/donbarrigon/nuevo-proyecto/pkg/errors"
+	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -15,13 +15,13 @@ type PaginateResource struct {
 	Meta  map[string]any `json:"meta"`
 }
 
-func Paginate(model MongoModel, result any, qf *QueryFilter) (*PaginateResource, errors.Error) {
-	cursor, err := Mongo.Database.Collection(model.CollectionName()).Aggregate(context.TODO(), qf.Pipeline())
+func Paginate(model Model, result any, qf *QueryFilter) (*PaginateResource, system.Error) {
+	cursor, err := Mongo.Database.Collection(model.TableName()).Aggregate(context.TODO(), qf.Pipeline())
 	if err != nil {
-		return nil, errors.Mongo(err)
+		return nil, system.Errors.Mongo(err)
 	}
 	if err = cursor.All(context.TODO(), result); err != nil {
-		return nil, errors.Mongo(err)
+		return nil, system.Errors.Mongo(err)
 	}
 
 	paginated := &PaginateResource{
@@ -53,9 +53,9 @@ func Paginate(model MongoModel, result any, qf *QueryFilter) (*PaginateResource,
 		countQF.Cursor = ""
 		countQF.CursorDirection = 0
 
-		total, err := Mongo.Database.Collection(model.CollectionName()).CountDocuments(context.TODO(), countQF.Pipeline())
+		total, err := Mongo.Database.Collection(model.TableName()).CountDocuments(context.TODO(), countQF.Pipeline())
 		if err != nil {
-			return nil, errors.Mongo(err)
+			return nil, system.Errors.Mongo(err)
 		}
 
 		lastPage := int((int64(total) + int64(qf.PerPage) - 1) / int64(qf.PerPage))
@@ -141,6 +141,7 @@ func Paginate(model MongoModel, result any, qf *QueryFilter) (*PaginateResource,
 
 	return paginated, nil
 }
+
 func getFieldValueByJSONTag(obj any, tag string) any {
 	v := reflect.ValueOf(obj)
 	if v.Kind() == reflect.Ptr {

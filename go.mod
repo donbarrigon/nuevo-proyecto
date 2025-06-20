@@ -3,13 +3,13 @@ module github.com/donbarrigon/nuevo-proyecto
 go 1.24.1
 
 require (
-	go.mongodb.org/mongo-driver/v2 v2.1.0
+	go.mongodb.org/mongo-driver/v2 v2.2.2
 	golang.org/x/crypto v0.33.0
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 )
 
 require (
-	github.com/golang/snappy v0.0.4 // indirect
+	github.com/golang/snappy v1.0.0 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
