@@ -314,7 +314,7 @@ func (ctx *Context) WriteError(err system.Error) {
 }
 
 func (ctx *Context) WriteNotFound() {
-	ctx.WriteError(system.Errors.NotFoundf(system.Translate(ctx.Lang(), "El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path)))
+	ctx.WriteError(system.Errors.NotFoundf("El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path))
 }
 
 func (ctx *Context) WriteMessage(code int, data any, message string, v ...any) {
