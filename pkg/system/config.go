@@ -29,6 +29,8 @@ type Environment struct {
 	DB_PASSWORD   string
 	DB_URI        string
 
+	LOG_DATE_FORMAT string
+
 	MAIL_MAILER       string
 	MAIL_SCHEME       string
 	MAIL_HOST         string
@@ -60,6 +62,8 @@ var Env = Environment{
 	DB_USERNAME:   "",
 	DB_PASSWORD:   "",
 	DB_URI:        "",
+
+	LOG_DATE_FORMAT: "2006-01-02 15:04:05.000000",
 
 	MAIL_MAILER:       "log",
 	MAIL_SCHEME:       "smtp",
