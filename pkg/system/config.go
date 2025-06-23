@@ -10,8 +10,6 @@ import (
 )
 
 type Environment struct {
-	APP_ENV    string
-	APP_DEBUG  bool
 	APP_KEY    string
 	APP_URL    string
 	APP_LOCALE string
@@ -29,6 +27,11 @@ type Environment struct {
 	DB_PASSWORD   string
 	DB_URI        string
 
+	LOG_LEVEL       LogLevel
+	LOG_FLAGS       int
+	LOG_OUTPUT      int
+	LOG_URL         string
+	LOG_PATH        string
 	LOG_DATE_FORMAT string
 
 	MAIL_MAILER       string
@@ -44,8 +47,6 @@ type Environment struct {
 
 // si se proporciona una ruta, se usa la primera; de lo contrario, se carga el archivo .env por defecto
 var Env = Environment{
-	APP_ENV:    "local",
-	APP_DEBUG:  true,
 	APP_KEY:    "base64:AlgunacadenacodificadaenBase64aleatoria==",
 	APP_URL:    "http://localhost",
 	APP_LOCALE: "es",
@@ -63,6 +64,11 @@ var Env = Environment{
 	DB_PASSWORD:   "",
 	DB_URI:        "",
 
+	LOG_LEVEL:       LOG_DEBUG,
+	LOG_FLAGS:       LOG_FLAG_ALL,
+	LOG_OUTPUT:      LOG_OUTPUT_CONSOLE | LOG_OUTPUT_DATABASE,
+	LOG_URL:         "http://127.0.0.1/debug/log",
+	LOG_PATH:        "log.json",
 	LOG_DATE_FORMAT: "2006-01-02 15:04:05.000000",
 
 	MAIL_MAILER:       "log",
@@ -76,13 +82,13 @@ var Env = Environment{
 	MAIL_FROM_NAME:    "MiAppGo",
 }
 
-func LoadEnv(path ...string) error {
-	p := ".env"
-	if len(path) > 0 {
-		p = path[0]
+func LoadEnv(filepath ...string) error {
+	f := ".env"
+	if len(filepath) > 0 {
+		f = filepath[0]
 	}
 
-	file, err := os.Open(p)
+	file, err := os.Open(f)
 	if err != nil {
 		return err
 	}
@@ -119,10 +125,6 @@ func LoadEnv(path ...string) error {
 		os.Setenv(key, value)
 
 		switch key {
-		case "APP_ENV":
-			Env.APP_ENV = value
-		case "APP_DEBUG":
-			Env.APP_DEBUG = value == "true"
 		case "APP_KEY":
 			Env.APP_KEY = value
 		case "APP_URL":
@@ -204,6 +206,80 @@ func LoadEnv(path ...string) error {
 				}
 			}
 
+		case "LOG_LEVEL":
+			switch strings.ToUpper(strings.TrimSpace(value)) {
+			case "EMERGENCY":
+				Env.LOG_LEVEL = LOG_EMERGENCY
+			case "ALERT":
+				Env.LOG_LEVEL = LOG_ALERT
+			case "CRITICAL":
+				Env.LOG_LEVEL = LOG_CRITICAL
+			case "ERROR":
+				Env.LOG_LEVEL = LOG_ERROR
+			case "WARNING":
+				Env.LOG_LEVEL = LOG_WARNING
+			case "NOTICE":
+				Env.LOG_LEVEL = LOG_NOTICE
+			case "INFO":
+				Env.LOG_LEVEL = LOG_INFO
+			case "DEBUG":
+				Env.LOG_LEVEL = LOG_DEBUG
+			default:
+				Env.LOG_LEVEL = LOG_DEBUG
+			}
+		case "LOG_FLAGS":
+			flags := 0
+			parts := strings.Split(value, ",")
+			for _, part := range parts {
+				switch strings.ToUpper(strings.TrimSpace(part)) {
+				case "TIMESTAMP":
+					flags |= LOG_FLAG_TIMESTAMP
+				case "LONGFILE":
+					flags |= LOG_FLAG_LONGFILE
+				case "SHORTFILE":
+					flags |= LOG_FLAG_SHORTFILE
+				case "RELATIVEFILE":
+					flags |= LOG_FLAG_RELATIVEFILE
+				case "FUNCTION":
+					flags |= LOG_FLAG_FUNCTION
+				case "LINE":
+					flags |= LOG_FLAG_LINE
+				case "PREFIX":
+					flags |= LOG_FLAG_PREFIX
+				case "CONSOLE_AS_JSON":
+					flags |= LOG_FLAG_CONSOLE_AS_JSON
+				case "FILE_AS_JSON":
+					flags |= LOG_FLAG_FILE_AS_JSON
+				case "CONTEXT":
+					flags |= LOG_FLAG_CONTEXT
+				case "DUMP":
+					flags |= LOG_FLAG_DUMP
+				}
+			}
+			Env.LOG_FLAGS = flags
+		case "LOG_OUTPUT":
+			outputs := 0
+			parts := strings.Split(value, ",")
+			for _, part := range parts {
+				switch strings.ToUpper(strings.TrimSpace(part)) {
+				case "CONSOLE":
+					outputs |= LOG_OUTPUT_CONSOLE
+				case "FILE":
+					outputs |= LOG_OUTPUT_FILE
+				case "DATABASE":
+					outputs |= LOG_OUTPUT_DATABASE
+				case "REMOTE":
+					outputs |= LOG_OUTPUT_REMOTE
+				}
+			}
+			Env.LOG_OUTPUT = outputs
+		case "LOG_URL":
+			Env.LOG_URL = value
+		case "LOG_PATH":
+			Env.LOG_PATH = value
+		case "LOG_DATE_FORMAT":
+			Env.LOG_DATE_FORMAT = value
+
 		case "MAIL_MAILER":
 			Env.MAIL_MAILER = value
 		case "MAIL_SCHEME":
@@ -231,41 +307,17 @@ func LoadEnv(path ...string) error {
 		}
 	}
 
-	printEnv()
+	if scanner.Err() != nil {
+		Log.Emergency("Fallo crítico al cargar las variables de entorno desde el archivo {file}", map[string]any{
+			"env":  Env,
+			"file": f,
+		})
+		return scanner.Err()
+	}
 
-	return scanner.Err()
-}
-
-func printEnv() {
-	fmt.Println(".env")
-	fmt.Println("--------------------------------")
-	fmt.Printf("APP_ENV: %v\n", Env.APP_ENV)
-	fmt.Printf("APP_DEBUG: %v\n", Env.APP_DEBUG)
-	fmt.Printf("APP_KEY: %v\n", Env.APP_KEY)
-	fmt.Printf("APP_URL: %v\n", Env.APP_URL)
-	fmt.Printf("APP_LOCALE: %v\n", Env.APP_LOCALE)
-
-	fmt.Printf("SERVER_PORT: %v\n", Env.SERVER_PORT)
-	fmt.Printf("SERVER_HTTPS_ENABLED: %v\n", Env.SERVER_HTTPS_ENABLED)
-	fmt.Printf("SERVER_HTTPS_CERT_PATH: %v\n", Env.SERVER_HTTPS_CERT_PATH)
-	fmt.Printf("SERVER_HTTPS_KEY_PATH: %v\n", Env.SERVER_HTTPS_KEY_PATH)
-
-	fmt.Printf("DB_CONNECTION: %v\n", Env.DB_CONNECTION)
-	fmt.Printf("DB_HOST: %v\n", Env.DB_HOST)
-	fmt.Printf("DB_PORT: %v\n", Env.DB_PORT)
-	fmt.Printf("DB_DATABASE: %v\n", Env.DB_DATABASE)
-	fmt.Printf("DB_USERNAME: %v\n", Env.DB_USERNAME)
-	fmt.Printf("DB_PASSWORD: %v\n", Env.DB_PASSWORD)
-	fmt.Printf("DB_URI: %v\n", Env.DB_URI)
-
-	fmt.Printf("MAIL_MAILER: %v\n", Env.MAIL_MAILER)
-	fmt.Printf("MAIL_SCHEME: %v\n", Env.MAIL_SCHEME)
-	fmt.Printf("MAIL_HOST: %v\n", Env.MAIL_HOST)
-	fmt.Printf("MAIL_PORT: %v\n", Env.MAIL_PORT)
-	fmt.Printf("MAIL_USERNAME: %v\n", Env.MAIL_USERNAME)
-	fmt.Printf("MAIL_PASSWORD: %v\n", Env.MAIL_PASSWORD)
-	fmt.Printf("MAIL_ENCRYPTION: %v\n", Env.MAIL_ENCRYPTION)
-	fmt.Printf("MAIL_FROM_ADDRESS: %v\n", Env.MAIL_FROM_ADDRESS)
-	fmt.Printf("MAIL_FROM_NAME: %v\n", Env.MAIL_FROM_NAME)
-	fmt.Println("--------------------------------")
+	Log.Info("Variables de entorno cargadas exitosamente desde el archivo {file}", map[string]any{
+		"env":  Env,
+		"file": f,
+	})
+	return nil
 }

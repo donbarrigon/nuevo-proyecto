@@ -12,11 +12,15 @@ import (
 )
 
 const (
-	LOG_DEBUG = iota
-	LOG_INFO
-	LOG_WARN
-	LOG_ERROR
-	LOG_FATAL
+	LOG_EMERGENCY      LogLevel = iota // 0 - El sistema está inutilizable
+	LOG_ALERT                          // 1 - Se necesita acción inmediata
+	LOG_CRITICAL                       // 2 - Fallo crítico del sistema
+	LOG_ERROR                          // 3 - Errores de ejecución
+	LOG_WARNING                        // 4 - Algo inesperado pasó
+	LOG_NOTICE                         // 5 - Eventos normales, pero significativos
+	LOG_INFO                           // 6 - Información general
+	LOG_DEBUG                          // 7 - Información detallada para depuración
+	LOG_INTERNAL_PRINT                 // 8 - Solo imprime en consola
 )
 
 const (
@@ -30,12 +34,12 @@ const (
 	LOG_FLAG_CONSOLE_AS_JSON             // 128   // Salida en formato JSON en la consola
 	LOG_FLAG_FILE_AS_JSON                // 256   // Salida en formato JSON en el archivo
 	LOG_FLAG_CONTEXT                     // 512   // Agrega el contexto de la petición al log
-	LOG_FLAG_DETAIL                      // 1024  // Las variables las se imprimen de forma detallada
+	LOG_FLAG_DUMP                        // 1024  // Las variables las se imprimen de forma detallada
 
 	// Combinación de todos los flags
 	LOG_FLAG_ALL = LOG_FLAG_TIMESTAMP |
-		// LOG_FLAG_LONGFILE |
-		// LOG_FLAG_SHORTFILE |
+		LOG_FLAG_LONGFILE |
+		LOG_FLAG_SHORTFILE |
 		LOG_FLAG_RELATIVEFILE |
 		LOG_FLAG_FUNCTION |
 		LOG_FLAG_LINE |
@@ -43,7 +47,7 @@ const (
 		LOG_FLAG_CONSOLE_AS_JSON |
 		LOG_FLAG_FILE_AS_JSON |
 		LOG_FLAG_CONTEXT |
-		LOG_FLAG_DETAIL
+		LOG_FLAG_DUMP
 )
 
 const (
@@ -55,91 +59,115 @@ const (
 
 type LogLevel int
 
-type Logger struct {
-	Level     LogLevel
-	Flags     int
-	Output    int
-	RemoteURL string
-	Path      string
-	Context   map[string]any
-}
+type Logger struct{}
 
-var Log = Logger{
-	Level:     LOG_DEBUG,
-	Flags:     LOG_FLAG_ALL,
-	Output:    LOG_OUTPUT_CONSOLE | LOG_OUTPUT_DATABASE,
-	RemoteURL: "http://127.0.0.1/debug/log",
-	Path:      "log.json",
-}
+var Log = Logger{}
 
 func (lv LogLevel) String() string {
 	switch lv {
-	case LOG_DEBUG:
-		return "DEBUG"
-	case LOG_INFO:
-		return "INFO"
-	case LOG_WARN:
-		return "WARN"
+	case LOG_EMERGENCY:
+		return "EMERGENCY"
+	case LOG_ALERT:
+		return "ALERT"
+	case LOG_CRITICAL:
+		return "CRITICAL"
 	case LOG_ERROR:
 		return "ERROR"
-	case LOG_FATAL:
-		return "FATAL"
+	case LOG_WARNING:
+		return "WARNING"
+	case LOG_NOTICE:
+		return "NOTICE"
+	case LOG_INFO:
+		return "INFO"
+	case LOG_DEBUG:
+		return "DEBUG"
+	case LOG_INTERNAL_PRINT:
+		return "PRINT"
 	default:
 		return "UNKNOWN"
 	}
 }
 
-func (l *Logger) Debug(format string, a ...any) {
-	if l.Level <= LOG_DEBUG {
-		go l.output(l.Level.String(), format, a...)
+func (l *Logger) Emergency(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_EMERGENCY {
+		go l.output(LOG_EMERGENCY.String(), msg, ctx)
 	}
 }
 
-func (l *Logger) Info(format string, a ...any) {
-	if l.Level <= LOG_INFO {
-		go l.output(l.Level.String(), format, a...)
+func (l *Logger) Alert(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_ALERT {
+		go l.output(LOG_ALERT.String(), msg, ctx)
 	}
 }
 
-func (l *Logger) Warning(format string, a ...any) {
-	if l.Level <= LOG_WARN {
-		go l.output(l.Level.String(), format, a...)
+func (l *Logger) Critical(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_CRITICAL {
+		go l.output(LOG_CRITICAL.String(), msg, ctx)
 	}
 }
 
-func (l *Logger) Error(format string, a ...any) {
-	if l.Level <= LOG_ERROR {
-		go l.output(l.Level.String(), format, a...)
+func (l *Logger) Error(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_ERROR {
+		go l.output(LOG_ERROR.String(), msg, ctx)
 	}
 }
 
-func (l *Logger) Fatal(format string, a ...any) {
-	if l.Level <= LOG_FATAL {
-		go l.output(l.Level.String(), format, a...)
+func (l *Logger) Warning(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_WARNING {
+		go l.output(LOG_WARNING.String(), msg, ctx)
 	}
 }
 
-func (l *Logger) Print(format string, a ...any) {
-	go l.output("PRINT", format, a...)
-}
-
-func (l *Logger) WithContext(level LogLevel, ctx map[string]any, format string, a ...any) {
-	if l.Level > level {
-		return
+func (l *Logger) Notice(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_NOTICE {
+		go l.output(LOG_NOTICE.String(), msg, ctx)
 	}
-
-	copy := *l
-	copy.Context = ctx
-	go copy.output(level.String(), format, a...)
 }
 
-func (l *Logger) output(level string, format string, a ...any) {
+func (l *Logger) Info(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_INFO {
+		go l.output(LOG_INFO.String(), msg, ctx)
+	}
+}
+
+func (l *Logger) Debug(msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= LOG_DEBUG {
+		go l.output(LOG_DEBUG.String(), msg, ctx)
+	}
+}
+
+func (l *Logger) Log(level LogLevel, msg string, ctx map[string]any) {
+	if Env.LOG_LEVEL >= level {
+		go l.output(level.String(), msg, ctx)
+	}
+}
+
+func (l *Logger) Print(msg string, ctx map[string]any) {
+	go l.output(LOG_INTERNAL_PRINT.String(), msg, ctx)
+}
+
+func (l *Logger) Dump(a any) {
+	fmt.Println(l.formatDump(a))
+}
+
+func (l *Logger) DumpMany(vars ...any) {
+	sep := strings.Repeat("-", 30)
+
+	for i, v := range vars {
+		if i > 0 {
+			fmt.Println(sep)
+		}
+		fmt.Println(l.formatDump(v))
+	}
+}
+
+func (l *Logger) output(level string, msg string, ctx map[string]any) {
 	// Obtener información del runtime
 	pc, file, line, _ := runtime.Caller(2)
 	funcName := runtime.FuncForPC(pc).Name()
 
 	// Si RELATIVEFILE está activado
-	if l.Flags&LOG_FLAG_RELATIVEFILE != 0 {
+	if Env.LOG_FLAGS&LOG_FLAG_RELATIVEFILE != 0 {
 		if wd, err := os.Getwd(); err == nil {
 			if rel, err := filepath.Rel(wd, file); err == nil {
 				file = rel
@@ -148,15 +176,12 @@ func (l *Logger) output(level string, format string, a ...any) {
 	}
 
 	// Si SHORTFILE está activado
-	if l.Flags&LOG_FLAG_SHORTFILE != 0 {
+	if Env.LOG_FLAGS&LOG_FLAG_SHORTFILE != 0 {
 		file = filepath.Base(file)
 	}
 
 	// Preparar mensaje
-	if l.Flags&LOG_FLAG_DETAIL != 0 {
-		// poner el tipo de dato de la de cada variable del slice a. si es string(len) "value", array[type(len)]{"value1","value2"}, map[type(len)]type{(len_del_key)key:(len_del_value)"value"}, struct igual que el map
-	}
-	msg := Translate(Env.APP_LOCALE, format, a...)
+	msg = interpolatePlaceholders(msg, ctx)
 
 	// Crear estructura de log
 	entry := map[string]any{
@@ -164,59 +189,67 @@ func (l *Logger) output(level string, format string, a ...any) {
 		"message": msg,
 	}
 
-	if l.Flags&LOG_FLAG_TIMESTAMP != 0 {
+	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 		now := time.Now().Format(Env.LOG_DATE_FORMAT)
 		entry["time"] = now
 	}
 
-	if l.Flags&LOG_FLAG_FUNCTION != 0 {
+	if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
 		entry["function"] = funcName
 	}
 
-	if l.Flags&LOG_FLAG_LINE != 0 {
+	if Env.LOG_FLAGS&LOG_FLAG_LINE != 0 {
 		entry["line"] = line
 	}
 
-	if l.Flags&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE) != 0 {
+	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE) != 0 {
 		entry["file"] = file
 	}
 
-	if l.Flags&LOG_FLAG_CONTEXT != 0 && l.Context != nil {
-		entry["context"] = l.Context
+	if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && ctx != nil {
+		entry["context"] = ctx
 	}
 
 	// salida en consola
-	if l.Output&LOG_OUTPUT_CONSOLE != 0 {
-		if l.Flags&LOG_FLAG_CONSOLE_AS_JSON != 0 {
+	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || level == LOG_INTERNAL_PRINT.String() {
+		if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_AS_JSON != 0 {
 			data, _ := json.MarshalIndent(entry, "", "  ")
-			fmt.Println(string(data))
+			if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(ctx) > 0 {
+				fmt.Println(l.formatDump(data))
+			} else {
+				fmt.Println(string(data))
+			}
 		} else {
 			var b strings.Builder
 
-			if l.Flags&LOG_FLAG_TIMESTAMP != 0 {
+			if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 				b.WriteString(fmt.Sprintf("%s ", entry["time"]))
 			}
-			if l.Flags&LOG_FLAG_PREFIX != 0 {
+			if Env.LOG_FLAGS&LOG_FLAG_PREFIX != 0 {
 				b.WriteString(fmt.Sprintf("[%s] ", entry["level"]))
 			}
 			b.WriteString(fmt.Sprintf("%s", entry["message"]))
 
-			if l.Flags&LOG_FLAG_FUNCTION != 0 {
+			if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
 				b.WriteString(fmt.Sprintf(" [%s]", entry["function"]))
 			}
-			if l.Flags&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE|LOG_FLAG_LINE) != 0 {
+			if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE|LOG_FLAG_LINE) != 0 {
 				b.WriteString(fmt.Sprintf(" (%s:%d)", entry["file"], entry["line"]))
 			}
 
 			fmt.Println(b.String())
 
 			// Detalle de argumentos
-			if l.Flags&LOG_FLAG_DETAIL != 0 && len(a) > 0 {
-				for i, arg := range a {
-					detail := l.formatDump(arg)
-					fmt.Printf("  arg[%d]: %s\n", i, detail)
-				}
+			if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(ctx) > 0 {
+				// for i, arg := range a {
+				// 	detail := l.formatDump(arg)
+				// 	fmt.Printf("  arg[%d]: %s\n", i, detail)
+				// }
+				fmt.Println("\nargs: " + l.formatDump(ctx))
 			}
+		}
+		if level == LOG_INTERNAL_PRINT.String() {
+			return
 		}
 	}
 
@@ -287,7 +320,11 @@ func (l *Logger) formatDump(val any) string {
 	case reflect.Array:
 		var b strings.Builder
 		length := v.Len()
-		b.WriteString(fmt.Sprintf("array(%d){\n", length))
+		if isPtr {
+			b.WriteString(fmt.Sprintf("*array(%d){\n", length))
+		} else {
+			b.WriteString(fmt.Sprintf("array(%d){\n", length))
+		}
 
 		for i := 0; i < length; i++ {
 			val := v.Index(i)
@@ -306,7 +343,11 @@ func (l *Logger) formatDump(val any) string {
 
 		var b strings.Builder
 		length := v.Len()
-		b.WriteString(fmt.Sprintf("slice(%d){\n", length))
+		if isPtr {
+			b.WriteString(fmt.Sprintf("*slice(%d){\n", length))
+		} else {
+			b.WriteString(fmt.Sprintf("slice(%d){\n", length))
+		}
 
 		for i := 0; i < length; i++ {
 			val := v.Index(i)
@@ -325,7 +366,11 @@ func (l *Logger) formatDump(val any) string {
 
 		var b strings.Builder
 		keys := v.MapKeys()
-		b.WriteString(fmt.Sprintf("map(%d){\n", len(keys)))
+		if isPtr {
+			b.WriteString(fmt.Sprintf("*map(%d){\n", len(keys)))
+		} else {
+			b.WriteString(fmt.Sprintf("map(%d){\n", len(keys)))
+		}
 
 		for _, k := range keys {
 			keyStr := l.formatDump(k.Interface())
@@ -346,7 +391,11 @@ func (l *Logger) formatDump(val any) string {
 			name = "anonymous"
 		}
 
-		b.WriteString(fmt.Sprintf("struct(%s){\n", name))
+		if isPtr {
+			b.WriteString(fmt.Sprintf("*struct(%s){\n", name))
+		} else {
+			b.WriteString(fmt.Sprintf("struct(%s){\n", name))
+		}
 
 		for i := 0; i < v.NumField(); i++ {
 			field := t.Field(i)
@@ -482,4 +531,20 @@ func (l *Logger) formatDump(val any) string {
 		}
 		return fmt.Sprintf("%s: %v", t.Kind(), v.Interface())
 	}
+}
+
+func interpolatePlaceholders(msg string, ctx map[string]any) string {
+	if len(ctx) == 0 {
+		return msg
+	}
+
+	for key, val := range ctx {
+		placeholder := fmt.Sprintf("{%s}", key)
+		valueStr := fmt.Sprint(val)
+
+		// Reemplazar todas las ocurrencias del placeholder
+		msg = strings.ReplaceAll(msg, placeholder, valueStr)
+	}
+
+	return msg
 }
