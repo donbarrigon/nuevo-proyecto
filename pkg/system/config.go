@@ -96,7 +96,7 @@ func LoadEnv(filepath ...string) {
 
 	file, err := os.Open(f)
 	if err != nil {
-		Log.Warning("Archivo .env no encontrado en la ruta {file}", V{"file": f})
+		Log.Warning("Archivo .env no encontrado en la ruta {file}", F{"file", f})
 		return
 	}
 	defer file.Close()
@@ -114,7 +114,7 @@ func LoadEnv(filepath ...string) {
 
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			Log.Warning("error de sintaxis en variables de entorno en la línea {lineNumber}: {rawLine}", V{"lineNumber": i, "rawLine": line})
+			Log.Warning("error de sintaxis en variables de entorno en la línea {lineNumber}: {rawLine}", F{"lineNumber", i}, F{"rawLine", line})
 			continue
 		}
 
@@ -220,6 +220,8 @@ func LoadEnv(filepath ...string) {
 
 		case "LOG_LEVEL":
 			switch strings.ToUpper(strings.TrimSpace(value)) {
+			case "OFF":
+				Env.LOG_LEVEL = LOG_OFF
 			case "EMERGENCY":
 				Env.LOG_LEVEL = LOG_EMERGENCY
 			case "ALERT":
@@ -297,10 +299,10 @@ func LoadEnv(filepath ...string) {
 		case "LOG_DAYS":
 			days, err := strconv.Atoi(value)
 			if err != nil {
-				Log.Warning("LOG_DAYS inválido en la línea {lineNumber}: {value}", V{
-					"lineNumber": i,
-					"value":      value,
-				})
+				Log.Warning("LOG_DAYS inválido en la línea {lineNumber}: {value}",
+					F{"lineNumber", i},
+					F{"value", value},
+				)
 				continue
 			}
 			Env.LOG_DAYS = days
@@ -315,10 +317,10 @@ func LoadEnv(filepath ...string) {
 		case "MAIL_PORT":
 			port, err := strconv.Atoi(value)
 			if err != nil {
-				Log.Warning("MAIL_PORT inválido en la línea {lineNumber}: {invalidValue}", V{
-					"lineNumber":   i,
-					"invalidValue": value,
-				})
+				Log.Warning("MAIL_PORT inválido en la línea {lineNumber}: {invalidValue}",
+					F{"lineNumber", i},
+					F{"invalidValue", value},
+				)
 				continue
 			}
 			Env.MAIL_PORT = port
@@ -333,23 +335,23 @@ func LoadEnv(filepath ...string) {
 		case "MAIL_FROM_NAME":
 			Env.MAIL_FROM_NAME = value
 		default:
-			Log.Warning("{envKey} no es una variable de entorno válida", V{
-				"envKey": key,
-			})
+			Log.Warning("{envKey} no es una variable de entorno válida",
+				F{"envKey", key},
+			)
 		}
 	}
 
 	if scanner.Err() != nil {
-		Log.Warning("Fallo crítico al cargar las variables de entorno desde el archivo {file} \nerror: {error}", V{
-			"env":   Env,
-			"file":  f,
-			"error": scanner.Err().Error(),
-		})
+		Log.Warning("Fallo crítico al cargar las variables de entorno desde el archivo {file} \nerror: {error}",
+			F{"file", f},
+			F{"error", scanner.Err().Error()},
+			F{"env", Env},
+		)
 		return
 	}
 
-	Log.Info("Variables de entorno cargadas exitosamente desde el archivo {file}", V{
-		"file": f,
-		"env":  Env,
-	})
+	Log.Info("Variables de entorno cargadas exitosamente desde el archivo {file}",
+		F{"file", f},
+		F{"env", Env},
+	)
 }
