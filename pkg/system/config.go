@@ -3,11 +3,12 @@ package system
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 )
+
+type V map[string]any
 
 type Environment struct {
 	APP_KEY    string
@@ -32,6 +33,9 @@ type Environment struct {
 	LOG_OUTPUT      int
 	LOG_URL         string
 	LOG_PATH        string
+	LOG_CHANNEL     string
+	LOG_FILE_FORMAT LogFileFormat
+	LOG_DAYS        int
 	LOG_DATE_FORMAT string
 
 	MAIL_MAILER       string
@@ -66,9 +70,11 @@ var Env = Environment{
 
 	LOG_LEVEL:       LOG_DEBUG,
 	LOG_FLAGS:       LOG_FLAG_ALL,
-	LOG_OUTPUT:      LOG_OUTPUT_CONSOLE | LOG_OUTPUT_DATABASE,
+	LOG_OUTPUT:      LOG_OUTPUT_CONSOLE | LOG_OUTPUT_FILE | LOG_OUTPUT_DATABASE | LOG_OUTPUT_REMOTE,
 	LOG_URL:         "http://127.0.0.1/debug/log",
 	LOG_PATH:        "log.json",
+	LOG_CHANNEL:     "daily",
+	LOG_DAYS:        14,
 	LOG_DATE_FORMAT: "2006-01-02 15:04:05.000000",
 
 	MAIL_MAILER:       "log",
@@ -82,7 +88,7 @@ var Env = Environment{
 	MAIL_FROM_NAME:    "MiAppGo",
 }
 
-func LoadEnv(filepath ...string) error {
+func LoadEnv(filepath ...string) {
 	f := ".env"
 	if len(filepath) > 0 {
 		f = filepath[0]
@@ -90,7 +96,8 @@ func LoadEnv(filepath ...string) error {
 
 	file, err := os.Open(f)
 	if err != nil {
-		return err
+		Log.Warning("Archivo .env no encontrado en la ruta {file}", V{"file": f})
+		return
 	}
 	defer file.Close()
 
@@ -107,7 +114,8 @@ func LoadEnv(filepath ...string) error {
 
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			return fmt.Errorf("error de sintaxis en variables de entorno en la línea %d: %v", i, line)
+			Log.Warning("error de sintaxis en variables de entorno en la línea {lineNumber}: {rawLine}", V{"lineNumber": i, "rawLine": line})
+			continue
 		}
 
 		key := strings.TrimSpace(parts[0])
@@ -119,7 +127,11 @@ func LoadEnv(filepath ...string) error {
 		value = strings.Trim(value, `"'`)
 
 		if key == "" {
-			return fmt.Errorf("clave vacía al cargar variables de entorno en la línea %d: %v", i, line)
+			Log.Warning("clave vacía al cargar variables de entorno en la línea {lineNumber}: {rawLine}",
+				F{"lineNumber", i},
+				F{"rawLine", line},
+			)
+			continue
 		}
 
 		os.Setenv(key, value)
@@ -248,8 +260,6 @@ func LoadEnv(filepath ...string) error {
 					flags |= LOG_FLAG_PREFIX
 				case "CONSOLE_AS_JSON":
 					flags |= LOG_FLAG_CONSOLE_AS_JSON
-				case "FILE_AS_JSON":
-					flags |= LOG_FLAG_FILE_AS_JSON
 				case "CONTEXT":
 					flags |= LOG_FLAG_CONTEXT
 				case "DUMP":
@@ -277,9 +287,25 @@ func LoadEnv(filepath ...string) error {
 			Env.LOG_URL = value
 		case "LOG_PATH":
 			Env.LOG_PATH = value
+		case "LOG_CHANNEL":
+			value = strings.ToLower(value)
+			if value == "monthly" || value == "weekly" || value == "single" {
+				Env.LOG_CHANNEL = value
+			} else {
+				Env.LOG_CHANNEL = "daily"
+			}
+		case "LOG_DAYS":
+			days, err := strconv.Atoi(value)
+			if err != nil {
+				Log.Warning("LOG_DAYS inválido en la línea {lineNumber}: {value}", V{
+					"lineNumber": i,
+					"value":      value,
+				})
+				continue
+			}
+			Env.LOG_DAYS = days
 		case "LOG_DATE_FORMAT":
 			Env.LOG_DATE_FORMAT = value
-
 		case "MAIL_MAILER":
 			Env.MAIL_MAILER = value
 		case "MAIL_SCHEME":
@@ -289,7 +315,11 @@ func LoadEnv(filepath ...string) error {
 		case "MAIL_PORT":
 			port, err := strconv.Atoi(value)
 			if err != nil {
-				return fmt.Errorf("MAIL_PORT inválido en la línea %d: %v", i, value)
+				Log.Warning("MAIL_PORT inválido en la línea {lineNumber}: {invalidValue}", V{
+					"lineNumber":   i,
+					"invalidValue": value,
+				})
+				continue
 			}
 			Env.MAIL_PORT = port
 		case "MAIL_USERNAME":
@@ -303,21 +333,23 @@ func LoadEnv(filepath ...string) error {
 		case "MAIL_FROM_NAME":
 			Env.MAIL_FROM_NAME = value
 		default:
-			log.Printf("%v no es una variable de entrono", key)
+			Log.Warning("{envKey} no es una variable de entorno válida", V{
+				"envKey": key,
+			})
 		}
 	}
 
 	if scanner.Err() != nil {
-		Log.Emergency("Fallo crítico al cargar las variables de entorno desde el archivo {file}", map[string]any{
-			"env":  Env,
-			"file": f,
+		Log.Warning("Fallo crítico al cargar las variables de entorno desde el archivo {file} \nerror: {error}", V{
+			"env":   Env,
+			"file":  f,
+			"error": scanner.Err().Error(),
 		})
-		return scanner.Err()
+		return
 	}
 
-	Log.Info("Variables de entorno cargadas exitosamente desde el archivo {file}", map[string]any{
-		"env":  Env,
+	Log.Info("Variables de entorno cargadas exitosamente desde el archivo {file}", V{
 		"file": f,
+		"env":  Env,
 	})
-	return nil
 }

@@ -2,14 +2,38 @@ package system
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
+
+type LogLevel int
+type LogFileFormat int
+
+type F struct {
+	Key   string
+	Value any
+}
+
+type Fields []F
+
+type Logger struct {
+	Time     string   `json:"time,omitempty"`
+	Level    LogLevel `json:"-"`
+	Message  string   `json:"message,omitempty"`
+	Function string   `json:"function,omitempty"`
+	Line     string   `json:"line,omitempty"`
+	File     string   `json:"file,omitempty"`
+	Context  Fields   `json:"context,omitempty"`
+}
 
 const (
 	LOG_EMERGENCY      LogLevel = iota // 0 - El sistema está inutilizable
@@ -32,7 +56,7 @@ const (
 	LOG_FLAG_LINE                        // 32    // Solo el número de línea (sin ruta de archivo)
 	LOG_FLAG_PREFIX                      // 64    // Agrega un prefijo antes del mensaje (por ejemplo: [DEBUG])
 	LOG_FLAG_CONSOLE_AS_JSON             // 128   // Salida en formato JSON en la consola
-	LOG_FLAG_FILE_AS_JSON                // 256   // Salida en formato JSON en el archivo
+	LOG_FLAG_CONSOLE_COLOR               // 256 // salida en consola con solor segun el lv
 	LOG_FLAG_CONTEXT                     // 512   // Agrega el contexto de la petición al log
 	LOG_FLAG_DUMP                        // 1024  // Las variables las se imprimen de forma detallada
 
@@ -45,7 +69,6 @@ const (
 		LOG_FLAG_LINE |
 		LOG_FLAG_PREFIX |
 		LOG_FLAG_CONSOLE_AS_JSON |
-		LOG_FLAG_FILE_AS_JSON |
 		LOG_FLAG_CONTEXT |
 		LOG_FLAG_DUMP
 )
@@ -57,9 +80,15 @@ const (
 	LOG_OUTPUT_REMOTE               // 8 - enviar a un servidor remoto (opcional)
 )
 
-type LogLevel int
-
-type Logger struct{}
+const (
+	LOG_FILE_FORMAT_NDJSON LogFileFormat = iota // 0 - NDJSON (JSON por línea)
+	LOG_FILE_FORMAT_CSV                         // 1 - CSV (valores separados por coma)
+	LOG_FILE_FORMAT_PLAIN                       // 2 - Texto plano
+	LOG_FILE_FORMAT_XML                         // 3 - XML estructurado
+	LOG_FILE_FORMAT_YAML                        // 4 - YAML legible para humanos
+	LOG_FILE_FORMAT_LTSV                        // 5 - LTSV (Labelled Tab-separated Values)
+	LOG_FILE_FORMAT_SYSLOG                      // 6 - Formato tipo syslog (RFC 5424)
+)
 
 var Log = Logger{}
 
@@ -88,62 +117,124 @@ func (lv LogLevel) String() string {
 	}
 }
 
-func (l *Logger) Emergency(msg string, ctx map[string]any) {
+func (lv LogLevel) Color() string {
+	switch lv {
+	case LOG_EMERGENCY:
+		return "\033[91m" // rojo brillante
+	case LOG_ALERT:
+		return "\033[95m" // magenta
+	case LOG_CRITICAL:
+		return "\033[35m" // fucsia
+	case LOG_ERROR:
+		return "\033[31m" // rojo
+	case LOG_WARNING:
+		return "\033[33m" // amarillo
+	case LOG_NOTICE:
+		return "\033[92m" // verde claro
+	case LOG_INFO:
+		return "\033[34m" // azul
+	case LOG_DEBUG:
+		return "\033[36m" // cian
+	case LOG_INTERNAL_PRINT:
+		return "\033[90m" // gris claro
+	default:
+		return "\033[0m"
+	}
+}
+
+func (lv LogLevel) DefaultColor() string {
+	return "\033[0m"
+}
+
+func (l LogLevel) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.String())
+}
+
+func (f LogFileFormat) String() string {
+	switch f {
+	case LOG_FILE_FORMAT_NDJSON:
+		return "ndjson"
+	case LOG_FILE_FORMAT_CSV:
+		return "csv"
+	case LOG_FILE_FORMAT_PLAIN:
+		return "plain"
+	case LOG_FILE_FORMAT_XML:
+		return "xml"
+	case LOG_FILE_FORMAT_YAML:
+		return "yaml"
+	case LOG_FILE_FORMAT_LTSV:
+		return "ltsv"
+	case LOG_FILE_FORMAT_SYSLOG:
+		return "syslog"
+	default:
+		return "unknown"
+	}
+}
+
+func (f Fields) MarshalJSON() ([]byte, error) {
+	m := make(map[string]any, len(f))
+	for _, field := range f {
+		m[field.Key] = field.Value
+	}
+	return json.Marshal(m)
+}
+
+func (l *Logger) Emergency(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_EMERGENCY {
-		go l.output(LOG_EMERGENCY.String(), msg, ctx)
+		go l.output(LOG_EMERGENCY, msg, ctx)
 	}
 }
 
-func (l *Logger) Alert(msg string, ctx map[string]any) {
+func (l *Logger) Alert(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_ALERT {
-		go l.output(LOG_ALERT.String(), msg, ctx)
+		go l.output(LOG_ALERT, msg, ctx)
 	}
 }
 
-func (l *Logger) Critical(msg string, ctx map[string]any) {
+func (l *Logger) Critical(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_CRITICAL {
-		go l.output(LOG_CRITICAL.String(), msg, ctx)
+		go l.output(LOG_CRITICAL, msg, ctx)
 	}
 }
 
-func (l *Logger) Error(msg string, ctx map[string]any) {
+func (l *Logger) Error(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_ERROR {
-		go l.output(LOG_ERROR.String(), msg, ctx)
+		go l.output(LOG_ERROR, msg, ctx)
 	}
 }
 
-func (l *Logger) Warning(msg string, ctx map[string]any) {
+func (l *Logger) Warning(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_WARNING {
-		go l.output(LOG_WARNING.String(), msg, ctx)
+		go l.output(LOG_WARNING, msg, ctx)
 	}
 }
 
-func (l *Logger) Notice(msg string, ctx map[string]any) {
+func (l *Logger) Notice(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_NOTICE {
-		go l.output(LOG_NOTICE.String(), msg, ctx)
+		go l.output(LOG_NOTICE, msg, ctx)
 	}
 }
 
-func (l *Logger) Info(msg string, ctx map[string]any) {
+func (l *Logger) Info(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_INFO {
-		go l.output(LOG_INFO.String(), msg, ctx)
+		go l.output(LOG_INFO, msg, ctx)
 	}
 }
 
-func (l *Logger) Debug(msg string, ctx map[string]any) {
+func (l *Logger) Debug(msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= LOG_DEBUG {
-		go l.output(LOG_DEBUG.String(), msg, ctx)
+		go l.output(LOG_DEBUG, msg, ctx)
 	}
 }
 
-func (l *Logger) Log(level LogLevel, msg string, ctx map[string]any) {
+func (l *Logger) Log(level LogLevel, msg string, ctx ...F) {
 	if Env.LOG_LEVEL >= level {
-		go l.output(level.String(), msg, ctx)
+		go l.output(level, msg, ctx)
 	}
 }
 
-func (l *Logger) Print(msg string, ctx map[string]any) {
-	go l.output(LOG_INTERNAL_PRINT.String(), msg, ctx)
+func (l *Logger) Print(msg string, ctx ...F) {
+	go l.output(LOG_INTERNAL_PRINT, msg, ctx)
 }
 
 func (l *Logger) Dump(a any) {
@@ -161,7 +252,39 @@ func (l *Logger) DumpMany(vars ...any) {
 	}
 }
 
-func (l *Logger) output(level string, msg string, ctx map[string]any) {
+func (l *Logger) outputPlain(withColor bool) string {
+	var b strings.Builder
+	color := ""
+	reset := ""
+	if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_COLOR != 0 && withColor {
+		color = l.Level.Color()
+		reset = l.Level.DefaultColor()
+	}
+
+	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
+		b.WriteString(fmt.Sprintf("%s ", l.Time))
+	}
+	if Env.LOG_FLAGS&LOG_FLAG_PREFIX != 0 {
+		b.WriteString(fmt.Sprintf("[%s%s%s] ", color, l.Level.String(), reset))
+	}
+
+	if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_COLOR != 0 {
+		b.WriteString(color + l.Message + reset)
+	} else {
+		b.WriteString(l.Message)
+	}
+
+	if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
+		b.WriteString(fmt.Sprintf(" [%s]", l.Function))
+	}
+	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE|LOG_FLAG_LINE) != 0 {
+		b.WriteString(fmt.Sprintf(" (%s:%s)", l.File, l.Line))
+	}
+
+	return b.String()
+}
+
+func (l *Logger) output(level LogLevel, msg string, ctx Fields) {
 	// Obtener información del runtime
 	pc, file, line, _ := runtime.Caller(2)
 	funcName := runtime.FuncForPC(pc).Name()
@@ -184,73 +307,268 @@ func (l *Logger) output(level string, msg string, ctx map[string]any) {
 	msg = interpolatePlaceholders(msg, ctx)
 
 	// Crear estructura de log
-	entry := map[string]any{
-		"level":   level,
-		"message": msg,
+	entry := &Logger{
+		Level:   level,
+		Message: msg,
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 		now := time.Now().Format(Env.LOG_DATE_FORMAT)
-		entry["time"] = now
+		entry.Time = now
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
-		entry["function"] = funcName
+		entry.Function = funcName
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_LINE != 0 {
-		entry["line"] = line
+		entry.Line = strconv.Itoa(line)
 	}
 
 	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE) != 0 {
-		entry["file"] = file
+		entry.File = file
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && ctx != nil {
-		entry["context"] = ctx
+		entry.Context = ctx
 	}
 
-	// salida en consola
-	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || level == LOG_INTERNAL_PRINT.String() {
+	// salida en consola ----------------------------------------------------------------
+	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || level == LOG_INTERNAL_PRINT {
 		if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_AS_JSON != 0 {
-			data, _ := json.MarshalIndent(entry, "", "  ")
 			if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(ctx) > 0 {
-				fmt.Println(l.formatDump(data))
+				fmt.Println(l.formatDump(entry))
 			} else {
+				data, _ := json.MarshalIndent(entry, "", "  ")
 				fmt.Println(string(data))
 			}
 		} else {
-			var b strings.Builder
-
-			if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
-				b.WriteString(fmt.Sprintf("%s ", entry["time"]))
-			}
-			if Env.LOG_FLAGS&LOG_FLAG_PREFIX != 0 {
-				b.WriteString(fmt.Sprintf("[%s] ", entry["level"]))
-			}
-			b.WriteString(fmt.Sprintf("%s", entry["message"]))
-
-			if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
-				b.WriteString(fmt.Sprintf(" [%s]", entry["function"]))
-			}
-			if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE|LOG_FLAG_LINE) != 0 {
-				b.WriteString(fmt.Sprintf(" (%s:%d)", entry["file"], entry["line"]))
-			}
-
-			fmt.Println(b.String())
-
+			fmt.Println(entry.outputPlain(true))
 			// Detalle de argumentos
 			if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(ctx) > 0 {
-				// for i, arg := range a {
-				// 	detail := l.formatDump(arg)
-				// 	fmt.Printf("  arg[%d]: %s\n", i, detail)
-				// }
 				fmt.Println("\nargs: " + l.formatDump(ctx))
 			}
 		}
-		if level == LOG_INTERNAL_PRINT.String() {
+
+		if level == LOG_INTERNAL_PRINT {
 			return
 		}
+
+	}
+
+	// salida en archivo ----------------------------------------------------------------
+	if Env.LOG_OUTPUT&LOG_OUTPUT_FILE != 0 {
+		var filename string
+		now := time.Now()
+
+		switch strings.ToLower(Env.LOG_CHANNEL) {
+		case "daily":
+			filename = now.Format("2006-01-02") + ".log"
+		case "monthly", "mensual":
+			filename = now.Format("2006-01") + ".log"
+		case "weekly":
+			year, week := now.ISOWeek()
+			filename = fmt.Sprintf("%d-W%02d.log", year, week)
+		default:
+			filename = "output.log"
+		}
+
+		logDir := "logs"
+		if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
+			fmt.Printf("No se pudo crear el directorio de logs: %v\n", err)
+			return
+		}
+
+		filePath := filepath.Join(logDir, filename)
+		var file *os.File
+
+		// Crear nuevo archivo o agregar al existente
+		file, _ = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+		if Env.LOG_CHANNEL != "single" {
+
+			// Eliminar archivos viejos si
+
+			if Env.LOG_CHANNEL == "daily" && Env.LOG_DAYS > 0 {
+				entries, _ := os.ReadDir(logDir)
+				cutoff := now.AddDate(0, 0, -Env.LOG_DAYS)
+				for _, entry := range entries {
+					if entry.IsDir() {
+						continue
+					}
+					name := entry.Name()
+					if !strings.HasSuffix(name, ".log") {
+						continue
+					}
+					datePart := strings.TrimSuffix(name, ".log")
+					entryDate, err := time.Parse("2006-01-02", datePart)
+					if err == nil && entryDate.Before(cutoff) {
+						_ = os.Remove(filepath.Join(logDir, name))
+					}
+				}
+			}
+
+			if Env.LOG_CHANNEL == "weekly" && Env.LOG_DAYS > 0 {
+				entries, _ := os.ReadDir(logDir)
+
+				// Calcular semanas a conservar, redondeando hacia arriba (mínimo 1)
+				weeksToKeep := (Env.LOG_DAYS + 6) / 7
+				if weeksToKeep < 1 {
+					weeksToKeep = 1
+				}
+
+				// Crear lista de semanas válidas (formato YYYY-Www)
+				validWeeks := make(map[string]bool)
+				for i := 0; i < weeksToKeep; i++ {
+					weekTime := now.AddDate(0, 0, -7*i)
+					year, week := weekTime.ISOWeek()
+					weekStr := fmt.Sprintf("%d-W%02d", year, week)
+					validWeeks[weekStr] = true
+				}
+
+				// Eliminar logs fuera del rango de semanas válidas
+				for _, entry := range entries {
+					if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".log") {
+						continue
+					}
+					name := strings.TrimSuffix(entry.Name(), ".log")
+
+					// Formato semanal esperado: YYYY-Wxx
+					if strings.Count(name, "-") == 1 && strings.Contains(name, "W") && len(name) == 8 {
+						if !validWeeks[name] {
+							_ = os.Remove(filepath.Join(logDir, entry.Name()))
+						}
+					}
+				}
+			}
+
+			if strings.ToLower(Env.LOG_CHANNEL) == "monthly" && Env.LOG_DAYS > 0 {
+				entries, _ := os.ReadDir(logDir)
+
+				// Redondear hacia arriba los días a meses (mínimo 1)
+				monthsToKeep := (Env.LOG_DAYS + 29) / 30
+				if monthsToKeep < 1 {
+					monthsToKeep = 1
+				}
+
+				// Generar meses válidos
+				validMonths := make(map[string]bool)
+				for i := 0; i < monthsToKeep; i++ {
+					month := now.AddDate(0, -i, 0).Format("2006-01")
+					validMonths[month] = true
+				}
+
+				// Eliminar archivos fuera del rango permitido
+				for _, entry := range entries {
+					if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".log") {
+						continue
+					}
+					name := strings.TrimSuffix(entry.Name(), ".log")
+
+					// Formato YYYY-MM
+					if len(name) == 7 && strings.Count(name, "-") == 1 {
+						if !validMonths[name] {
+							_ = os.Remove(filepath.Join(logDir, entry.Name()))
+						}
+					}
+				}
+			}
+		}
+
+		defer file.Close()
+
+		var out string
+
+		switch Env.LOG_FILE_FORMAT {
+		case LOG_FILE_FORMAT_NDJSON:
+			jsonData, err := json.Marshal(entry)
+			if err != nil {
+				msg := fmt.Sprintf("Error al serializar log: %s", err.Error())
+				escapedDump := strings.ReplaceAll(entry.formatDump(entry), `"`, `\"`)
+				out = fmt.Sprintf(`{"level":"ERROR","message":"%s","context":"%s"}`, msg, escapedDump)
+
+				Log.Print(msg, F{"context", entry})
+			} else {
+				out = string(jsonData)
+			}
+
+		case LOG_FILE_FORMAT_CSV:
+			// CSV: Time, Level, Message, Function, File, Line
+			escape := func(s string) string {
+				s = strings.ReplaceAll(s, `"`, `""`)
+				return `"` + s + `"`
+			}
+			out = strings.Join([]string{
+				escape(l.Time),
+				escape(l.Level.String()),
+				escape(l.Message),
+				escape(l.Function),
+				escape(l.File),
+				escape(l.Line),
+			}, ",")
+
+		case LOG_FILE_FORMAT_PLAIN:
+			out = l.outputPlain(false)
+
+		case LOG_FILE_FORMAT_XML:
+			// XML estructurado
+			xmlData, err := xml.MarshalIndent(l, "", "  ")
+			if err != nil {
+				out = fmt.Sprintf(`<log><level>ERROR</level><message>Error al serializar log: %s</message></log>`, err.Error())
+			} else {
+				out = string(xmlData)
+			}
+
+		case LOG_FILE_FORMAT_YAML:
+			yamlData, err := yaml.Marshal(l)
+			if err != nil {
+				out = fmt.Sprintf("level: ERROR\nmessage: Error al serializar log: %s", err.Error())
+			} else {
+				out = string(yamlData)
+			}
+
+		case LOG_FILE_FORMAT_LTSV:
+			// LTSV: key:value separados por tabs
+			escape := func(s string) string {
+				s = strings.ReplaceAll(s, "\t", " ")
+				s = strings.ReplaceAll(s, "\n", " ")
+				return s
+			}
+			out = fmt.Sprintf("time:%s\tlevel:%s\tmessage:%s\tfunction:%s\tfile:%s\tline:%s",
+				escape(l.Time),
+				escape(l.Level.String()),
+				escape(l.Message),
+				escape(l.Function),
+				escape(l.File),
+				escape(l.Line),
+			)
+
+		case LOG_FILE_FORMAT_SYSLOG:
+			// Syslog estilo RFC 5424 básico: <PRI>TIMESTAMP HOST APP-NAME PROCID MSGID MSG
+			timestamp := l.Time
+			hostname, _ := os.Hostname()
+			appName := "go-app"
+			procID := fmt.Sprintf("%d", os.Getpid())
+			msgID := "-"
+			msg := fmt.Sprintf("%s", l.Message)
+
+			out = fmt.Sprintf("<%d>%s %s %s %s %s %s",
+				14, // facility/user-level info
+				timestamp,
+				hostname,
+				appName,
+				procID,
+				msgID,
+				msg,
+			)
+
+		default:
+			// Fallback a texto plano sin color
+			out = l.outputPlain(false)
+		}
+
+		file.WriteString(out + "\n")
+
 	}
 
 }
@@ -533,16 +851,15 @@ func (l *Logger) formatDump(val any) string {
 	}
 }
 
-func interpolatePlaceholders(msg string, ctx map[string]any) string {
+func interpolatePlaceholders(msg string, ctx Fields) string {
 	if len(ctx) == 0 {
 		return msg
 	}
 
-	for key, val := range ctx {
-		placeholder := fmt.Sprintf("{%s}", key)
-		valueStr := fmt.Sprint(val)
+	for _, field := range ctx {
+		placeholder := fmt.Sprintf("{%s}", field.Key)
+		valueStr := fmt.Sprint(field.Value)
 
-		// Reemplazar todas las ocurrencias del placeholder
 		msg = strings.ReplaceAll(msg, placeholder, valueStr)
 	}
 
