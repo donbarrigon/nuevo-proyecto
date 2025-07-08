@@ -16,38 +16,53 @@ type Error interface {
 	GetMessage() string
 	GetErr() any
 	SetStatus(code int)
-	SetMessage(format string, a ...any)
-	SetErr(format any, a ...any)
-	Translate(lang string)           // traduce el error
-	Append(field string, err string) // agrega error si es que hay
-	Errors() Error                   // para el retorno de multiples errores usado en el request
+	SetMessage(format string, ph ...F)
+	SetErr(format any, ph ...F)
+	Translate(lang string)                     // traduce el error
+	Append(field string, text string, ph ...F) // agrega error si es que hay
+	Errors() Error                             // para el retorno de multiples errores usado en el request
 }
 
 type Err struct {
-	Status  int                 `json:"-"`
-	Message string              `json:"message"`
-	Err     any                 `json:"error,omitempty"`
-	ErrMap  map[string][]string `json:"-"`
-	am      []any               `json:"-"`
-	ae      []any               `json:"-"`
+	Status    int                 `json:"-"`
+	Message   string              `json:"message"`
+	Err       any                 `json:"errors,omitempty"`
+	ErrMap    map[string][]string `json:"-"`
+	phMessage Fields              `json:"-"`
+	phErr     Fields              `json:"-"`
+	phMap     map[string][]Fields `json:"-"`
 }
 
 // variable para azucar sintactico
 var Errors = Err{
-	Status:  0,
-	Message: "",
-	Err:     nil,
-	ErrMap:  make(map[string][]string),
+	Status:    0,
+	Message:   "",
+	Err:       nil,
+	ErrMap:    make(map[string][]string),
+	phMessage: make(Fields, 0),
+	phErr:     make(Fields, 0),
+	phMap:     make(map[string][]Fields),
 }
 
-func (e *Err) New() Error {
+func (e *Err) New(status int, message string, ph ...F) Error {
+	return &Err{
+		Status:    status,
+		Message:   message,
+		ErrMap:    make(map[string][]string),
+		phMessage: ph,
+	}
+}
+
+func (e *Err) Empty() Error {
 	return &Err{
 		ErrMap: make(map[string][]string),
+		phMap:  make(map[string][]Fields),
 	}
 }
 
 func (e *Err) Error() string {
-	return fmt.Sprintf("[%v] %v: \n%v", e.Status, e.Message, e.Err)
+	msg := interpolatePlaceholders(e.Message, e.phMessage)
+	return fmt.Sprintf("[%v] %v: \n%v", e.Status, msg, e.GetErr())
 }
 
 func (e *Err) GetStatus() int {
@@ -55,7 +70,7 @@ func (e *Err) GetStatus() int {
 }
 
 func (e *Err) GetMessage() string {
-	return fmt.Sprintf(e.Message, e.am...)
+	return e.Message
 }
 
 func (e *Err) GetErr() any {
@@ -63,7 +78,7 @@ func (e *Err) GetErr() any {
 		return e.ErrMap
 	}
 	if str, ok := e.Err.(string); ok {
-		return fmt.Sprintf(str, e.ae...)
+		return interpolatePlaceholders(str, e.phErr)
 	}
 	return e.Err
 }
@@ -72,33 +87,39 @@ func (e *Err) SetStatus(code int) {
 	e.Status = code
 }
 
-func (e *Err) SetMessage(format string, a ...any) {
+func (e *Err) SetMessage(format string, ph ...F) {
 	e.Message = format
-	e.am = a
+	e.phMessage = ph
 }
 
-func (e *Err) SetErr(format any, a ...any) {
+func (e *Err) SetErr(format any, ph ...F) {
 	e.Err = format
-	e.ae = a
+	e.phErr = ph
 }
 
 func (e *Err) Translate(l string) {
-	e.Message = Translate(l, e.Message, e.am...)
+	e.Message = Translate(l, e.Message, e.phMessage...)
 
-	switch errVal := e.Err.(type) {
-	case string:
-		e.Err = Translate(l, errVal, e.ae...)
-	case error:
-		e.Err = Translate(l, errVal.Error())
+	if e.ErrMap == nil {
+		switch errVal := e.Err.(type) {
+		case string:
+			e.Err = Translate(l, errVal, e.phErr...)
+		case error:
+			e.Err = Translate(l, errVal.Error())
+		}
+	} else {
+		for key, messages := range e.ErrMap {
+			for k, msg := range messages {
+				e.ErrMap[key][k] = Translate(l, msg, e.phMap[key][k]...)
+			}
+		}
 	}
 }
 
-func (e *Err) Append(field string, text string) {
-	// if e.ErrMap == nil {
-	// 	e.ErrMap = make(map[string][]string)
-	// }
+func (e *Err) Append(field string, text string, ph ...F) {
 	if text != "" {
 		e.ErrMap[field] = append(e.ErrMap[field], text)
+		e.phMap[field] = append(e.phMap[field], ph)
 	}
 }
 
