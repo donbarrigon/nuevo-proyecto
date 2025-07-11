@@ -45,12 +45,12 @@ func (ctx *Context) Lang() string {
 func (ctx *Context) GetBody(request any) system.Error {
 	decoder := json.NewDecoder(ctx.Request.Body)
 	if err := decoder.Decode(request); err != nil {
-		return &system.Err{
-			Status:  http.StatusBadRequest,
-			Message: "El cuerpo de la solicitud es incorrecto",
-			Err:     "No se pudo decodificar el cuerpo de la solicitud: {error}",
-			phErr:   system.Fields{{"error", err.Error()}},
-		}
+		return system.Errors.New(
+			http.StatusBadRequest,
+			"El cuerpo de la solicitud es incorrecto",
+			"No se pudo decodificar el cuerpo de la solicitud: {error}",
+			system.F{Key: "error", Value: err.Error()},
+		)
 	}
 	defer ctx.Request.Body.Close()
 	return nil
