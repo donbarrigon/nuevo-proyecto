@@ -1,4 +1,4 @@
-package controller
+package app
 
 import (
 	"bytes"
@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/request"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
+	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -42,36 +41,37 @@ func (ctx *Context) Lang() string {
 	return ctx.Request.Header.Get("Accept-Language")
 }
 
-func (ctx *Context) GetBody(request any) system.Error {
+func (ctx *Context) GetBody(request any) Error {
 	decoder := json.NewDecoder(ctx.Request.Body)
 	if err := decoder.Decode(request); err != nil {
-		return system.Errors.New(
-			http.StatusBadRequest,
-			"El cuerpo de la solicitud es incorrecto",
-			"No se pudo decodificar el cuerpo de la solicitud: {error}",
-			system.F{Key: "error", Value: err.Error()},
-		)
+		return &Err{
+			Status:    http.StatusBadRequest,
+			Message:   "The request body is invalid",
+			Err:       "Could not decode the request body: {error}",
+			phMessage: Fields{{Key: "error", Value: err.Error()}},
+		}
 	}
 	defer ctx.Request.Body.Close()
 	return nil
 }
 
-func (ctx *Context) GetMultiPartForm(req any) system.Error {
+func (ctx *Context) GetMultiPartForm(req any) Error {
 	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB
 	if err != nil {
-		return &system.Err{
-			Status:  http.StatusBadRequest,
-			Message: system.Translate(ctx.Lang(), "El formulario no se pudo procesar"),
-			Err:     system.Translate(ctx.Lang(), "Error al analizar el formulario: %v", err.Error()),
+		return &Err{
+			Status:    http.StatusBadRequest,
+			Message:   "The form could not be processed",
+			Err:       "Failed to parse the form: {error}",
+			phMessage: Fields{{Key: "error", Value: err.Error()}},
 		}
 	}
 
 	form := ctx.Request.MultipartForm
 	if form == nil {
-		return &system.Err{
+		return &Err{
 			Status:  http.StatusBadRequest,
-			Message: system.Translate(ctx.Lang(), "Formulario no válido"),
-			Err:     system.Translate(ctx.Lang(), "No se encontró un formulario multipart válido"),
+			Message: "Invalid form",
+			Err:     "No valid multipart form found",
 		}
 	}
 
@@ -172,63 +172,7 @@ func (ctx *Context) GetMultiPartForm(req any) system.Error {
 	return nil
 }
 
-// GetMultiPartForm analiza multipart/form-data y asigna los valores al struct `req`
-// func (ctx *Context) GetMultiPartForm(req any) system.Error {
-// 	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB por defecto
-// 	if err != nil {
-// 		return &system.Err{
-// 			Status:  http.StatusBadRequest,
-// 			Message: "El formulario no se pudo procesar",
-// 			Err:     system.Translate(ctx.Lang(), "Error al analizar el formulario") + ": " + err.Error(),
-// 		}
-// 	}
-
-// 	form := ctx.Request.MultipartForm
-// 	if form == nil {
-// 		return &system.Err{
-// 			Status:  http.StatusBadRequest,
-// 			Message: "Formulario no válido",
-// 			Err:     system.Translate(ctx.Lang(), "No se encontró un formulario multipart válido"),
-// 		}
-// 	}
-
-// 	v := reflect.ValueOf(req)
-// 	t := reflect.TypeOf(req)
-
-// 	// Si es puntero, desreferenciar
-// 	if t.Kind() == reflect.Ptr {
-// 		t = t.Elem()
-// 		v = v.Elem()
-// 	}
-
-// 	for i := 0; i < t.NumField(); i++ {
-// 		field := t.Field(i)
-// 		formKey := field.Tag.Get("form")
-// 		if formKey == "" {
-// 			formKey = field.Name
-// 		}
-
-// 		values := form.Value[formKey]
-// 		if len(values) == 0 {
-// 			continue // No hay valor para este campo
-// 		}
-
-// 		fieldValue := v.Field(i)
-// 		if !fieldValue.CanSet() {
-// 			continue
-// 		}
-
-// 		// Solo manejamos string por simplicidad aquí
-// 		if field.Type.Kind() == reflect.String {
-// 			fieldValue.SetString(values[0])
-// 		}
-// 		// Puedes extender esto para otros tipos si lo necesitas
-// 	}
-
-// 	return nil
-// }
-
-func (ctx *Context) ValidateBody(req any) system.Error {
+func (ctx *Context) ValidateBody(req any) Error {
 	if err := ctx.GetBody(req); err != nil {
 		return err
 	}
@@ -255,7 +199,7 @@ func (ctx *Context) ValidateBody(req any) system.Error {
 	return nil
 }
 
-func (ctx *Context) ValidateMultiPartForm(req any) system.Error {
+func (ctx *Context) ValidateMultiPartForm(req any) Error {
 	if err := ctx.GetMultiPartForm(req); err != nil {
 		return err
 	}
@@ -265,7 +209,7 @@ func (ctx *Context) ValidateMultiPartForm(req any) system.Error {
 	return nil
 }
 
-func (ctx *Context) ValidateRequest(req any) system.Error {
+func (ctx *Context) ValidateRequest(req any) Error {
 	contentType := ctx.Request.Header.Get("Content-Type")
 
 	switch {
@@ -277,10 +221,11 @@ func (ctx *Context) ValidateRequest(req any) system.Error {
 		return ctx.ValidateBody(req)
 
 	default:
-		return &system.Err{
-			Status:  http.StatusUnsupportedMediaType,
-			Message: system.Translate(ctx.Lang(), "Tipo de contenido no soportado"),
-			Err:     system.Translate(ctx.Lang(), "Tipo de contenido no soportado: %v", contentType),
+		return &Err{
+			Status:    http.StatusUnsupportedMediaType,
+			Message:   "Unsupported content type",
+			Err:       "Unsupported content type: {contentType}",
+			phMessage: Fields{{Key: "contentType", Value: contentType}},
 		}
 	}
 }
@@ -305,64 +250,67 @@ func (ctx *Context) WriteJSON(status int, data any) {
 	if err := json.NewEncoder(ctx.Writer).Encode(data); err != nil {
 		ctx.Writer.WriteHeader(http.StatusInternalServerError)
 		ctx.Writer.WriteHeader(500)
-		ctx.Writer.Write([]byte(fmt.Sprintf(`{"message":"Error","error":"%s"}`, system.Translate(ctx.Lang(), "No se pudo codificar la respuesta"))))
+		ctx.Writer.Write([]byte(Translate(ctx.Lang(), `{"message": "Error", "error": "Could not encode the response"}`)))
 	}
 }
 
-func (ctx *Context) WriteError(err system.Error) {
+func (ctx *Context) WriteError(err Error) {
 	err.Translate(ctx.Lang())
 	ctx.WriteJSON(err.GetStatus(), err)
 }
 
 func (ctx *Context) WriteNotFound() {
-	ctx.WriteError(system.Errors.NotFoundf("El recurso [%v:%v] no existe", ctx.Request.Method, ctx.Request.URL.Path))
+	ctx.WriteError(Errors.NotFoundf("The resource [{method}:{path}] does not exist",
+		F{Key: "method", Value: ctx.Request.Method},
+		F{Key: "path", Value: ctx.Request.URL.Path},
+	))
 }
 
-func (ctx *Context) WriteMessage(code int, data any, message string, v ...any) {
+func (ctx *Context) WriteMessage(code int, data any, message string, ph ...F) {
 	ctx.WriteJSON(code, &MessageResource{
-		Message: system.Translate(ctx.Lang(), message, v...),
+		Message: Translate(ctx.Lang(), message, ph...),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteSuccess(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: system.Translate(ctx.Lang(), "Solicitud procesada con éxito"),
+		Message: Translate(ctx.Lang(), "Request processed successfully"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteCreated(data any) {
 	ctx.WriteJSON(http.StatusCreated, &MessageResource{
-		Message: system.Translate(ctx.Lang(), "Recurso creado exitosamente"),
+		Message: Translate(ctx.Lang(), "Resource created successfully"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteUpdated(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: system.Translate(ctx.Lang(), "Recurso actualizado exitosamente"),
+		Message: Translate(ctx.Lang(), "Resource updated successfully"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteDeleted(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: system.Translate(ctx.Lang(), "Recurso eliminado exitosamente"),
+		Message: Translate(ctx.Lang(), "Resource deleted successfully"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteRestored(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: system.Translate(ctx.Lang(), "Recurso restaurado exitosamente"),
+		Message: Translate(ctx.Lang(), "Resource restored successfully"),
 		Data:    data,
 	})
 }
 
 func (ctx *Context) WriteForceDeleted(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: system.Translate(ctx.Lang(), "Recurso eliminado permanentemente"),
+		Message: Translate(ctx.Lang(), "Resource permanently deleted"),
 		Data:    data,
 	})
 }
@@ -371,9 +319,9 @@ func (ctx *Context) WriteNoContent() {
 	ctx.Writer.WriteHeader(http.StatusNoContent)
 }
 
-func (ctx *Context) TT(s string, v ...any) string {
-	return system.Translate(ctx.Lang(), s, v...)
-}
+// func (ctx *Context) TT(s string, ph ...F) string {
+// 	return Translate(ctx.Lang(), s, ph...)
+// }
 
 func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *db.QueryFilter {
 	query := ctx.Request.URL.Query()
@@ -545,10 +493,10 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Slice {
-		err := &system.Err{
+		err := &Err{
 			Status:  http.StatusInternalServerError,
-			Message: "Error al escribir el csv",
-			Err:     system.Translate(ctx.Lang(), "Los datos no son un slice de structs"),
+			Message: "Error writing CSV",
+			Err:     "Data is not a slice of structs",
 		}
 		ctx.WriteError(err)
 		return
@@ -564,7 +512,7 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 	writer.Comma = del
 
 	if val.Len() == 0 {
-		err := system.Errors.NoDocumentsf(system.Translate(ctx.Lang(), "No hay datos"))
+		err := Errors.NoDocumentsf("No data available")
 		ctx.WriteError(err)
 		return
 	}
@@ -632,111 +580,21 @@ func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
 	ctx.Writer.Write(buffer.Bytes())
 }
 
-// func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
-// 	val := reflect.ValueOf(data)
-
-// 	if val.Kind() != reflect.Slice {
-// 		err := errors.NewError(
-// 			http.StatusInternalServerError,
-// 			"Error al escribir el csv",
-// 			errors.New(system.Translate(ctx.Lang(), "Los datos no son un slice de structs")),
-// 		)
-// 		ctx.WriteError(err)
-// 		return
-// 	}
-
-// 	var buffer bytes.Buffer
-// 	writer := csv.NewWriter(&buffer)
-
-// 	del := ';'
-// 	if len(comma) > 0 {
-// 		del = comma[0]
-// 	}
-// 	writer.Comma = del
-
-// 	if val.Len() == 0 {
-// 		err := errors.NoDocuments(errors.New(system.Translate(ctx.Lang(), "No hay datos")))
-// 		ctx.WriteError(err)
-// 		return
-// 	}
-
-// 	first := val.Index(0)
-// 	elemType := first.Type()
-
-// 	var headers []string
-// 	var fields []int // Índices de campos válidos
-
-// 	// Encabezados filtrando por tag json
-// 	for i := 0; i < elemType.NumField(); i++ {
-// 		field := elemType.Field(i)
-// 		tag := field.Tag.Get("json")
-// 		if tag == "" || tag == "-" {
-// 			continue
-// 		}
-// 		// Cortar por coma por si hay `json:"name,omitempty"`
-// 		tag = strings.Split(tag, ",")[0]
-// 		headers = append(headers, tag)
-// 		fields = append(fields, i)
-// 	}
-// 	writer.Write(headers)
-
-// 	// Datos
-// 	for i := 0; i < val.Len(); i++ {
-// 		var record []string
-// 		elem := val.Index(i)
-
-// 		for _, j := range fields {
-// 			fieldVal := elem.Field(j)
-// 			switch fieldVal.Kind() {
-// 			case reflect.String:
-// 				record = append(record, fieldVal.String())
-// 			case reflect.Int, reflect.Int64:
-// 				record = append(record, fmt.Sprintf("%d", fieldVal.Int()))
-// 			case reflect.Float64:
-// 				record = append(record, fmt.Sprintf("%f", fieldVal.Float()))
-// 			case reflect.Bool:
-// 				record = append(record, fmt.Sprintf("%t", fieldVal.Bool()))
-// 			case reflect.Struct:
-// 				if t, ok := fieldVal.Interface().(time.Time); ok {
-// 					record = append(record, t.Format(time.RFC3339))
-// 				} else {
-// 					jsonVal, _ := json.Marshal(fieldVal.Interface())
-// 					record = append(record, string(jsonVal))
-// 				}
-// 			case reflect.Slice, reflect.Map, reflect.Array:
-// 				jsonVal, _ := json.Marshal(fieldVal.Interface())
-// 				record = append(record, string(jsonVal))
-// 			default:
-// 				record = append(record, fmt.Sprintf("%v", fieldVal.Interface()))
-// 				// Para cualquier otro tipo (interface, pointer, etc.)
-// 				// jsonVal, _ := json.Marshal(fieldVal.Interface())
-// 				// record = append(record, string(jsonVal))
-// 			}
-// 		}
-// 		writer.Write(record)
-// 	}
-// 	writer.Flush()
-
-// 	ctx.Writer.Header().Set("Content-Type", "text/csv")
-// 	ctx.Writer.Header().Set("Content-Disposition", "attachment;filename="+fileName+".csv")
-// 	ctx.Writer.Write(buffer.Bytes())
-// }
-
 // Fill llena los campos del modelo con los valores del request,
 // pero solo si el campo del modelo tiene la etiqueta fillable
-func Fill(model any, request any) system.Error {
+func Fill(model any, request any) Error {
 	modelValue := reflect.ValueOf(model)
 	requestValue := reflect.ValueOf(request)
 
 	if modelValue.Kind() != reflect.Ptr || requestValue.Kind() != reflect.Ptr {
-		return system.Errors.Unknownf("Los parámetros model y request deben ser punteros")
+		return Errors.Unknownf("The parameters model and request must be pointers")
 	}
 
 	modelValue = modelValue.Elem()
 	requestValue = requestValue.Elem()
 
 	if modelValue.Kind() != reflect.Struct || requestValue.Kind() != reflect.Struct {
-		return system.Errors.Unknownf("Los parámetros model y request deben ser estructuras")
+		return Errors.Unknownf("The parameters model and request must be structs")
 	}
 
 	modelType := modelValue.Type()
