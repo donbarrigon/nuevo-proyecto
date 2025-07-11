@@ -3,12 +3,13 @@ package controller
 import (
 	"net/http"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/request"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
+	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/request"
 )
 
-func PermissionIndex(ctx *Context) {
+func PermissionIndex(ctx *app.Context) {
 	allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
 
 	var permissions []model.Permission
@@ -21,7 +22,7 @@ func PermissionIndex(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func PermissionExport(ctx *Context) {
+func PermissionExport(ctx *app.Context) {
 	allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
 	qf := ctx.GetQueryFilter(allowFilters)
 	qf.All()
@@ -35,7 +36,7 @@ func PermissionExport(ctx *Context) {
 	ctx.WriteCSV("db", permissions)
 }
 
-func PermissionShow(ctx *Context) {
+func PermissionShow(ctx *app.Context) {
 	id := ctx.Get("id")
 
 	permission := &model.Permission{}
@@ -47,7 +48,7 @@ func PermissionShow(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, permission)
 }
 
-func PermissionStore(ctx *Context) {
+func PermissionStore(ctx *app.Context) {
 	req := &request.StorePermission{}
 	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
@@ -55,7 +56,7 @@ func PermissionStore(ctx *Context) {
 	}
 
 	permission := &model.Permission{}
-	Fill(permission, req)
+	model.Fill(permission, req)
 
 	if err := db.Create(permission); err != nil {
 		ctx.WriteError(err)
@@ -65,7 +66,7 @@ func PermissionStore(ctx *Context) {
 	ctx.WriteCreated(permission)
 }
 
-func PermissionUpdate(ctx *Context) {
+func PermissionUpdate(ctx *app.Context) {
 	req := &request.StorePermission{}
 	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
@@ -79,7 +80,7 @@ func PermissionUpdate(ctx *Context) {
 		return
 	}
 
-	Fill(permission, req)
+	model.Fill(permission, req)
 
 	if err := db.Update(permission); err != nil {
 		ctx.WriteError(err)
@@ -89,7 +90,7 @@ func PermissionUpdate(ctx *Context) {
 	ctx.WriteUpdated(permission)
 }
 
-func PermissionDestroy(ctx *Context) {
+func PermissionDestroy(ctx *app.Context) {
 	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
@@ -105,7 +106,7 @@ func PermissionDestroy(ctx *Context) {
 	ctx.WriteDeleted(permission)
 }
 
-func PermissionRestore(ctx *Context) {
+func PermissionRestore(ctx *app.Context) {
 	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
@@ -121,7 +122,7 @@ func PermissionRestore(ctx *Context) {
 	ctx.WriteRestored(permission)
 }
 
-func PermissionForceDelete(ctx *Context) {
+func PermissionForceDelete(ctx *app.Context) {
 	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {

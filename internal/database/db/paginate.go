@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -15,13 +15,13 @@ type PaginateResource struct {
 	Meta  map[string]any `json:"meta"`
 }
 
-func Paginate(model Model, result any, qf *QueryFilter) (*PaginateResource, system.Error) {
+func Paginate(model Model, result any, qf *app.QueryFilter) (*PaginateResource, app.Error) {
 	cursor, err := Mongo.Database.Collection(model.TableName()).Aggregate(context.TODO(), qf.Pipeline())
 	if err != nil {
-		return nil, system.Errors.Mongo(err)
+		return nil, app.Errors.Mongo(err)
 	}
 	if err = cursor.All(context.TODO(), result); err != nil {
-		return nil, system.Errors.Mongo(err)
+		return nil, app.Errors.Mongo(err)
 	}
 
 	paginated := &PaginateResource{
@@ -55,7 +55,7 @@ func Paginate(model Model, result any, qf *QueryFilter) (*PaginateResource, syst
 
 		total, err := Mongo.Database.Collection(model.TableName()).CountDocuments(context.TODO(), countQF.Pipeline())
 		if err != nil {
-			return nil, system.Errors.Mongo(err)
+			return nil, app.Errors.Mongo(err)
 		}
 
 		lastPage := int((int64(total) + int64(qf.PerPage) - 1) / int64(qf.PerPage))

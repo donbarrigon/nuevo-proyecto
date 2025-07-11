@@ -34,7 +34,7 @@ type Err struct {
 }
 
 type FieldError struct {
-	FildName     string
+	FieldName    string
 	Message      string
 	Placeholders Fields
 }
@@ -140,8 +140,8 @@ func (e *Err) Appendf(field string, text string, ph ...F) {
 
 func (e *Err) Append(err *FieldError) {
 	if err != nil {
-		e.ErrMap[err.FildName] = append(e.ErrMap[err.FildName], err.Message)
-		e.phMap[err.FildName] = append(e.phMap[err.FildName], err.Placeholders)
+		e.ErrMap[err.FieldName] = append(e.ErrMap[err.FieldName], err.Message)
+		e.phMap[err.FieldName] = append(e.phMap[err.FieldName], err.Placeholders)
 	}
 }
 

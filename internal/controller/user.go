@@ -3,15 +3,15 @@ package controller
 import (
 	"net/http"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/resource"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
+	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/resource"
 	"github.com/donbarrigon/nuevo-proyecto/pkg/validate"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func UserShow(ctx *Context) {
+func UserShow(ctx *app.Context) {
 	id := ctx.Get("id")
 
 	user := &model.User{}
@@ -23,7 +23,7 @@ func UserShow(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, resource.NewUserLoginResource(user, nil))
 }
 
-func UserStore(ctx *Context) {
+func UserStore(ctx *app.Context) {
 
 	user := &model.User{}
 	if err := ctx.GetBody(user); err != nil {
@@ -38,7 +38,7 @@ func UserStore(ctx *Context) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		ctx.WriteError(&system.Err{
+		ctx.WriteError(&app.Err{
 			Status:  http.StatusInternalServerError,
 			Message: "No se logro encriptar la contraseña",
 			Err:     err.Error(),
@@ -62,7 +62,7 @@ func UserStore(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func UserUpdate(ctx *Context) {
+func UserUpdate(ctx *app.Context) {
 
 	id := ctx.Get("id")
 
@@ -83,18 +83,18 @@ func UserUpdate(ctx *Context) {
 	// }
 
 	// esto es para que el usuario solo pueda modificarse asi mismo
-	if user.ID != ctx.User.ID {
-		ctx.WriteError(&system.Err{
+	if user.ID != ctx.User.ID() {
+		ctx.WriteError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",
-			Err:     ctx.TT("No esta autorizado para realizar esta accion"),
+			Err:     "No esta autorizado para realizar esta accion",
 		})
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		ctx.WriteError(&system.Err{
+		ctx.WriteError(&app.Err{
 			Status:  http.StatusInternalServerError,
 			Message: "No se logro encriptar la contraseña",
 			Err:     err.Error(),
@@ -112,7 +112,7 @@ func UserUpdate(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func UserDestroy(ctx *Context) {
+func UserDestroy(ctx *app.Context) {
 
 	id := ctx.Get("id")
 	user := &model.User{}
@@ -122,11 +122,11 @@ func UserDestroy(ctx *Context) {
 	}
 
 	// esto espara que el usuario solo pueda eliminarse asi mismo
-	if user.ID != ctx.User.ID {
-		ctx.WriteError(&system.Err{
+	if user.ID != ctx.User.ID() {
+		ctx.WriteError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",
-			Err:     ctx.TT("No esta autorizado para realizar esta accion"),
+			Err:     "No esta autorizado para realizar esta accion",
 		})
 		return
 	}
@@ -139,7 +139,7 @@ func UserDestroy(ctx *Context) {
 	ctx.Writer.WriteHeader(http.StatusOK)
 }
 
-func Login(ctx *Context) {
+func Login(ctx *app.Context) {
 
 	var req map[string]string
 	if err := ctx.GetBody(req); err != nil {
@@ -150,28 +150,28 @@ func Login(ctx *Context) {
 	user := &model.User{}
 	if validate.Email(req["user"]) {
 		if err := db.FindOneByField(user, "email", req["user"]); err != nil {
-			ctx.WriteError(&system.Err{
+			ctx.WriteError(&app.Err{
 				Status:  http.StatusUnauthorized,
 				Message: "No autorizado",
-				Err:     ctx.TT("No autorizado"),
+				Err:     "No autorizado",
 			})
 			return
 		}
 	} else {
 		if err := db.FindOneByField(user, "phone", req["user"]); err != nil {
-			ctx.WriteError(&system.Err{
+			ctx.WriteError(&app.Err{
 				Status:  http.StatusUnauthorized,
 				Message: "No autorizado",
-				Err:     ctx.TT("No autorizado"),
+				Err:     "No autorizado",
 			})
 			return
 		}
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req["password"])); err != nil {
-		ctx.WriteError(&system.Err{
+		ctx.WriteError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",
-			Err:     ctx.TT("No autorizado"),
+			Err:     "No autorizado",
 		})
 		return
 	}
@@ -185,19 +185,19 @@ func Login(ctx *Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func Logout(ctx *Context) {
+func Logout(ctx *app.Context) {
 
 	if ctx.Token == nil {
-		ctx.WriteError(&system.Err{
+		ctx.WriteError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",
-			Err:     ctx.TT("Token Invalido"),
+			Err:     "Token Invalido",
 		})
 		return
 	}
-	if err := db.ForceDelete(ctx.Token); err != nil {
-		ctx.WriteError(err)
-		return
-	}
+	// if err := db.ForceDelete(ctx.Token); err != nil {
+	// 	ctx.WriteError(err)
+	// 	return
+	// }
 	ctx.WriteNoContent()
 }
