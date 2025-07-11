@@ -244,7 +244,7 @@ func (e *Err) HandleWriteException(err error) Error {
 func (e *Err) Write(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Error al escribir el registro",
+		Message: "Write error",
 		Err:     err.Error(),
 	}
 }
@@ -252,7 +252,7 @@ func (e *Err) Write(err error) Error {
 func (e *Err) Update(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Error al modificar el registro",
+		Message: "Update error",
 		Err:     err.Error(),
 	}
 }
@@ -260,7 +260,7 @@ func (e *Err) Update(err error) Error {
 func (e *Err) Delete(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Error al eliminar el registro",
+		Message: "Delete error",
 		Err:     err.Error(),
 	}
 }
@@ -268,7 +268,7 @@ func (e *Err) Delete(err error) Error {
 func (e *Err) Restore(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Error al restaurar el registro",
+		Message: "Restore error",
 		Err:     err.Error(),
 	}
 }
@@ -276,7 +276,7 @@ func (e *Err) Restore(err error) Error {
 func (e *Err) ForceDelete(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Error al eliminar el registro permanentemente",
+		Message: "Permanent delete error",
 		Err:     err.Error(),
 	}
 }
@@ -284,7 +284,7 @@ func (e *Err) ForceDelete(err error) Error {
 func (e *Err) Command(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Error de comando",
+		Message: "Command error",
 		Err:     err.Error(),
 	}
 }
@@ -292,7 +292,7 @@ func (e *Err) Command(err error) Error {
 func (e *Err) BulkWrite(err error) Error {
 	return &Err{
 		Status:  http.StatusBadRequest,
-		Message: "Error en escritura masiva",
+		Message: "Bulk write error",
 		Err:     err.Error(),
 	}
 }
@@ -300,7 +300,7 @@ func (e *Err) BulkWrite(err error) Error {
 func (e *Err) Driver(err error) Error {
 	return &Err{
 		Status:  http.StatusBadGateway,
-		Message: "Error del driver",
+		Message: "Driver error",
 		Err:     err.Error(),
 	}
 }
@@ -308,7 +308,7 @@ func (e *Err) Driver(err error) Error {
 func (e *Err) Unknown(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Error inesperado",
+		Message: "Unexpected error",
 		Err:     err.Error(),
 	}
 }
@@ -316,7 +316,7 @@ func (e *Err) Unknown(err error) Error {
 func (e *Err) Unauthorized(err error) Error {
 	return &Err{
 		Status:  http.StatusUnauthorized,
-		Message: "No autorizado",
+		Message: "Unauthorized",
 		Err:     err.Error(),
 	}
 }
@@ -324,135 +324,151 @@ func (e *Err) Unauthorized(err error) Error {
 func (e *Err) HexID(err error) Error {
 	return &Err{
 		Status:  http.StatusBadRequest,
-		Message: "El id no es un hexadecimal válido",
+		Message: "Invalid hexadecimal ID",
 		Err:     err.Error(),
 	}
 }
 
-func (e *Err) NotFoundf(format string, a ...any) Error {
+func (e *Err) NotFoundf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusNotFound,
-		Message: "El recurso no existe",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusNotFound,
+		Message:   "Resource not found",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) NoDocumentsf(format string, a ...any) Error {
+func (e *Err) NoDocumentsf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusNotFound,
-		Message: "No se encontraron registros",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusNotFound,
+		Message:   "No documents found",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) ClientDisconnectedf(format string, a ...any) Error {
+func (e *Err) ClientDisconnectedf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Cliente desconectado",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Client disconnected",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) BadRequestf(format string, a ...any) Error {
+func (e *Err) BadRequestf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusBadRequest,
-		Message: "Solicitud incorrecta",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusBadRequest,
+		Message:   "Bad request",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Timeoutf(format string, a ...any) Error {
+func (e *Err) Timeoutf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusRequestTimeout,
-		Message: "Tiempo de espera agotado",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusRequestTimeout,
+		Message:   "Request timeout",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Writef(format string, a ...any) Error {
+func (e *Err) Writef(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Error al escribir el registro",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Write error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Updatef(format string, a ...any) Error {
+func (e *Err) Updatef(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Error al modificar el registro",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Update error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Deletef(format string, a ...any) Error {
+func (e *Err) Deletef(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Error al eliminar el registro",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Delete error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Restoref(format string, a ...any) Error {
+func (e *Err) Restoref(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Error al restaurar el registro",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Restore error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) ForceDeletef(format string, a ...any) Error {
+func (e *Err) ForceDeletef(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Error al eliminar el registro permanentemente",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Permanent delete error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Commandf(format string, a ...any) Error {
+func (e *Err) Commandf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Error de comando",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Command error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) BulkWritef(format string, a ...any) Error {
+func (e *Err) BulkWritef(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusBadRequest,
-		Message: "Error en escritura masiva",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusBadRequest,
+		Message:   "Bulk write error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Driverf(format string, a ...any) Error {
+func (e *Err) Driverf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusBadGateway,
-		Message: "Error del driver",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusBadGateway,
+		Message:   "Driver error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Unknownf(format string, a ...any) Error {
+func (e *Err) Unknownf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusInternalServerError,
-		Message: "Error inesperado",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusInternalServerError,
+		Message:   "Unexpected error",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) Unauthorizedf(format string, a ...any) Error {
+func (e *Err) Unauthorizedf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusUnauthorized,
-		Message: "No autorizado",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusUnauthorized,
+		Message:   "Unauthorized",
+		Err:       format,
+		phMessage: ph,
 	}
 }
 
-func (e *Err) HexIDf(format string, a ...any) Error {
+func (e *Err) HexIDf(format string, ph ...F) Error {
 	return &Err{
-		Status:  http.StatusBadRequest,
-		Message: "El id no es un hexadecimal válido",
-		Err:     fmt.Sprintf(format, a...),
+		Status:    http.StatusBadRequest,
+		Message:   "Invalid hexadecimal ID",
+		Err:       format,
+		phMessage: ph,
 	}
 }
