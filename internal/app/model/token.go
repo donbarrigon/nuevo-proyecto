@@ -6,7 +6,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -42,14 +41,6 @@ func (t *Token) Default() {
 		t.CreatedAt = time.Now()
 	}
 	t.ExpiresAt = time.Now().Add(10 * time.Hour)
-}
-
-func (t *Token) Validate(l string) system.Error {
-	err := system.Errors.New()
-	if t.UserID.IsZero() {
-		err.Append("user_id", system.Translate(l, "Este campo es requerido"))
-	}
-	return err.Errors()
 }
 
 func (t *Token) Anonymous() *Token {

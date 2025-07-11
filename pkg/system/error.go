@@ -18,9 +18,10 @@ type Error interface {
 	SetStatus(code int)
 	SetMessage(format string, ph ...F)
 	SetErr(format any, ph ...F)
-	Translate(lang string)                     // traduce el error
-	Append(field string, text string, ph ...F) // agrega error si es que hay
-	Errors() Error                             // para el retorno de multiples errores usado en el request
+	Translate(lang string)                      // traduce el error
+	Append(err *FieldError)                     // agrega error si es que hay con struct.
+	Appendf(field string, text string, ph ...F) // agrega error si es que hay con valores por separado.
+	Errors() Error                              // para el retorno de multiples errores usado en el request
 }
 
 type Err struct {
@@ -29,8 +30,13 @@ type Err struct {
 	Err       any                 `json:"errors,omitempty"`
 	ErrMap    map[string][]string `json:"-"`
 	phMessage Fields              `json:"-"`
-	phErr     Fields              `json:"-"`
 	phMap     map[string][]Fields `json:"-"`
+}
+
+type FieldError struct {
+	FildName     string
+	Message      string
+	Placeholders Fields
 }
 
 // variable para azucar sintactico
@@ -40,20 +46,20 @@ var Errors = Err{
 	Err:       nil,
 	ErrMap:    make(map[string][]string),
 	phMessage: make(Fields, 0),
-	phErr:     make(Fields, 0),
 	phMap:     make(map[string][]Fields),
 }
 
-func (e *Err) New(status int, message string, ph ...F) Error {
+func (e *Err) New(status int, message string, err any, ph ...F) Error {
 	return &Err{
 		Status:    status,
 		Message:   message,
+		Err:       err,
 		ErrMap:    make(map[string][]string),
 		phMessage: ph,
 	}
 }
 
-func (e *Err) Empty() Error {
+func (e *Err) NewEmpty() Error {
 	return &Err{
 		ErrMap: make(map[string][]string),
 		phMap:  make(map[string][]Fields),
@@ -78,7 +84,7 @@ func (e *Err) GetErr() any {
 		return e.ErrMap
 	}
 	if str, ok := e.Err.(string); ok {
-		return interpolatePlaceholders(str, e.phErr)
+		return interpolatePlaceholders(str, e.phMessage)
 	}
 	return e.Err
 }
@@ -89,21 +95,30 @@ func (e *Err) SetStatus(code int) {
 
 func (e *Err) SetMessage(format string, ph ...F) {
 	e.Message = format
-	e.phMessage = ph
+	if len(e.phMessage) == 0 {
+		e.phMessage = ph
+	} else {
+		e.phMessage = append(e.phMessage, ph...)
+	}
 }
 
 func (e *Err) SetErr(format any, ph ...F) {
 	e.Err = format
-	e.phErr = ph
+	if len(e.phMessage) == 0 {
+		e.phMessage = ph
+	} else {
+		e.phMessage = append(e.phMessage, ph...)
+	}
 }
 
 func (e *Err) Translate(l string) {
+
 	e.Message = Translate(l, e.Message, e.phMessage...)
 
 	if e.ErrMap == nil {
 		switch errVal := e.Err.(type) {
 		case string:
-			e.Err = Translate(l, errVal, e.phErr...)
+			e.Err = Translate(l, errVal, e.phMessage...)
 		case error:
 			e.Err = Translate(l, errVal.Error())
 		}
@@ -116,10 +131,17 @@ func (e *Err) Translate(l string) {
 	}
 }
 
-func (e *Err) Append(field string, text string, ph ...F) {
+func (e *Err) Appendf(field string, text string, ph ...F) {
 	if text != "" {
 		e.ErrMap[field] = append(e.ErrMap[field], text)
 		e.phMap[field] = append(e.phMap[field], ph)
+	}
+}
+
+func (e *Err) Append(err *FieldError) {
+	if err != nil {
+		e.ErrMap[err.FildName] = append(e.ErrMap[err.FildName], err.Message)
+		e.phMap[err.FildName] = append(e.phMap[err.FildName], err.Placeholders)
 	}
 }
 
@@ -133,9 +155,8 @@ func (e *Err) Errors() Error {
 	return e
 }
 
-// -------------------------------- //
+// ---------------------------------------------------------------- //
 // funciones para crear erores estandarizados
-
 func (e *Err) Mongo(err error) Error {
 
 	if err == nil {

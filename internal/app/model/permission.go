@@ -8,7 +8,7 @@ import (
 
 type Permission struct {
 	ID        bson.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name      string        `bson:"name" json:"name" fillable`
+	Name      string        `bson:"name" json:"name" fillable:"true"`
 	DeletedAt *time.Time    `bson:"deleted_at,omitempty" json:"deletedAt,omitempty"`
 }
 

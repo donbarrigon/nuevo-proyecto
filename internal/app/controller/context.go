@@ -47,8 +47,9 @@ func (ctx *Context) GetBody(request any) system.Error {
 	if err := decoder.Decode(request); err != nil {
 		return &system.Err{
 			Status:  http.StatusBadRequest,
-			Message: system.Translate(ctx.Lang(), "El cuerpo de la solicitud es incorrecto"),
-			Err:     system.Translate(ctx.Lang(), "No se pudo decodificar el cuerpo de la solicitud: %v", err.Error()),
+			Message: "El cuerpo de la solicitud es incorrecto",
+			Err:     "No se pudo decodificar el cuerpo de la solicitud: {error}",
+			phErr:   system.Fields{{"error", err.Error()}},
 		}
 	}
 	defer ctx.Request.Body.Close()
