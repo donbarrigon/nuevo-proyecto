@@ -16,11 +16,9 @@ func Translate(lang string, format string, fields ...F) string {
 			}
 		}
 	}
-	return interpolatePlaceholders(format, fields)
+	return InterpolatePlaceholders(format, fields...)
 }
 
 var TranslateMap = map[string]map[string]string{
-	"en": {
-		"No encontrado": "Not found",
-	},
+	"es": {},
 }

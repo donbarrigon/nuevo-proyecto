@@ -67,7 +67,7 @@ func (e *Err) NewEmpty() Error {
 }
 
 func (e *Err) Error() string {
-	msg := interpolatePlaceholders(e.Message, e.phMessage)
+	msg := InterpolatePlaceholders(e.Message, e.phMessage...)
 	return fmt.Sprintf("[%v] %v: \n%v", e.Status, msg, e.GetErr())
 }
 
@@ -84,7 +84,7 @@ func (e *Err) GetErr() any {
 		return e.ErrMap
 	}
 	if str, ok := e.Err.(string); ok {
-		return interpolatePlaceholders(str, e.phMessage)
+		return InterpolatePlaceholders(str, e.phMessage...)
 	}
 	return e.Err
 }
@@ -150,7 +150,7 @@ func (e *Err) Errors() Error {
 		return nil
 	}
 	e.Status = http.StatusUnprocessableEntity
-	e.Message = "Error de validación"
+	e.Message = "Unprocessable Entity: Validation error"
 	e.Err = e.ErrMap
 	return e
 }
@@ -188,7 +188,7 @@ func (e *Err) Mongo(err error) Error {
 func (e *Err) NotFound(err error) Error {
 	return &Err{
 		Status:  http.StatusNotFound,
-		Message: "El recurso no existe",
+		Message: "Resource not found",
 		Err:     err.Error(),
 	}
 }
@@ -196,7 +196,7 @@ func (e *Err) NotFound(err error) Error {
 func (e *Err) NoDocuments(err error) Error {
 	return &Err{
 		Status:  http.StatusNotFound,
-		Message: "No se encontraron registros",
+		Message: "No records found",
 		Err:     err.Error(),
 	}
 }
@@ -204,7 +204,7 @@ func (e *Err) NoDocuments(err error) Error {
 func (e *Err) ClientDisconnected(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Cliente desconectado",
+		Message: "Client disconnected",
 		Err:     err.Error(),
 	}
 }
@@ -212,7 +212,7 @@ func (e *Err) ClientDisconnected(err error) Error {
 func (e *Err) BadRequest(err error) Error {
 	return &Err{
 		Status:  http.StatusBadRequest,
-		Message: "Solicitud incorrecta",
+		Message: "Invalid request",
 		Err:     err.Error(),
 	}
 }
@@ -220,7 +220,7 @@ func (e *Err) BadRequest(err error) Error {
 func (e *Err) Timeout(err error) Error {
 	return &Err{
 		Status:  http.StatusRequestTimeout,
-		Message: "Tiempo de espera agotado",
+		Message: "Request timeout",
 		Err:     err.Error(),
 	}
 }
@@ -232,7 +232,7 @@ func (e *Err) HandleWriteException(err error) Error {
 			if we.Code == 11000 {
 				return &Err{
 					Status:  http.StatusConflict,
-					Message: "Registro duplicado",
+					Message: "Duplicate record",
 					Err:     err.Error(),
 				}
 			}
@@ -244,7 +244,7 @@ func (e *Err) HandleWriteException(err error) Error {
 func (e *Err) Write(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Write error",
+		Message: "Database write error",
 		Err:     err.Error(),
 	}
 }
@@ -252,7 +252,7 @@ func (e *Err) Write(err error) Error {
 func (e *Err) Update(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Update error",
+		Message: "Database update error",
 		Err:     err.Error(),
 	}
 }
@@ -260,7 +260,7 @@ func (e *Err) Update(err error) Error {
 func (e *Err) Delete(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Delete error",
+		Message: "Database deletion error",
 		Err:     err.Error(),
 	}
 }
@@ -268,7 +268,7 @@ func (e *Err) Delete(err error) Error {
 func (e *Err) Restore(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Restore error",
+		Message: "Database restore error",
 		Err:     err.Error(),
 	}
 }
@@ -276,7 +276,7 @@ func (e *Err) Restore(err error) Error {
 func (e *Err) ForceDelete(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Permanent delete error",
+		Message: "Permanent deletion error",
 		Err:     err.Error(),
 	}
 }
@@ -284,7 +284,7 @@ func (e *Err) ForceDelete(err error) Error {
 func (e *Err) Command(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Command error",
+		Message: "Database command error",
 		Err:     err.Error(),
 	}
 }
@@ -292,7 +292,7 @@ func (e *Err) Command(err error) Error {
 func (e *Err) BulkWrite(err error) Error {
 	return &Err{
 		Status:  http.StatusBadRequest,
-		Message: "Bulk write error",
+		Message: "Bulk write operation error",
 		Err:     err.Error(),
 	}
 }
@@ -300,7 +300,7 @@ func (e *Err) BulkWrite(err error) Error {
 func (e *Err) Driver(err error) Error {
 	return &Err{
 		Status:  http.StatusBadGateway,
-		Message: "Driver error",
+		Message: "Database driver error",
 		Err:     err.Error(),
 	}
 }
@@ -308,7 +308,7 @@ func (e *Err) Driver(err error) Error {
 func (e *Err) Unknown(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Unexpected error",
+		Message: "Unexpected system error",
 		Err:     err.Error(),
 	}
 }
@@ -316,7 +316,7 @@ func (e *Err) Unknown(err error) Error {
 func (e *Err) Unauthorized(err error) Error {
 	return &Err{
 		Status:  http.StatusUnauthorized,
-		Message: "Unauthorized",
+		Message: "Unauthorized access",
 		Err:     err.Error(),
 	}
 }
@@ -324,7 +324,7 @@ func (e *Err) Unauthorized(err error) Error {
 func (e *Err) HexID(err error) Error {
 	return &Err{
 		Status:  http.StatusBadRequest,
-		Message: "Invalid hexadecimal ID",
+		Message: "Invalid hexadecimal identifier",
 		Err:     err.Error(),
 	}
 }
@@ -341,7 +341,7 @@ func (e *Err) NotFoundf(format string, ph ...F) Error {
 func (e *Err) NoDocumentsf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusNotFound,
-		Message:   "No documents found",
+		Message:   "No records found",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -359,7 +359,7 @@ func (e *Err) ClientDisconnectedf(format string, ph ...F) Error {
 func (e *Err) BadRequestf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusBadRequest,
-		Message:   "Bad request",
+		Message:   "Invalid request",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -377,7 +377,7 @@ func (e *Err) Timeoutf(format string, ph ...F) Error {
 func (e *Err) Writef(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Write error",
+		Message:   "Database write error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -386,7 +386,7 @@ func (e *Err) Writef(format string, ph ...F) Error {
 func (e *Err) Updatef(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Update error",
+		Message:   "Database update error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -395,7 +395,7 @@ func (e *Err) Updatef(format string, ph ...F) Error {
 func (e *Err) Deletef(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Delete error",
+		Message:   "Database deletion error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -404,7 +404,7 @@ func (e *Err) Deletef(format string, ph ...F) Error {
 func (e *Err) Restoref(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Restore error",
+		Message:   "Database restore error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -413,7 +413,7 @@ func (e *Err) Restoref(format string, ph ...F) Error {
 func (e *Err) ForceDeletef(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Permanent delete error",
+		Message:   "Permanent deletion error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -422,7 +422,7 @@ func (e *Err) ForceDeletef(format string, ph ...F) Error {
 func (e *Err) Commandf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Command error",
+		Message:   "Database command error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -431,7 +431,7 @@ func (e *Err) Commandf(format string, ph ...F) Error {
 func (e *Err) BulkWritef(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusBadRequest,
-		Message:   "Bulk write error",
+		Message:   "Bulk write operation error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -440,7 +440,7 @@ func (e *Err) BulkWritef(format string, ph ...F) Error {
 func (e *Err) Driverf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusBadGateway,
-		Message:   "Driver error",
+		Message:   "Database driver error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -449,7 +449,7 @@ func (e *Err) Driverf(format string, ph ...F) Error {
 func (e *Err) Unknownf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Unexpected error",
+		Message:   "Unexpected system error",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -458,7 +458,7 @@ func (e *Err) Unknownf(format string, ph ...F) Error {
 func (e *Err) Unauthorizedf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusUnauthorized,
-		Message:   "Unauthorized",
+		Message:   "Unauthorized access",
 		Err:       format,
 		phMessage: ph,
 	}
@@ -467,7 +467,7 @@ func (e *Err) Unauthorizedf(format string, ph ...F) Error {
 func (e *Err) HexIDf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusBadRequest,
-		Message:   "Invalid hexadecimal ID",
+		Message:   "Invalid hexadecimal identifier",
 		Err:       format,
 		phMessage: ph,
 	}

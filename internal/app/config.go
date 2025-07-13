@@ -96,7 +96,7 @@ func LoadEnv(filepath ...string) {
 
 	file, err := os.Open(f)
 	if err != nil {
-		Log.Warning("Archivo .env no encontrado en la ruta {file}", F{"file", f})
+		Log.Warning("Environment file (.env) not found at location {file}", F{"file", f})
 		return
 	}
 	defer file.Close()
@@ -114,7 +114,9 @@ func LoadEnv(filepath ...string) {
 
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			Log.Warning("error de sintaxis en variables de entorno en la línea {lineNumber}: {rawLine}", F{"lineNumber", i}, F{"rawLine", line})
+			Log.Warning("Syntax error in environment variables at line {lineNumber}: {rawLine}",
+				F{"lineNumber", i},
+				F{"rawLine", line})
 			continue
 		}
 
@@ -127,7 +129,7 @@ func LoadEnv(filepath ...string) {
 		value = strings.Trim(value, `"'`)
 
 		if key == "" {
-			Log.Warning("clave vacía al cargar variables de entorno en la línea {lineNumber}: {rawLine}",
+			Log.Warning("Empty key detected while loading environment variables at line {lineNumber}: {rawLine}",
 				F{"lineNumber", i},
 				F{"rawLine", line},
 			)
@@ -299,7 +301,7 @@ func LoadEnv(filepath ...string) {
 		case "LOG_DAYS":
 			days, err := strconv.Atoi(value)
 			if err != nil {
-				Log.Warning("LOG_DAYS inválido en la línea {lineNumber}: {value}",
+				Log.Warning("Invalid LOG_DAYS value at line {lineNumber}: {value}",
 					F{"lineNumber", i},
 					F{"value", value},
 				)
@@ -317,7 +319,7 @@ func LoadEnv(filepath ...string) {
 		case "MAIL_PORT":
 			port, err := strconv.Atoi(value)
 			if err != nil {
-				Log.Warning("MAIL_PORT inválido en la línea {lineNumber}: {invalidValue}",
+				Log.Warning("Invalid MAIL_PORT value at line {lineNumber}: {invalidValue}",
 					F{"lineNumber", i},
 					F{"invalidValue", value},
 				)
@@ -335,14 +337,14 @@ func LoadEnv(filepath ...string) {
 		case "MAIL_FROM_NAME":
 			Env.MAIL_FROM_NAME = value
 		default:
-			Log.Warning("{envKey} no es una variable de entorno válida",
+			Log.Warning("{envKey} is not a valid environment variable name",
 				F{"envKey", key},
 			)
 		}
 	}
 
 	if scanner.Err() != nil {
-		Log.Warning("Fallo crítico al cargar las variables de entorno desde el archivo {file} \nerror: {error}",
+		Log.Warning("Critical failure loading environment variables from file {file}\nerror: {error}",
 			F{"file", f},
 			F{"error", scanner.Err().Error()},
 			F{"env", Env},
@@ -350,7 +352,7 @@ func LoadEnv(filepath ...string) {
 		return
 	}
 
-	Log.Info("Variables de entorno cargadas exitosamente desde el archivo {file}",
+	Log.Info("Environment variables loaded successfully from file {file}",
 		F{"file", f},
 		F{"env", Env},
 	)

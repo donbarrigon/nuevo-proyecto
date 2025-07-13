@@ -282,7 +282,7 @@ func (l *Logger) output(level LogLevel, msg string, ctx Fields) {
 	}
 
 	// Preparar mensaje
-	msg = interpolatePlaceholders(msg, ctx)
+	msg = InterpolatePlaceholders(msg, ctx...)
 
 	// Crear estructura de log
 	entry := &Logger{
@@ -406,13 +406,16 @@ func (l *Logger) outputNDJSON() string {
 	jsonData, err := json.Marshal(l)
 	var output string
 	if err != nil {
-		msg := fmt.Sprintf("Error al serializar log: %s", err.Error())
+		msg := Translate(Env.APP_LOCALE, "Log serialization error: {error}", F{"error", err.Error()})
 		escapedDump := strings.ReplaceAll(l.formatDump(l), `"`, `\"`)
 		escapedDump = strings.ReplaceAll(escapedDump, "\n", " ")
 		escapedDump = strings.ReplaceAll(escapedDump, "\r", " ")
-		output = fmt.Sprintf(`{"level":"ERROR","message":"%s","context":"%s"}`, msg, escapedDump)
+		output = InterpolatePlaceholders(`{"level":"ERROR","message":"{msg}","context":"{context}"}`,
+			F{"msg", msg},
+			F{"context", escapedDump},
+		)
 
-		Log.Print(msg, F{"context", l})
+		Log.Print(Translate(Env.APP_LOCALE, msg, F{"context", l}))
 	} else {
 		output = string(jsonData)
 	}
@@ -473,9 +476,10 @@ func (l *Logger) outputXML() string {
 			s = strings.ReplaceAll(s, `'`, "&apos;")
 			return s
 		}
-		return fmt.Sprintf(
-			`<log><level>ERROR</level><message>Error al serializar log: %s</message><context>%s</context></log>`,
-			xmlEscape(err.Error()), xmlEscape(l.formatDump(l)),
+		return InterpolatePlaceholders(
+			`<log><level>ERROR</level><message>Log serialization error: {error}</message><context>{context}</context></log>`,
+			F{"error", xmlEscape(err.Error())},
+			F{"context", xmlEscape(l.formatDump(l))},
 		)
 	} else {
 		return string(xmlData)
@@ -489,9 +493,10 @@ func (l *Logger) outputYAML() string {
 		escapedDump = strings.ReplaceAll(escapedDump, "\n", " ")
 		escapedDump = strings.ReplaceAll(escapedDump, "\r", " ")
 
-		return fmt.Sprintf(
-			"level: ERROR\nmessage: Error al serializar log: %s\ncontext: \"%s\"",
-			err.Error(), escapedDump,
+		return InterpolatePlaceholders(
+			"level: ERROR\nmessage: Log serialization error: {error}\ncontext: \"{context}\"",
+			F{"error", err.Error()},
+			F{"context", escapedDump},
 		)
 	} else {
 		return string(yamlData)
@@ -940,16 +945,22 @@ func (l *Logger) formatDump(val any) string {
 	}
 }
 
-func interpolatePlaceholders(msg string, ctx Fields) string {
+// InterpolatePlaceholders reemplaza placeholders en el mensaje con valores del contexto
+// Soporta formatos: {placeholder} y :placeholder
+func InterpolatePlaceholders(msg string, ctx ...F) string {
 	if len(ctx) == 0 {
 		return msg
 	}
 
 	for _, field := range ctx {
-		placeholder := fmt.Sprintf("{%s}", field.Key)
+		// Crear ambos formatos de placeholder
+		placeholder1 := fmt.Sprintf("{%s}", field.Key) // Formato {key}
+		placeholder2 := fmt.Sprintf(":%s", field.Key)  // Formato :key
 		valueStr := fmt.Sprint(field.Value)
 
-		msg = strings.ReplaceAll(msg, placeholder, valueStr)
+		// Reemplazar ambos formatos
+		msg = strings.ReplaceAll(msg, placeholder1, valueStr)
+		msg = strings.ReplaceAll(msg, placeholder2, valueStr)
 	}
 
 	return msg
