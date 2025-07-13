@@ -7,7 +7,6 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
 	"github.com/donbarrigon/nuevo-proyecto/internal/model"
 	"github.com/donbarrigon/nuevo-proyecto/internal/resource"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/validate"
 	"golang.org/x/crypto/bcrypt"
 )
 

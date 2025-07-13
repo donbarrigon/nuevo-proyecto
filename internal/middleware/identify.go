@@ -5,14 +5,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/controller"
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
+	"github.com/donbarrigon/nuevo-proyecto/internal/model"
 )
 
-func Identify(next func(ctx *controller.Context)) func(ctx *controller.Context) {
+func Identify(next func(ctx *app.Context)) func(ctx *app.Context) {
 
-	return func(ctx *controller.Context) {
+	return func(ctx *app.Context) {
 		user := &model.User{}
 		token := &model.Token{}
 

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -191,12 +190,12 @@ func (ctx *Context) ValidateBody(req any) Error {
 	case reflect.Slice, reflect.Array:
 		for i := 0; i < v.Len(); i++ {
 			item := v.Index(i).Interface()
-			if err := request.Validate(ctx.Lang(), item); err != nil {
+			if err := Validate(item); err != nil {
 				return err
 			}
 		}
 	default:
-		if err := request.Validate(ctx.Lang(), req); err != nil {
+		if err := Validate(req); err != nil {
 			return err
 		}
 	}
@@ -208,7 +207,7 @@ func (ctx *Context) ValidateMultiPartForm(req any) Error {
 	if err := ctx.GetMultiPartForm(req); err != nil {
 		return err
 	}
-	if err := request.Validate(ctx.Lang(), req); err != nil {
+	if err := Validate(req); err != nil {
 		return err
 	}
 	return nil
