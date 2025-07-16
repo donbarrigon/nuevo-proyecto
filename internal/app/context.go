@@ -14,11 +14,11 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type User interface {
-	ID() any
+type UserInterface interface {
+	GetID() string
 }
 
-type Token interface {
+type TokenInterface interface {
 }
 
 type MessageResource struct {
@@ -30,8 +30,8 @@ type Context struct {
 	Writer     http.ResponseWriter
 	Request    *http.Request
 	PathParams map[string]string
-	User       User
-	Token      Token
+	User       UserInterface
+	Token      TokenInterface
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request) *Context {

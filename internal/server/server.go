@@ -10,17 +10,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/pkg/system"
 )
 
 func NewHttpServer(port string) *http.Server {
+	timeout := time.Duration(app.Env.SERVER_TIMEOUT) * time.Second
 	server := &http.Server{
 		Addr:         ":" + port,
 		Handler:      NewRouter(),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  timeout / 2,
+		WriteTimeout: timeout / 2,
+		IdleTimeout:  timeout,
 	}
 
 	go func() {
@@ -73,5 +74,5 @@ func startMessage() {
 
  🚀 Servidor corriendo en http://localhost:%v
  🌱 Entorno: DESARROLLO
-	`, system.Env.SERVER_PORT))
+	`, app.Env.SERVER_PORT))
 }

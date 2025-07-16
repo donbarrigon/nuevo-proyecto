@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/controller"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/routes"
 )
 
@@ -15,7 +15,7 @@ func NewRouter() *http.ServeMux {
 }
 
 func HandleFunction(w http.ResponseWriter, r *http.Request) {
-	ctx := controller.NewContext(w, r)
+	ctx := app.NewContext(w, r)
 	params := map[string]string{}
 	pathSegments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	pathLength := len(pathSegments)

@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/controller"
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/middleware"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/middleware"
 )
 
-type ControllerFun func(ctx *controller.Context)
-type MiddlewareFun func(func(ctx *controller.Context)) func(ctx *controller.Context)
+type ControllerFun func(ctx *app.Context)
+type MiddlewareFun func(func(ctx *app.Context)) func(ctx *app.Context)
 
 type Route struct {
 	Method     string

@@ -5,8 +5,8 @@ import (
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/resource"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/resource"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -82,7 +82,7 @@ func UserUpdate(ctx *app.Context) {
 	// }
 
 	// esto es para que el usuario solo pueda modificarse asi mismo
-	if user.ID != ctx.User.ID() {
+	if user.GetID() != ctx.User.GetID() {
 		ctx.WriteError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",
@@ -121,7 +121,7 @@ func UserDestroy(ctx *app.Context) {
 	}
 
 	// esto espara que el usuario solo pueda eliminarse asi mismo
-	if user.ID != ctx.User.ID() {
+	if user.GetID() != ctx.User.GetID() {
 		ctx.WriteError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "No autorizado",
@@ -147,7 +147,7 @@ func Login(ctx *app.Context) {
 	}
 
 	user := &model.User{}
-	if validate.Email(req["user"]) {
+	if err := app.Email("email", req["user"]); err == nil {
 		if err := db.FindOneByField(user, "email", req["user"]); err != nil {
 			ctx.WriteError(&app.Err{
 				Status:  http.StatusUnauthorized,

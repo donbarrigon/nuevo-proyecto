@@ -1,8 +1,6 @@
 package routes
 
-import (
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/controller"
-)
+import "github.com/donbarrigon/nuevo-proyecto/internal/http/controller"
 
 // path: /Permission/
 func permission() {

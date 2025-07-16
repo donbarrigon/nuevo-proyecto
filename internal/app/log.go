@@ -1,18 +1,22 @@
 package app
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
+	"math"
+	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,6 +31,7 @@ type F struct {
 type Fields []F
 
 type Logger struct {
+	ID       string   `json:"id,omitempty" yaml:"id,omitempty" id:"time,omitempty"`
 	Time     string   `json:"time,omitempty" yaml:"time,omitempty" xml:"time,omitempty"`
 	Level    LogLevel `json:"level,omitempty" yaml:"level,omitempty" xml:"level,omitempty"`
 	Message  string   `json:"message" yaml:"message" xml:"message"`
@@ -51,17 +56,18 @@ const (
 )
 
 const (
-	LOG_FLAG_TIMESTAMP       = 1 << iota // 1     // Agrega la fecha y hora formateada según LOG_DATE_FORMAT
-	LOG_FLAG_LONGFILE                    // 2     // Ruta completa del archivo y número de línea: /a/b/c/d.go:23
-	LOG_FLAG_SHORTFILE                   // 4     // Solo el nombre del archivo y línea: d.go:23
-	LOG_FLAG_RELATIVEFILE                // 8     // Ruta relativa al directorio del proyecto
-	LOG_FLAG_FUNCTION                    // 16    // Nombre de la función desde donde se llamó
-	LOG_FLAG_LINE                        // 32    // Solo el número de línea (sin ruta de archivo)
-	LOG_FLAG_PREFIX                      // 64    // Agrega un prefijo antes del mensaje (por ejemplo: [DEBUG])
-	LOG_FLAG_CONSOLE_AS_JSON             // 128   // Salida en formato JSON en la consola
-	LOG_FLAG_CONSOLE_COLOR               // 256 // salida en consola con solor segun el lv
-	LOG_FLAG_CONTEXT                     // 512   // Agrega el contexto de la petición al log
-	LOG_FLAG_DUMP                        // 1024  // Las variables las se imprimen de forma detallada
+	LOG_FLAG_TIMESTAMP       = 1 << iota // 1     - Agrega la fecha y hora formateada según LOG_DATE_FORMAT
+	LOG_FLAG_LONGFILE                    // 2     - Ruta completa del archivo y número de línea: /a/b/c/d.go:23
+	LOG_FLAG_SHORTFILE                   // 4     - Solo el nombre del archivo y línea: d.go:23
+	LOG_FLAG_RELATIVEFILE                // 8     - Ruta relativa al directorio del proyecto
+	LOG_FLAG_FUNCTION                    // 16    - Nombre de la función desde donde se llamó
+	LOG_FLAG_LINE                        // 32    - Solo el número de línea (sin ruta de archivo)
+	LOG_FLAG_PREFIX                      // 64    - Agrega un prefijo antes del mensaje (por ejemplo: [DEBUG])
+	LOG_FLAG_CONSOLE_AS_JSON             // 128   - Salida en formato JSON en la consola
+	LOG_FLAG_CONSOLE_COLOR               // 256   - salida en consola con solor segun el lv
+	LOG_FLAG_CONTEXT                     // 512   - Agrega el contexto de la petición al log
+	LOG_FLAG_DUMP                        // 1024  - Las variables las se imprimen de forma detallada
+	LOG_FLAG_ID                          // 2048  - Genera un ID único en formato hexadecimal string (bson.ObjectID.Hex())
 
 	// Combinación de todos los flags
 	LOG_FLAG_ALL = LOG_FLAG_TIMESTAMP |
@@ -73,7 +79,8 @@ const (
 		LOG_FLAG_PREFIX |
 		LOG_FLAG_CONSOLE_AS_JSON |
 		LOG_FLAG_CONTEXT |
-		LOG_FLAG_DUMP
+		LOG_FLAG_DUMP |
+		LOG_FLAG_ID
 )
 
 const (
@@ -290,6 +297,10 @@ func (l *Logger) output(level LogLevel, msg string, ctx Fields) {
 		Message: msg,
 	}
 
+	if Env.LOG_FLAGS&LOG_FLAG_ID != 0 {
+		entry.ID = bson.NewObjectID().Hex()
+	}
+
 	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 		now := time.Now().Format(Env.LOG_DATE_FORMAT)
 		entry.Time = now
@@ -307,67 +318,191 @@ func (l *Logger) output(level LogLevel, msg string, ctx Fields) {
 		entry.File = file
 	}
 
-	if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && ctx != nil {
-		entry.Context = ctx
-	}
+	//if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && ctx != nil {
+	entry.Context = ctx
+	//}
 
-	// salida en consola ----------------------------------------------------------------
 	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || level == LOG_PRINT {
-		if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_AS_JSON != 0 {
-			if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(ctx) > 0 {
-				fmt.Println(l.formatDump(entry))
-			} else {
-				data, _ := json.MarshalIndent(entry, "", "  ")
-				fmt.Println(string(data))
-			}
-		} else {
-			fmt.Println(entry.outputPlain(true))
-			// Detalle de argumentos
-			if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(ctx) > 0 {
-				fmt.Println("\nargs: " + l.formatDump(ctx))
-			}
-		}
-
+		l.outputConsole()
 		if level == LOG_PRINT {
 			return
 		}
-
 	}
 
-	// salida en archivo ----------------------------------------------------------------
 	if Env.LOG_OUTPUT&LOG_OUTPUT_FILE != 0 {
-
-		file := l.openFile()
-		if file == nil {
-			return
-		}
-		defer file.Close()
-
-		l.deleteOldFiles()
-
-		var output string
-
-		switch Env.LOG_FILE_FORMAT {
-		case LOG_FILE_FORMAT_NDJSON:
-			output = entry.outputNDJSON()
-		case LOG_FILE_FORMAT_CSV:
-			output = entry.outputCSV() // CSV: Time, Level, Message, Function, File, Line, context
-		case LOG_FILE_FORMAT_PLAIN:
-			output = entry.outputPlain(false)
-		case LOG_FILE_FORMAT_XML:
-			output = entry.outputXML()
-		case LOG_FILE_FORMAT_YAML:
-			output = entry.outputYAML()
-		case LOG_FILE_FORMAT_LTSV:
-			output = entry.outputLTSV()
-		default:
-			// Fallback a ndjson
-			output = l.outputNDJSON()
-		}
-
-		file.WriteString(output + "\n")
+		entry.outputFile()
 	}
 
+	if Env.LOG_OUTPUT&LOG_OUTPUT_DATABASE != 0 {
+		entry.outputDatabase()
+	}
+
+	if Env.LOG_OUTPUT&LOG_OUTPUT_REMOTE != 0 {
+		entry.outputRemote()
+	}
+
+}
+
+func (l *Logger) outputConsole() {
+	if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_AS_JSON != 0 {
+		if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(l.Context) > 0 {
+			fmt.Println(l.formatDump(l))
+		} else {
+			data, _ := json.MarshalIndent(l, "", "  ")
+			fmt.Println(string(data))
+		}
+	} else {
+		fmt.Println(l.outputPlain(true))
+		// Detalle de argumentos
+		if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(l.Context) > 0 {
+			fmt.Println("\nargs: " + l.formatDump(l.Context))
+		}
+	}
+}
+
+func (l *Logger) outputFile() {
+	file := l.openFile()
+	if file == nil {
+		return
+	}
+	defer file.Close()
+
+	l.deleteOldFiles()
+
+	var output string
+
+	switch Env.LOG_FILE_FORMAT {
+	case LOG_FILE_FORMAT_NDJSON:
+		output = l.outputNDJSON()
+	case LOG_FILE_FORMAT_CSV:
+		output = l.outputCSV() // CSV: Time, Level, Message, Function, File, Line, context
+	case LOG_FILE_FORMAT_PLAIN:
+		output = l.outputPlain(false)
+	case LOG_FILE_FORMAT_XML:
+		output = l.outputXML()
+	case LOG_FILE_FORMAT_YAML:
+		output = l.outputYAML()
+	case LOG_FILE_FORMAT_LTSV:
+		output = l.outputLTSV()
+	default:
+		// Fallback a ndjson
+		output = l.outputNDJSON()
+	}
+
+	file.WriteString(output + "\n")
+}
+
+func (l *Logger) outputDatabase() {
+
+	// se queda sin funcionar hasta que resuelva lo del ciclo de dependencias.
+
+	// id, e := bson.ObjectIDFromHex(l.ID)
+	// if e != nil {
+	// 	Log.Print("Failed to convert string [:input_id] to ObjectID :error ",
+	// 		F{"error", e.Error()},
+	// 		F{"input_id", l.ID},
+	// 	)
+	// }
+
+	// ctx := make(map[string]string, len(l.Context))
+	// for _, field := range l.Context {
+	// 	ctx[field.Key] = fmt.Sprint(field.Value)
+	// }
+
+	// m := &model.Log{
+	// 	ID:       id,
+	// 	Time:     l.Time,
+	// 	Level:    l.Level.String(),
+	// 	Message:  l.Message,
+	// 	Function: l.Function,
+	// 	Line:     l.Line,
+	// 	File:     l.File,
+	// 	Context:  ctx,
+	// }
+
+	// if err := db.Create(m); err != nil {
+	// 	Log.Print("Failed to create log in database: :error", F{"error", err.Error()})
+	// }
+}
+
+func (l *Logger) outputRemote() {
+	if Env.LOG_URL == "" || Env.LOG_URL_TOKEN == "" {
+		return // No hay configuración completa
+	}
+
+	// Convertir el log a JSON
+	jsonData, err := json.Marshal(l)
+	if err != nil {
+		Log.Error("Failed to marshal log for remote output",
+			F{"error", err.Error()},
+			F{"log", l},
+		)
+		return
+	}
+
+	// Configuración de reintentos
+	maxRetries := 3
+	initialDelay := time.Second * 1
+	maxDelay := time.Second * 10
+
+	var lastError error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Esperar con backoff exponencial antes de reintentar
+			delay := initialDelay * time.Duration(math.Pow(2, float64(attempt-1)))
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+			time.Sleep(delay)
+		}
+
+		// Crear nueva solicitud para cada intento
+		req, err := http.NewRequest("POST", Env.LOG_URL, bytes.NewBuffer(jsonData))
+		if err != nil {
+			lastError = err
+			continue
+		}
+
+		// Configurar headers
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+Env.LOG_URL_TOKEN)
+
+		// Configurar timeout (10 segundos)
+		client := &http.Client{
+			Timeout: time.Second * 10,
+		}
+
+		// Enviar la solicitud
+		resp, err := client.Do(req)
+		if err != nil {
+			lastError = err
+			continue
+		}
+
+		// Verificar respuesta
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			resp.Body.Close()
+			return // Éxito, salir del bucle
+		}
+
+		// Si la respuesta no fue exitosa
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		lastError = fmt.Errorf("server returned status %d: %s", resp.StatusCode, string(body))
+
+		// No reintentar en errores 4xx (excepto 429 - Too Many Requests)
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 && resp.StatusCode != 429 {
+			break
+		}
+	}
+
+	// Si llegamos aquí, todos los intentos fallaron
+	Log.Print("Failed to send log to remote server after retries",
+		F{"error", lastError.Error()},
+		F{"url", Env.LOG_URL},
+		F{"attempts", maxRetries},
+	)
 }
 
 func (l *Logger) outputPlain(withColor bool) string {
@@ -377,6 +512,9 @@ func (l *Logger) outputPlain(withColor bool) string {
 	if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_COLOR != 0 && withColor {
 		color = l.Level.Color()
 		reset = l.Level.DefaultColor()
+	}
+	if Env.LOG_FLAGS&LOG_FLAG_ID != 0 {
+		b.WriteString(fmt.Sprintf("[ID:%s%s%s] ", color, l.ID, reset))
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
@@ -424,6 +562,10 @@ func (l *Logger) outputNDJSON() string {
 
 func (l *Logger) outputCSV() string {
 	var record []string
+
+	if Env.LOG_FLAGS&LOG_FLAG_ID != 0 {
+		record = append(record, l.ID)
+	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 		record = append(record, l.Time)
@@ -513,6 +655,10 @@ func (l *Logger) outputLTSV() string {
 
 	var b strings.Builder
 
+	if Env.LOG_FLAGS&LOG_FLAG_ID != 0 {
+		b.WriteString("id:" + escape(l.ID) + "\t")
+	}
+
 	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 		b.WriteString("time:" + escape(l.Time) + "\t")
 	}
@@ -570,7 +716,7 @@ func (l *Logger) openFile() *os.File {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		Log.Print("No se abrir el archivo de logs: {error}\n", F{"error", err})
+		Log.Print("Failed to create log directory: {error}\n", F{"error", err})
 		return nil
 	}
 	return file
@@ -665,303 +811,4 @@ func (l *Logger) deleteOldFiles() {
 			}
 		}
 	}
-}
-
-func (l *Logger) formatDump(val any) string {
-	v := reflect.ValueOf(val)
-	t := reflect.TypeOf(val)
-
-	// Si es puntero, desreferenciar
-	isPtr := false
-	if v.Kind() == reflect.Ptr {
-		isPtr = true
-		if v.IsNil() {
-			return fmt.Sprintf("*%s(nil)", t.Elem().Kind())
-		}
-		v = v.Elem()
-		t = t.Elem()
-	}
-
-	switch v.Kind() {
-	case reflect.String:
-		s := v.String()
-		if isPtr {
-			return fmt.Sprintf("*string(%d):\"%s\"", len(s), s)
-		}
-		return fmt.Sprintf("string(%d):\"%s\"", len(s), s)
-
-	//----------------------------------------------------------------
-	case reflect.Int32: // rune
-		// Confirmar que es rune explícito, no solo int32 genérico
-		if t.Name() == "rune" || t.String() == "rune" {
-			val := v.Int()
-			char := rune(val)
-			if isPtr {
-				return fmt.Sprintf("*rune(%d)'%c'", val, char)
-			}
-			return fmt.Sprintf("rune(%d)'%c'", val, char)
-		}
-		// si no es rune, seguir como int32 normal
-		if isPtr {
-			return fmt.Sprintf("*int32(%d)", v.Int())
-		}
-		return fmt.Sprintf("int32(%d)", v.Int())
-
-	//----------------------------------------------------------------
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int64:
-		if isPtr {
-			return fmt.Sprintf("*%s(%d)", t.Kind(), v.Int())
-		}
-		return fmt.Sprintf("%s(%d)", t.Kind(), v.Int())
-
-	//----------------------------------------------------------------
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		if isPtr {
-			return fmt.Sprintf("*%s(%d)", t.Kind(), v.Uint())
-		}
-		return fmt.Sprintf("%s(%d)", t.Kind(), v.Uint())
-
-	//----------------------------------------------------------------
-	case reflect.Float32, reflect.Float64:
-		if isPtr {
-			return fmt.Sprintf("*%s(%f)", t.Kind(), v.Float())
-		}
-		return fmt.Sprintf("%s(%f)", t.Kind(), v.Float())
-
-	//----------------------------------------------------------------
-	case reflect.Array:
-		var b strings.Builder
-		length := v.Len()
-		if isPtr {
-			b.WriteString(fmt.Sprintf("*array(%d){\n", length))
-		} else {
-			b.WriteString(fmt.Sprintf("array(%d){\n", length))
-		}
-
-		for i := 0; i < length; i++ {
-			val := v.Index(i)
-			valStr := l.formatDump(val.Interface())
-			b.WriteString(fmt.Sprintf("  [%d] => %s,\n", i, valStr))
-		}
-
-		b.WriteString("}")
-		return b.String()
-
-	//----------------------------------------------------------------
-	case reflect.Slice:
-		if v.IsNil() {
-			return "slice(nil){}"
-		}
-
-		var b strings.Builder
-		length := v.Len()
-		if isPtr {
-			b.WriteString(fmt.Sprintf("*slice(%d){\n", length))
-		} else {
-			b.WriteString(fmt.Sprintf("slice(%d){\n", length))
-		}
-
-		for i := 0; i < length; i++ {
-			val := v.Index(i)
-			valStr := l.formatDump(val.Interface())
-			b.WriteString(fmt.Sprintf("  [%d] => %s,\n", i, valStr))
-		}
-
-		b.WriteString("}")
-		return b.String()
-
-	//----------------------------------------------------------------
-	case reflect.Map:
-		if v.IsNil() {
-			return "map(nil){}"
-		}
-
-		var b strings.Builder
-		keys := v.MapKeys()
-		if isPtr {
-			b.WriteString(fmt.Sprintf("*map(%d){\n", len(keys)))
-		} else {
-			b.WriteString(fmt.Sprintf("map(%d){\n", len(keys)))
-		}
-
-		for _, k := range keys {
-			keyStr := l.formatDump(k.Interface())
-			valStr := l.formatDump(v.MapIndex(k).Interface())
-			b.WriteString(fmt.Sprintf("  [%s] => %s,\n", keyStr, valStr))
-		}
-
-		b.WriteString("}")
-		return b.String()
-
-	//----------------------------------------------------------------
-	case reflect.Struct:
-		t := v.Type()
-		var b strings.Builder
-
-		name := t.Name()
-		if name == "" {
-			name = "anonymous"
-		}
-
-		if isPtr {
-			b.WriteString(fmt.Sprintf("*struct(%s){\n", name))
-		} else {
-			b.WriteString(fmt.Sprintf("struct(%s){\n", name))
-		}
-
-		for i := 0; i < v.NumField(); i++ {
-			field := t.Field(i)
-			if field.PkgPath != "" {
-				continue // campo no exportado
-			}
-
-			fieldName := field.Name
-			val := l.formatDump(v.Field(i).Interface())
-
-			rawTag := string(field.Tag)
-			if rawTag != "" {
-				// Parsear todas las etiquetas: key:"value"
-				var tagParts []string
-				pairs := strings.Split(rawTag, " ")
-				for _, pair := range pairs {
-					pair = strings.TrimSpace(pair)
-					if pair != "" {
-						tagParts = append(tagParts, pair)
-					}
-				}
-				tagStr := strings.Join(tagParts, ", ")
-				b.WriteString(fmt.Sprintf("  %s ((%d) %s) => %s,\n", fieldName, len(tagParts), tagStr, val))
-			} else {
-				b.WriteString(fmt.Sprintf("  %s => %s,\n", fieldName, val))
-			}
-		}
-
-		b.WriteString("}")
-		return b.String()
-
-	//----------------------------------------------------------------
-	case reflect.Bool:
-		val := v.Bool()
-		if isPtr {
-			return fmt.Sprintf("*bool(%v)", val)
-		}
-		return fmt.Sprintf("bool(%v)", val)
-
-	//----------------------------------------------------------------
-	case reflect.Interface:
-		if v.IsNil() {
-			return "any(nil)"
-		}
-
-		inner := v.Elem()
-		innerType := inner.Type().String()
-		valStr := l.formatDump(inner.Interface())
-
-		return fmt.Sprintf("any(%s) => %s", innerType, valStr)
-
-	//----------------------------------------------------------------
-	case reflect.Func:
-		var inputTypes []string
-		var outputTypes []string
-
-		// Obtener tipos de entrada
-		for i := 0; t.NumIn() > i; i++ {
-			in := t.In(i)
-			inputTypes = append(inputTypes, in.String())
-		}
-
-		// Obtener tipos de salida
-		for i := 0; t.NumOut() > i; i++ {
-			out := t.Out(i)
-			outputTypes = append(outputTypes, out.String())
-		}
-
-		signature := fmt.Sprintf("func(%s)", strings.Join(inputTypes, ", "))
-		if len(outputTypes) > 0 {
-			signature += fmt.Sprintf(" -> %s", strings.Join(outputTypes, ", "))
-		}
-
-		if isPtr {
-			return "*" + signature
-		}
-		return signature
-
-	//----------------------------------------------------------------
-	case reflect.Chan:
-		elemType := t.Elem().String()
-
-		if v.IsNil() {
-			return fmt.Sprintf("chan(%s)[nil]", elemType)
-		}
-
-		switch t.ChanDir() {
-		case reflect.SendDir:
-			// Canal de solo envío
-			return fmt.Sprintf("chan<-(%s)[send-only]", elemType)
-
-		case reflect.RecvDir, reflect.BothDir:
-			// Intentar recibir sin bloquear
-			recv, ok := v.TryRecv()
-
-			if !ok {
-				// Canal cerrado
-				if t.ChanDir() == reflect.RecvDir {
-					return fmt.Sprintf("<-chan(%s)[closed]", elemType)
-				}
-				return fmt.Sprintf("chan(%s)[closed]", elemType)
-			}
-
-			// Canal abierto, valor recibido
-			dumped := l.formatDump(recv.Interface())
-			if t.ChanDir() == reflect.RecvDir {
-				return fmt.Sprintf("<-chan(%s)[open: %s]", elemType, dumped)
-			}
-			return fmt.Sprintf("chan(%s)[open: %s]", elemType, dumped)
-
-		default:
-			// esto nunca se ejecutara pero el compilador me obliga
-			return fmt.Sprintf("chan(%s)[unknown direction]", elemType)
-		}
-
-	//----------------------------------------------------------------
-	case reflect.Invalid:
-		return "invalid[nil]"
-
-	//----------------------------------------------------------------
-	case reflect.Complex64, reflect.Complex128:
-		val := v.Complex()
-		kind := t.Kind().String() // "complex64" o "complex128"
-
-		if isPtr {
-			return fmt.Sprintf("*%s(%f%+fi)", kind, real(val), imag(val))
-		}
-		return fmt.Sprintf("%s(%f%+fi)", kind, real(val), imag(val))
-
-	default:
-		if isPtr {
-			return fmt.Sprintf("*%s: %v", t.Kind(), v.Interface())
-		}
-		return fmt.Sprintf("%s: %v", t.Kind(), v.Interface())
-	}
-}
-
-// InterpolatePlaceholders reemplaza placeholders en el mensaje con valores del contexto
-// Soporta formatos: {placeholder} y :placeholder
-func InterpolatePlaceholders(msg string, ctx ...F) string {
-	if len(ctx) == 0 {
-		return msg
-	}
-
-	for _, field := range ctx {
-		// Crear ambos formatos de placeholder
-		placeholder1 := fmt.Sprintf("{%s}", field.Key) // Formato {key}
-		placeholder2 := fmt.Sprintf(":%s", field.Key)  // Formato :key
-		valueStr := fmt.Sprint(field.Value)
-
-		// Reemplazar ambos formatos
-		msg = strings.ReplaceAll(msg, placeholder1, valueStr)
-		msg = strings.ReplaceAll(msg, placeholder2, valueStr)
-	}
-
-	return msg
 }

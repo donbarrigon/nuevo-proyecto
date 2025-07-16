@@ -22,5 +22,5 @@ func (p *Permission) TableName() string {
 }
 
 func (p *Permission) Default() {
-	//...
+	//
 }

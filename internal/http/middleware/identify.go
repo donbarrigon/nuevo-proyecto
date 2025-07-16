@@ -7,7 +7,7 @@ import (
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/model"
 )
 
 func Identify(next func(ctx *app.Context)) func(ctx *app.Context) {

@@ -5,8 +5,8 @@ import (
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/request"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/request"
 )
 
 func PermissionIndex(ctx *app.Context) {

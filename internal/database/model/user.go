@@ -37,6 +37,10 @@ func (u *User) Default() {
 	u.UpdatedAt = time.Now()
 }
 
+func (u *User) GetID() string {
+	return u.ID.Hex()
+}
+
 func (u *User) Anonymous() *User {
 	var id bson.ObjectID // zero value: "000000000000000000000000"
 	var timeZero time.Time

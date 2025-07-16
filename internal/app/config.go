@@ -19,6 +19,7 @@ type Environment struct {
 	SERVER_HTTPS_ENABLED   bool
 	SERVER_HTTPS_CERT_PATH string
 	SERVER_HTTPS_KEY_PATH  string
+	SERVER_TIMEOUT         int
 
 	DB_CONNECTION string
 	DB_HOST       string
@@ -32,6 +33,7 @@ type Environment struct {
 	LOG_FLAGS       int
 	LOG_OUTPUT      int
 	LOG_URL         string
+	LOG_URL_TOKEN   string
 	LOG_PATH        string
 	LOG_CHANNEL     string
 	LOG_FILE_FORMAT LogFileFormat
@@ -59,6 +61,7 @@ var Env = Environment{
 	SERVER_HTTPS_ENABLED:   false,
 	SERVER_HTTPS_CERT_PATH: "certs/server.crt",
 	SERVER_HTTPS_KEY_PATH:  "certs/server.key",
+	SERVER_TIMEOUT:         30,
 
 	DB_CONNECTION: "mongodb",
 	DB_HOST:       "127.0.0.1",
@@ -72,6 +75,7 @@ var Env = Environment{
 	LOG_FLAGS:       LOG_FLAG_ALL,
 	LOG_OUTPUT:      LOG_OUTPUT_CONSOLE | LOG_OUTPUT_FILE | LOG_OUTPUT_DATABASE | LOG_OUTPUT_REMOTE,
 	LOG_URL:         "http://127.0.0.1/debug/log",
+	LOG_URL_TOKEN:   "",
 	LOG_PATH:        "log.json",
 	LOG_CHANNEL:     "daily",
 	LOG_DAYS:        14,
@@ -157,6 +161,11 @@ func LoadEnv(filepath ...string) {
 			Env.SERVER_HTTPS_CERT_PATH = value
 		case "SERVER_HTTPS_KEY_PATH":
 			Env.SERVER_HTTPS_KEY_PATH = value
+		case "SERVER_TIMEOUT":
+			timeout, e := strconv.Atoi(value)
+			if e != nil {
+				Env.SERVER_TIMEOUT = timeout
+			}
 
 		case "DB_CONNECTION":
 			Env.DB_CONNECTION = value
@@ -289,6 +298,8 @@ func LoadEnv(filepath ...string) {
 			Env.LOG_OUTPUT = outputs
 		case "LOG_URL":
 			Env.LOG_URL = value
+		case "LOG_URL_TOKEN":
+			Env.LOG_URL_TOKEN = value
 		case "LOG_PATH":
 			Env.LOG_PATH = value
 		case "LOG_CHANNEL":

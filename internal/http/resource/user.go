@@ -3,7 +3,7 @@ package resource
 import (
 	"time"
 
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/model"
 )
 
 type TokenResource struct {

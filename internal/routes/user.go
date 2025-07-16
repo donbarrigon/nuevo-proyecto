@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/controller"
-	"github.com/donbarrigon/nuevo-proyecto/internal/app/middleware"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/controller"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/middleware"
 )
 
 func user() {
