@@ -2,7 +2,6 @@ package app
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -21,13 +20,8 @@ type Environment struct {
 	SERVER_HTTPS_KEY_PATH  string
 	SERVER_TIMEOUT         int
 
-	DB_CONNECTION string
-	DB_HOST       string
-	DB_PORT       string
-	DB_DATABASE   string
-	DB_USERNAME   string
-	DB_PASSWORD   string
-	DB_URI        string
+	DB_DATABASE          string
+	DB_CONNECTION_STRING string
 
 	LOG_LEVEL       LogLevel
 	LOG_FLAGS       int
@@ -63,13 +57,8 @@ var Env = Environment{
 	SERVER_HTTPS_KEY_PATH:  "certs/server.key",
 	SERVER_TIMEOUT:         30,
 
-	DB_CONNECTION: "mongodb",
-	DB_HOST:       "127.0.0.1",
-	DB_PORT:       "27017",
-	DB_DATABASE:   "sample_mflix",
-	DB_USERNAME:   "",
-	DB_PASSWORD:   "",
-	DB_URI:        "",
+	DB_DATABASE:          "sample_mflix",
+	DB_CONNECTION_STRING: "mongodb://localhost:27017",
 
 	LOG_LEVEL:       LOG_DEBUG,
 	LOG_FLAGS:       LOG_FLAG_ALL,
@@ -167,67 +156,10 @@ func LoadEnv(filepath ...string) {
 				Env.SERVER_TIMEOUT = timeout
 			}
 
-		case "DB_CONNECTION":
-			Env.DB_CONNECTION = value
-		case "DB_HOST":
-			Env.DB_HOST = value
-		case "DB_PORT":
-			Env.DB_PORT = value
 		case "DB_DATABASE":
 			Env.DB_DATABASE = value
-		case "DB_USERNAME":
-			Env.DB_USERNAME = value
-		case "DB_PASSWORD":
-			Env.DB_PASSWORD = value
-		case "DB_URI":
-			Env.DB_URI = value
-			if Env.DB_URI == "" {
-				switch Env.DB_CONNECTION {
-				case "mongodb":
-					if Env.DB_USERNAME != "" && Env.DB_PASSWORD != "" {
-						Env.DB_URI = fmt.Sprintf(
-							"mongodb://%s:%s@%s:%s/%s?authSource=admin",
-							Env.DB_USERNAME, Env.DB_PASSWORD,
-							Env.DB_HOST, Env.DB_PORT, Env.DB_DATABASE,
-						)
-					} else {
-						Env.DB_URI = fmt.Sprintf(
-							"mongodb://%s:%s/%s",
-							Env.DB_HOST, Env.DB_PORT, Env.DB_DATABASE,
-						)
-					}
-
-				case "mysql":
-					if Env.DB_USERNAME != "" && Env.DB_PASSWORD != "" {
-						Env.DB_URI = fmt.Sprintf(
-							"%s:%s@tcp(%s:%s)/%s?parseTime=true",
-							Env.DB_USERNAME, Env.DB_PASSWORD,
-							Env.DB_HOST, Env.DB_PORT, Env.DB_DATABASE,
-						)
-					} else {
-						Env.DB_URI = fmt.Sprintf(
-							"tcp(%s:%s)/%s?parseTime=true",
-							Env.DB_HOST, Env.DB_PORT, Env.DB_DATABASE,
-						)
-					}
-
-				case "postgresql":
-					if Env.DB_USERNAME != "" && Env.DB_PASSWORD != "" {
-						Env.DB_URI = fmt.Sprintf(
-							"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-							Env.DB_USERNAME, Env.DB_PASSWORD,
-							Env.DB_HOST, Env.DB_PORT, Env.DB_DATABASE,
-						)
-					} else {
-						Env.DB_URI = fmt.Sprintf(
-							"postgres://%s:%s/%s?sslmode=disable",
-							Env.DB_HOST, Env.DB_PORT, Env.DB_DATABASE,
-						)
-					}
-				default:
-					Env.DB_URI = value
-				}
-			}
+		case "DB_CONNECTION_STRING":
+			Env.DB_CONNECTION_STRING = value
 
 		case "LOG_LEVEL":
 			switch strings.ToUpper(strings.TrimSpace(value)) {

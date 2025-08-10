@@ -32,7 +32,7 @@ func NewToken(userID bson.ObjectID) *Token {
 	return tokenModel
 }
 
-func (t *Token) TableName() string {
+func (t *Token) CollectionName() string {
 	return "tokens"
 }
 
@@ -40,7 +40,15 @@ func (t *Token) Default() {
 	if t.CreatedAt.IsZero() {
 		t.CreatedAt = time.Now()
 	}
-	t.ExpiresAt = time.Now().Add(10 * time.Hour)
+	t.ExpiresAt = time.Now().Add(100 * time.Hour)
+}
+
+func (t *Token) GetID() bson.ObjectID {
+	return t.ID
+}
+
+func (t *Token) SetID(id bson.ObjectID) {
+	t.ID = id
 }
 
 func (t *Token) Anonymous() *Token {

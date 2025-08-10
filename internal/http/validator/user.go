@@ -1,4 +1,4 @@
-package request
+package validator
 
 type StoreUser struct {
 	Name                 string `json:"name" rules:"required|max:255"`

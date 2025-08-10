@@ -4,29 +4,24 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type User struct {
-	ID        bson.ObjectID `bson:"_id,omitempty" json:"-"`
-	Name      string        `bson:"name" json:"name" fillable:"true"`
-	Email     string        `bson:"email,omitempty" json:"email" fillable:"true"`
-	Phone     string        `bson:"phone,omitempty" json:"phone" fillable:"true"`
-	Password  string        `bson:"password" json:"password"`
-	Tokens    *[]Token      `bson:"tokens" json:"tokens"`
-	CreatedAt time.Time     `bson:"created_at" json:"-"`
-	UpdatedAt time.Time     `bson:"updated_at" json:"-"`
-	DeletedAt *time.Time    `bson:"deleted_at,omitempty" json:"-"`
+	ID        bson.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Name      string          `bson:"name" json:"name"`
+	Email     string          `bson:"email" json:"email"`
+	Password  string          `bson:"password" json:"-"`
+	Tokens    []*Token        `bson:"tokens,omitempty" json:"tokens,omitempty"`   // hasMany
+	Profile   *Profile        `bson:"profile,omitempty" json:"profile,omitempty"` //hasOne
+	RoleIDs   []bson.ObjectID `bson:"role_ids" json:"-"`
+	Roles     []*Role         `bson:"roles,omitempty" json:"roles,omitempty"` // manyToMany
+	CreatedAt time.Time       `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time       `bson:"updated_at" json:"updated_at"`
+	DeletedAt *time.Time      `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"`
 }
 
-func NewUser() *User {
-	return &User{
-		ID:        bson.NewObjectID(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-}
-
-func (u *User) TableName() string {
+func (u *User) CollectionName() string {
 	return "users"
 }
 
@@ -37,8 +32,78 @@ func (u *User) Default() {
 	u.UpdatedAt = time.Now()
 }
 
-func (u *User) GetID() string {
-	return u.ID.Hex()
+func (u *User) GetID() bson.ObjectID {
+	return u.ID
+}
+
+func (u *User) SetID(id bson.ObjectID) {
+	u.ID = id
+}
+
+// manyToMany
+func (u *User) WithRoles() bson.D {
+	return bson.D{
+		{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "roles"},          // colección relacionada
+			{Key: "localField", Value: "role_ids"}, // campo en User
+			{Key: "foreignField", Value: "_id"},    // campo en Roles
+			{Key: "as", Value: "roles"},            // nombre en el resultado
+		}},
+	}
+}
+
+// hasMany
+func (u *User) WithTokens() bson.D {
+	return bson.D{
+		{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "tokens"},          // colección relacionada
+			{Key: "localField", Value: "_id"},       // campo en User
+			{Key: "foreignField", Value: "user_id"}, // campo en Token
+			{Key: "as", Value: "tokens"},            // nombre en el resultado
+		}},
+	}
+}
+
+// hasOne
+func (u *User) WithProfile() []bson.D {
+	return []bson.D{
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "profiles"},
+			{Key: "localField", Value: "_id"},
+			{Key: "foreignField", Value: "user_id"},
+			{Key: "as", Value: "profile"},
+		}}},
+		{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$profile"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+	}
+}
+
+func (u *User) WithRolesAndPermissions() bson.D {
+	return bson.D{
+		{
+			Key: "$lookup",
+			Value: bson.D{
+				{Key: "from", Value: "roles"},
+				{Key: "let", Value: bson.D{{Key: "role_ids", Value: "$role_ids"}}},
+				{Key: "pipeline", Value: mongo.Pipeline{
+					{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$in", Value: bson.A{"$_id", "$$role_ids"}},
+						}},
+					}}},
+					{{Key: "$lookup", Value: bson.D{
+						{Key: "from", Value: "permissions"},
+						{Key: "localField", Value: "permission_ids"},
+						{Key: "foreignField", Value: "_id"},
+						{Key: "as", Value: "permissions"},
+					}}},
+				}},
+				{Key: "as", Value: "roles"},
+			},
+		},
+	}
 }
 
 func (u *User) Anonymous() *User {
@@ -48,8 +113,7 @@ func (u *User) Anonymous() *User {
 	return &User{
 		ID:        id,
 		Name:      "Anonymous",
-		Email:     "anonymous@gmail.com",
-		Phone:     "+57 320 000 0000",
+		Email:     "anonymous@anonymous.com",
 		Password:  "anonymous",
 		CreatedAt: timeZero,
 		UpdatedAt: timeZero,

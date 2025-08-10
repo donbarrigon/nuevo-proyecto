@@ -16,7 +16,7 @@ type PaginateResource struct {
 }
 
 func Paginate(model Model, result any, qf *app.QueryFilter) (*PaginateResource, app.Error) {
-	cursor, err := Mongo.Database.Collection(model.TableName()).Aggregate(context.TODO(), qf.Pipeline())
+	cursor, err := Mongo.Database.Collection(model.CollectionName()).Aggregate(context.TODO(), qf.Pipeline())
 	if err != nil {
 		return nil, app.Errors.Mongo(err)
 	}
@@ -53,7 +53,7 @@ func Paginate(model Model, result any, qf *app.QueryFilter) (*PaginateResource, 
 		countQF.Cursor = ""
 		countQF.CursorDirection = 0
 
-		total, err := Mongo.Database.Collection(model.TableName()).CountDocuments(context.TODO(), countQF.Pipeline())
+		total, err := Mongo.Database.Collection(model.CollectionName()).CountDocuments(context.TODO(), countQF.Pipeline())
 		if err != nil {
 			return nil, app.Errors.Mongo(err)
 		}
