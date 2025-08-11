@@ -14,7 +14,8 @@ import (
 
 type Model interface {
 	CollectionName() string
-	Default()
+	BefereCreate() app.Error
+	BeforeUpdate() app.Error
 	GetID() bson.ObjectID
 	SetID(id bson.ObjectID)
 }
@@ -109,7 +110,9 @@ func FindByPipeline(model Model, result any, pipeline any) app.Error {
 }
 
 func Create(model Model) app.Error {
-	model.Default()
+	if err := model.BefereCreate(); err != nil {
+		return err
+	}
 	collection := Mongo.Database.Collection(model.CollectionName())
 	result, err := collection.InsertOne(context.TODO(), model)
 	if err != nil {
@@ -121,7 +124,9 @@ func Create(model Model) app.Error {
 }
 
 func Update(model Model) app.Error {
-	model.Default()
+	if err := model.BeforeUpdate(); err != nil {
+		return err
+	}
 	collection := Mongo.Database.Collection(model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
 	update := bson.D{bson.E{Key: "$set", Value: model}}

@@ -15,10 +15,11 @@ import (
 )
 
 type UserInterface interface {
-	GetID() string
+	GetID() bson.ObjectID
 }
 
 type TokenInterface interface {
+	GetID() bson.ObjectID
 }
 
 type MessageResource struct {
@@ -56,6 +57,33 @@ func (ctx *Context) GetBody(request any) Error {
 		}
 	}
 	defer ctx.Request.Body.Close()
+	return nil
+}
+
+func (ctx *Context) ValidateBody(req any) Error {
+	if err := ctx.GetBody(req); err != nil {
+		return err
+	}
+
+	v := reflect.ValueOf(req)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			item := v.Index(i).Interface()
+			if err := Validate(item); err != nil {
+				return err
+			}
+		}
+	default:
+		if err := Validate(req); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -176,33 +204,6 @@ func (ctx *Context) GetMultiPartForm(req any) Error {
 	return nil
 }
 
-func (ctx *Context) ValidateBody(req any) Error {
-	if err := ctx.GetBody(req); err != nil {
-		return err
-	}
-
-	v := reflect.ValueOf(req)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-
-	switch v.Kind() {
-	case reflect.Slice, reflect.Array:
-		for i := 0; i < v.Len(); i++ {
-			item := v.Index(i).Interface()
-			if err := Validate(item); err != nil {
-				return err
-			}
-		}
-	default:
-		if err := Validate(req); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (ctx *Context) ValidateMultiPartForm(req any) Error {
 	if err := ctx.GetMultiPartForm(req); err != nil {
 		return err
@@ -234,17 +235,18 @@ func (ctx *Context) ValidateRequest(req any) Error {
 	}
 }
 
-func (ctx *Context) Get(param string, defaultValue ...string) string {
-	if value := ctx.PathParams["id"]; value != "" {
+func (ctx *Context) GetParam(param string, defaultValue string) string {
+	if value := ctx.PathParams[param]; value != "" {
 		return value
 	}
-	value := ctx.Request.URL.Query().Get(param)
-	if value == "" {
-		if len(defaultValue) > 0 {
-			return defaultValue[0]
-		}
+	return defaultValue
+}
+
+func (ctx *Context) GetInput(param string, defaultValue string) string {
+	if value := ctx.Request.URL.Query().Get(param); value != "" {
+		return value
 	}
-	return value
+	return defaultValue
 }
 
 func (ctx *Context) WriteJSON(status int, data any) {

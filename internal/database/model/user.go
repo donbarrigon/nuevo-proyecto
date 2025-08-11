@@ -3,35 +3,42 @@ package model
 import (
 	"time"
 
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type User struct {
-	ID        bson.ObjectID   `bson:"_id,omitempty" json:"id"`
-	Name      string          `bson:"name" json:"name"`
-	Email     string          `bson:"email" json:"email"`
-	Password  string          `bson:"password" json:"-"`
-	Tokens    []*Token        `bson:"tokens,omitempty" json:"tokens,omitempty"`   // hasMany
-	Profile   *Profile        `bson:"profile,omitempty" json:"profile,omitempty"` //hasOne
-	RoleIDs   []bson.ObjectID `bson:"role_ids" json:"-"`
-	Roles     []*Role         `bson:"roles,omitempty" json:"roles,omitempty"` // manyToMany
-	CreatedAt time.Time       `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time       `bson:"updated_at" json:"updated_at"`
-	DeletedAt *time.Time      `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"`
+	ID            bson.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Name          string          `bson:"name" json:"name"`
+	Email         string          `bson:"email" json:"email"`
+	Password      string          `bson:"password" json:"-"`
+	Tokens        []*Token        `bson:"tokens,omitempty" json:"tokens,omitempty"`   // hasMany
+	Profile       *Profile        `bson:"profile,omitempty" json:"profile,omitempty"` //hasOne
+	RoleIDs       []bson.ObjectID `bson:"role_ids" json:"-"`
+	Roles         []*Role         `bson:"roles,omitempty" json:"roles,omitempty"` // manyToMany
+	PermissionIDs []bson.ObjectID `bson:"permission_ids" json:"-"`
+	Permissions   []*Permission   `bson:"permissions,omitempty" json:"permissions,omitempty"` // manyToMany
+	CreatedAt     time.Time       `bson:"created_at" json:"created_at"`
+	UpdatedAt     time.Time       `bson:"updated_at" json:"updated_at"`
+	DeletedAt     *time.Time      `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"`
 }
 
 func (u *User) CollectionName() string {
 	return "users"
 }
 
-func (u *User) Default() {
-	if u.CreatedAt.IsZero() {
-		u.CreatedAt = time.Now()
-	}
+func (u *User) BefereCreate() app.Error {
+	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
+	return nil
 }
 
+func (u *User) BefereUpdate() app.Error {
+	u.UpdatedAt = time.Now()
+	return nil
+}
 func (u *User) GetID() bson.ObjectID {
 	return u.ID
 }
@@ -42,44 +49,25 @@ func (u *User) SetID(id bson.ObjectID) {
 
 // manyToMany
 func (u *User) WithRoles() bson.D {
-	return bson.D{
-		{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "roles"},          // colección relacionada
-			{Key: "localField", Value: "role_ids"}, // campo en User
-			{Key: "foreignField", Value: "_id"},    // campo en Roles
-			{Key: "as", Value: "roles"},            // nombre en el resultado
-		}},
-	}
+	return db.ManyToMany("roles", "role_ids")
+}
+
+// manyToMany
+func (u *User) WhithPermissions() bson.D {
+	return db.HasMany("permissions", "permission_ids")
 }
 
 // hasMany
 func (u *User) WithTokens() bson.D {
-	return bson.D{
-		{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "tokens"},          // colección relacionada
-			{Key: "localField", Value: "_id"},       // campo en User
-			{Key: "foreignField", Value: "user_id"}, // campo en Token
-			{Key: "as", Value: "tokens"},            // nombre en el resultado
-		}},
-	}
+	return db.HasMany("tokens", "user_id")
 }
 
 // hasOne
 func (u *User) WithProfile() []bson.D {
-	return []bson.D{
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "profiles"},
-			{Key: "localField", Value: "_id"},
-			{Key: "foreignField", Value: "user_id"},
-			{Key: "as", Value: "profile"},
-		}}},
-		{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$profile"},
-			{Key: "preserveNullAndEmptyArrays", Value: true},
-		}}},
-	}
+	return db.HasOne("profiles", "user_id", "profile")
 }
 
+// manyToMany con preload de permissions
 func (u *User) WithRolesAndPermissions() bson.D {
 	return bson.D{
 		{
