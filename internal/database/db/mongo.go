@@ -48,7 +48,7 @@ func FindByID(model Model, id bson.ObjectID) app.Error {
 	return nil
 }
 
-func FindManyByField(model Model, result any, field string, value any) app.Error {
+func FindBy(model Model, result any, field string, value any) app.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
 	if err != nil {
@@ -60,28 +60,9 @@ func FindManyByField(model Model, result any, field string, value any) app.Error
 	return nil
 }
 
-func FindOneByField(model Model, field string, value any) app.Error {
+func FindOneBy(model Model, field string, value any) app.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	if err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
-		return app.Errors.Mongo(err)
-	}
-	return nil
-}
-
-func FindAll(model Model, result any) app.Error {
-	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), bson.D{})
-	if err != nil {
-		return app.Errors.Mongo(err)
-	}
-	if err = cursor.All(context.TODO(), result); err != nil {
-		return app.Errors.Mongo(err)
-	}
-	return nil
-}
-
-func FindOne(model Model, filter bson.D) app.Error {
-	err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model)
-	if err != nil {
 		return app.Errors.Mongo(err)
 	}
 	return nil
@@ -98,7 +79,7 @@ func Find(model Model, result any, filter bson.D) app.Error {
 	return nil
 }
 
-func FindByPipeline(model Model, result any, pipeline any) app.Error {
+func Aggregate(model Model, result any, pipeline mongo.Pipeline) app.Error {
 	cursor, err := Mongo.Database.Collection(model.CollectionName()).Aggregate(context.TODO(), pipeline)
 	if err != nil {
 		return app.Errors.Mongo(err)
