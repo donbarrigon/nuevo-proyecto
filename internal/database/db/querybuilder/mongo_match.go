@@ -3,6 +3,7 @@ package querybuilder
 import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"golang.org/x/exp/constraints"
 )
 
 func Match(value ...bson.E) bson.D {
@@ -19,6 +20,10 @@ func Filter(value ...bson.E) bson.D {
 
 func Field(key string, value any) bson.E {
 	return bson.E{Key: key, Value: value}
+}
+
+func Array(value ...any) bson.A {
+	return bson.A(value)
 }
 
 // operadores logicos ----------------------------------------------------------------
@@ -76,6 +81,83 @@ func In(value ...any) bson.E {
 
 func Nin(value ...any) bson.E {
 	return bson.E{Key: "$nin", Value: bson.A(value)}
+}
+
+// operadores de elemento ----------------------------------------------------------------
+
+func Exists() bson.E {
+	return bson.E{Key: "$exists", Value: true}
+}
+
+func NotExists() bson.E {
+	return bson.E{Key: "$exists", Value: false}
+}
+
+func Type(value string) bson.E {
+	return bson.E{Key: "$type", Value: value}
+}
+
+// funciones de softdelete ----------------------------------------------------------------
+
+func OnlyTrashed() bson.E {
+	return bson.E{Key: "deleted_at", Value: bson.D{bson.E{Key: "$exists", Value: true}}}
+}
+
+func WithOutTrashed() bson.E {
+	return bson.E{Key: "deleted_at", Value: bson.D{bson.E{Key: "$exists", Value: false}}}
+}
+
+// operadores de evacuacion ----------------------------------------------------------------
+
+func Expr(value any) bson.E {
+	return bson.E{Key: "$expr", Value: value}
+}
+
+func JsonSchema(value any) bson.E {
+	return bson.E{Key: "$jsonSchema", Value: value}
+}
+
+func Mod[D constraints.Integer | constraints.Float, R constraints.Integer | constraints.Float](divisor D, remainder R) bson.E {
+	return bson.E{Key: "$mod", Value: bson.A([]any{divisor, remainder})}
+}
+
+func Regex(value any) bson.E {
+	return bson.E{Key: "$regex", Value: value} // esta de aca queda pendiente para cuando investigue mejor
+}
+
+// operadores geoespaciales ----------------------------------------------------------------
+
+//quedan pendientes por que estan complejos y no la quiero cagar
+// ademas no los uso aun.
+
+// operadores de array ----------------------------------------------------------------
+
+func All(value ...any) bson.E {
+	return bson.E{Key: "$all", Value: bson.A(value)}
+}
+
+func ElemMatch(value any) bson.E {
+	return bson.E{Key: "$elemMatch", Value: value}
+}
+
+func Size(value int) bson.E {
+	return bson.E{Key: "$size", Value: value}
+}
+
+// operadores bitwise ----------------------------------------------------------------
+
+// quedan pendientes
+
+// operadores de proyeccion ----------------------------------------------------------------
+
+func Slice(value int) bson.E {
+	return bson.E{Key: "$slice", Value: value}
+}
+
+// operadores miselanios ----------------------------------------------------------------
+
+func Rand() bson.E {
+	return bson.E{Key: "$rand", Value: bson.D{}}
 }
 
 // ejemplos de prueba ----------------------------------------------------------------
