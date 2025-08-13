@@ -14,7 +14,7 @@ func Where(key string, value ...bson.E) bson.E {
 	return bson.E{Key: key, Value: bson.D(value)}
 }
 
-func Filter(value ...bson.E) bson.D {
+func Document(value ...bson.E) bson.D {
 	return bson.D(value)
 }
 
@@ -109,8 +109,8 @@ func WithOutTrashed() bson.E {
 
 // operadores de evacuacion ----------------------------------------------------------------
 
-func Expr(value any) bson.E {
-	return bson.E{Key: "$expr", Value: value}
+func Expr(value ...bson.E) bson.E {
+	return bson.E{Key: "$expr", Value: bson.D(value)}
 }
 
 func JsonSchema(value any) bson.E {
@@ -136,8 +136,8 @@ func All(value ...any) bson.E {
 	return bson.E{Key: "$all", Value: bson.A(value)}
 }
 
-func ElemMatch(value any) bson.E {
-	return bson.E{Key: "$elemMatch", Value: value}
+func ElemMatch(value ...bson.E) bson.E {
+	return bson.E{Key: "$elemMatch", Value: bson.D(value)}
 }
 
 func Size(value int) bson.E {
