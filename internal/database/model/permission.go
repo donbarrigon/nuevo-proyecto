@@ -1,26 +1,21 @@
 package model
 
 import (
-	"time"
-
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Permission struct {
-	ID        bson.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name      string        `bson:"name" json:"name" fillable:"true"`
-	DeletedAt *time.Time    `bson:"deleted_at,omitempty" json:"deletedAt,omitempty"`
+	ID   bson.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name string        `bson:"name"          json:"name"`
 }
 
-func NewPermission() *Permission {
-	return &Permission{
-		ID: bson.NewObjectID(),
-	}
-}
-func (p *Permission) TableName() string {
-	return "permissions"
-}
+func (p *Permission) CollectionName() string { return "permissions" }
 
-func (p *Permission) Default() {
-	//
-}
+func (p *Permission) GetID() bson.ObjectID { return p.ID }
+
+func (p *Permission) SetID(id bson.ObjectID) { p.ID = id }
+
+func (p *Permission) BeforeCreate() app.Error { return nil }
+
+func (p *Permission) BeforeUpdate() app.Error { return nil }

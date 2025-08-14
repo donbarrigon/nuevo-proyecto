@@ -14,10 +14,10 @@ import (
 
 type Model interface {
 	CollectionName() string
-	BefereCreate() app.Error
-	BeforeUpdate() app.Error
 	GetID() bson.ObjectID
 	SetID(id bson.ObjectID)
+	BeforeCreate() app.Error
+	BeforeUpdate() app.Error
 }
 
 type ConexionMongoDB struct {
@@ -91,7 +91,7 @@ func Aggregate(model Model, result any, pipeline mongo.Pipeline) app.Error {
 }
 
 func Create(model Model) app.Error {
-	if err := model.BefereCreate(); err != nil {
+	if err := model.BeforeCreate(); err != nil {
 		return err
 	}
 	collection := Mongo.Database.Collection(model.CollectionName())
@@ -101,6 +101,35 @@ func Create(model Model) app.Error {
 	}
 	model.SetID(result.InsertedID.(bson.ObjectID))
 
+	return nil
+}
+
+func CreateBy(model Model, validator any) app.Error {
+	if err := Fill(model, validator); err != nil {
+		return err
+	}
+	return Create(model)
+}
+
+func CreateMany(model Model, data any) app.Error {
+	models, ok := data.([]Model)
+	if !ok {
+		return app.Errors.InternalServerErrorF("type assertion failed in CreateMany")
+	}
+	for _, m := range models {
+
+		if err := m.BeforeCreate(); err != nil {
+			return err
+		}
+	}
+	collection := Mongo.Database.Collection(model.CollectionName())
+	result, err := collection.InsertMany(context.TODO(), data)
+	if err != nil {
+		return app.Errors.Mongo(err)
+	}
+	for i, m := range models {
+		m.SetID(result.InsertedIDs[i].(bson.ObjectID))
+	}
 	return nil
 }
 
@@ -124,6 +153,15 @@ func Update(model Model) app.Error {
 	}
 	return nil
 }
+
+func UpdateBy(model Model, validator any) (map[string]any, app.Error) {
+	dirty, err := FillDirty(model, validator)
+	if err != nil {
+		return nil, err
+	}
+	return dirty, Update(model)
+}
+
 func Delete(model Model) app.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}

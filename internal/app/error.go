@@ -313,6 +313,14 @@ func (e *Err) Unknown(err error) Error {
 	}
 }
 
+func (e *Err) InternalServerError(err error) Error {
+	return &Err{
+		Status:  http.StatusInternalServerError,
+		Message: "Internal server error",
+		Err:     err.Error(),
+	}
+}
+
 func (e *Err) Unauthorized(err error) Error {
 	return &Err{
 		Status:  http.StatusUnauthorized,
@@ -450,6 +458,15 @@ func (e *Err) Unknownf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Unexpected system error",
+		Err:       format,
+		phMessage: ph,
+	}
+}
+
+func (e *Err) InternalServerErrorF(format string, ph ...F) Error {
+	return &Err{
+		Status:    http.StatusInternalServerError,
+		Message:   "Internal server error",
 		Err:       format,
 		phMessage: ph,
 	}

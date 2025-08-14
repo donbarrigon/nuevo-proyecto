@@ -1,4 +1,4 @@
-package querybuilder
+package qb
 
 import (
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -12,6 +12,10 @@ func Match(value ...bson.E) bson.D {
 
 func Where(key string, value ...bson.E) bson.E {
 	return bson.E{Key: key, Value: bson.D(value)}
+}
+
+func OrWhere(key string, value ...bson.E) bson.D {
+	return bson.D{bson.E{Key: key, Value: bson.D(value)}}
 }
 
 func Document(value ...bson.E) bson.D {
@@ -263,32 +267,6 @@ func GetFruits6() bson.D {
 
 // 2️⃣ Operadores de expresión (dentro de $match, $project, $group, etc.)
 // Estos son como "funciones" que puedes usar para comparar, operar con strings, arrays, fechas, etc.
-
-// 🔹 Lógicos
-// $and
-
-// $or
-
-// $not
-
-// $nor
-
-// 🔹 Comparación
-// $eq
-
-// $ne
-
-// $gt
-
-// $gte
-
-// $lt
-
-// $lte
-
-// $in
-
-// $nin
 
 // 🔹 Operadores de array
 // $size
