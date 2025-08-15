@@ -1,26 +1,30 @@
 package routes
 
 import (
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/http/controller"
 	"github.com/donbarrigon/nuevo-proyecto/internal/http/middleware"
 )
 
-func user() {
-	Get("/users/{id}", controller.UserShow)
-	Name("users.show")
+func user(r *app.Routes) {
+	r.Get("/users/{id}", controller.UserShow).
+		Name("users.show")
 
-	Post("/users", controller.UserStore, middleware.Auth)
-	Name("users.store")
+	r.Post("/users/login", controller.Login).
+		Name("users.login")
 
-	Patch("/users/{id}", controller.UserUpdate, middleware.Auth)
-	Name("users.update")
+	r.Use(func() {
+		r.Post("/users", controller.UserStore, middleware.Auth).
+			Name("users.store")
 
-	Delete("/users/{id}", controller.PermissionDestroy, middleware.Auth)
-	Name("users.destroy")
+		r.Patch("/users/{id}", controller.UserUpdate, middleware.Auth).
+			Name("users.update")
 
-	Post("/users/login", controller.Login)
-	Name("users.login")
+		r.Delete("/users/{id}", controller.PermissionDestroy, middleware.Auth).
+			Name("users.destroy")
 
-	Post("/users/logout", controller.Logout, middleware.Auth)
-	Name("users.logout")
+		r.Post("/users/logout", controller.Logout, middleware.Auth).
+			Name("users.logout")
+	}, middleware.Auth)
+
 }

@@ -1,30 +1,35 @@
 package routes
 
-import "github.com/donbarrigon/nuevo-proyecto/internal/http/controller"
+import (
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/controller"
+)
 
 // path: /Permission/
-func permission() {
-	Get("/permissions", controller.PermissionIndex)
-	Name("permissions.index")
+func permission(r *app.Routes) {
+	r.Prefix(func() {
+		r.Get("/permissions", controller.PermissionIndex).
+			Name("permissions.index")
 
-	Get("/permissions/export", controller.PermissionExport)
-	Name("permissions.export")
+		r.Get("/permissions/export", controller.PermissionExport).
+			Name("permissions.export")
 
-	Get("/permissions/{id}", controller.PermissionShow)
-	Name("permissions.show")
+		r.Get("/permissions/:id", controller.PermissionShow).
+			Name("permissions.show")
 
-	Post("/permissions", controller.PermissionStore)
-	Name("permissions.store")
+		r.Post("/permissions", controller.PermissionStore).
+			Name("permissions.store")
 
-	Patch("/permissions/{id}", controller.PermissionUpdate)
-	Name("permissions.update")
+		r.Patch("/permissions/:id", controller.PermissionUpdate).
+			Name("permissions.update")
 
-	Delete("/permissions/{id}", controller.PermissionDestroy)
-	Name("permissions.destroy")
+		r.Delete("/permissions/:id", controller.PermissionDestroy).
+			Name("permissions.destroy")
 
-	Patch("/permissions/{id}/restore", controller.PermissionRestore)
-	Name("permissions.restore")
+		r.Patch("/permissions/:id/restore", controller.PermissionRestore).
+			Name("permissions.restore")
 
-	Delete("/permissions/{id}/force-delete", controller.PermissionForceDelete)
-	Name("permissions.force-delete")
+		r.Delete("/permissions/:id/force-delete", controller.PermissionForceDelete).
+			Name("permissions.force-delete")
+	}, "dashboard")
 }
