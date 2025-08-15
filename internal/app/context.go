@@ -27,26 +27,26 @@ type MessageResource struct {
 	Data    any    `json:"data"`
 }
 
-type Context struct {
-	Writer     http.ResponseWriter
-	Request    *http.Request
-	PathParams map[string]string
-	User       UserInterface
-	Token      TokenInterface
+type HttpContext struct {
+	Writer  http.ResponseWriter
+	Request *http.Request
+	Params  map[string]string
+	User    UserInterface
+	Token   TokenInterface
 }
 
-func NewContext(w http.ResponseWriter, r *http.Request) *Context {
-	return &Context{
+func NewHttpContext(w http.ResponseWriter, r *http.Request) *HttpContext {
+	return &HttpContext{
 		Writer:  w,
 		Request: r,
 	}
 }
 
-func (ctx *Context) Lang() string {
+func (ctx *HttpContext) Lang() string {
 	return ctx.Request.Header.Get("Accept-Language")
 }
 
-func (ctx *Context) GetBody(request any) Error {
+func (ctx *HttpContext) GetBody(request any) Error {
 	decoder := json.NewDecoder(ctx.Request.Body)
 	if err := decoder.Decode(request); err != nil {
 		return &Err{
@@ -60,7 +60,7 @@ func (ctx *Context) GetBody(request any) Error {
 	return nil
 }
 
-func (ctx *Context) ValidateBody(req any) Error {
+func (ctx *HttpContext) ValidateBody(req any) Error {
 	if err := ctx.GetBody(req); err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (ctx *Context) ValidateBody(req any) Error {
 	return nil
 }
 
-func (ctx *Context) GetMultiPartForm(req any) Error {
+func (ctx *HttpContext) GetMultiPartForm(req any) Error {
 	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB
 	if err != nil {
 		return &Err{
@@ -204,7 +204,7 @@ func (ctx *Context) GetMultiPartForm(req any) Error {
 	return nil
 }
 
-func (ctx *Context) ValidateMultiPartForm(req any) Error {
+func (ctx *HttpContext) ValidateMultiPartForm(req any) Error {
 	if err := ctx.GetMultiPartForm(req); err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (ctx *Context) ValidateMultiPartForm(req any) Error {
 	return nil
 }
 
-func (ctx *Context) ValidateRequest(req any) Error {
+func (ctx *HttpContext) ValidateRequest(req any) Error {
 	contentType := ctx.Request.Header.Get("Content-Type")
 
 	switch {
@@ -235,21 +235,21 @@ func (ctx *Context) ValidateRequest(req any) Error {
 	}
 }
 
-func (ctx *Context) GetParam(param string, defaultValue string) string {
-	if value := ctx.PathParams[param]; value != "" {
+func (ctx *HttpContext) GetParam(param string, defaultValue string) string {
+	if value := ctx.Params[param]; value != "" {
 		return value
 	}
 	return defaultValue
 }
 
-func (ctx *Context) GetInput(param string, defaultValue string) string {
+func (ctx *HttpContext) GetInput(param string, defaultValue string) string {
 	if value := ctx.Request.URL.Query().Get(param); value != "" {
 		return value
 	}
 	return defaultValue
 }
 
-func (ctx *Context) WriteJSON(status int, data any) {
+func (ctx *HttpContext) WriteJSON(status int, data any) {
 	ctx.Writer.Header().Set("Content-Type", "application/json")
 	ctx.Writer.WriteHeader(status)
 
@@ -260,76 +260,76 @@ func (ctx *Context) WriteJSON(status int, data any) {
 	}
 }
 
-func (ctx *Context) WriteError(err Error) {
+func (ctx *HttpContext) WriteError(err Error) {
 	err.Translate(ctx.Lang())
 	ctx.WriteJSON(err.GetStatus(), err)
 }
 
-func (ctx *Context) WriteNotFound() {
+func (ctx *HttpContext) WriteNotFound() {
 	ctx.WriteError(Errors.NotFoundf("The resource [{method}:{path}] does not exist",
 		F{Key: "method", Value: ctx.Request.Method},
 		F{Key: "path", Value: ctx.Request.URL.Path},
 	))
 }
 
-func (ctx *Context) WriteMessage(code int, data any, message string, ph ...F) {
+func (ctx *HttpContext) WriteMessage(code int, data any, message string, ph ...F) {
 	ctx.WriteJSON(code, &MessageResource{
 		Message: Translate(ctx.Lang(), message, ph...),
 		Data:    data,
 	})
 }
 
-func (ctx *Context) WriteSuccess(data any) {
+func (ctx *HttpContext) WriteSuccess(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
 		Message: Translate(ctx.Lang(), "Request processed successfully"),
 		Data:    data,
 	})
 }
 
-func (ctx *Context) WriteCreated(data any) {
+func (ctx *HttpContext) WriteCreated(data any) {
 	ctx.WriteJSON(http.StatusCreated, &MessageResource{
 		Message: Translate(ctx.Lang(), "Resource created successfully"),
 		Data:    data,
 	})
 }
 
-func (ctx *Context) WriteUpdated(data any) {
+func (ctx *HttpContext) WriteUpdated(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
 		Message: Translate(ctx.Lang(), "Resource updated successfully"),
 		Data:    data,
 	})
 }
 
-func (ctx *Context) WriteDeleted(data any) {
+func (ctx *HttpContext) WriteDeleted(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
 		Message: Translate(ctx.Lang(), "Resource deleted successfully"),
 		Data:    data,
 	})
 }
 
-func (ctx *Context) WriteRestored(data any) {
+func (ctx *HttpContext) WriteRestored(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
 		Message: Translate(ctx.Lang(), "Resource restored successfully"),
 		Data:    data,
 	})
 }
 
-func (ctx *Context) WriteForceDeleted(data any) {
+func (ctx *HttpContext) WriteForceDeleted(data any) {
 	ctx.WriteJSON(http.StatusOK, &MessageResource{
 		Message: Translate(ctx.Lang(), "Resource permanently deleted"),
 		Data:    data,
 	})
 }
 
-func (ctx *Context) WriteNoContent() {
+func (ctx *HttpContext) WriteNoContent() {
 	ctx.Writer.WriteHeader(http.StatusNoContent)
 }
 
-// func (ctx *Context) TT(s string, ph ...F) string {
+// func (ctx *HttpContext) TT(s string, ph ...F) string {
 // 	return Translate(ctx.Lang(), s, ph...)
 // }
 
-func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *QueryFilter {
+func (ctx *HttpContext) GetQueryFilter(allowFilters map[string][]string) *QueryFilter {
 	query := ctx.Request.URL.Query()
 
 	qf := NewQueryFilter()
@@ -495,7 +495,7 @@ func (ctx *Context) GetQueryFilter(allowFilters map[string][]string) *QueryFilte
 	return qf
 }
 
-func (ctx *Context) WriteCSV(fileName string, data any, comma ...rune) {
+func (ctx *HttpContext) WriteCSV(fileName string, data any, comma ...rune) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Slice {

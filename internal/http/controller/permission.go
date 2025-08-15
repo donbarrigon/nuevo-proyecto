@@ -9,7 +9,7 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/http/request"
 )
 
-func PermissionIndex(ctx *app.Context) {
+func PermissionIndex(ctx *app.HttpContext) {
 	allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
 
 	var permissions []model.Permission
@@ -22,7 +22,7 @@ func PermissionIndex(ctx *app.Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func PermissionExport(ctx *app.Context) {
+func PermissionExport(ctx *app.HttpContext) {
 	allowFilters := map[string][]string{"name": {"eq", "ne", "lt", "gt", "lte", "gte", "sortable"}}
 	qf := ctx.GetQueryFilter(allowFilters)
 	qf.All()
@@ -36,7 +36,7 @@ func PermissionExport(ctx *app.Context) {
 	ctx.WriteCSV("db", permissions)
 }
 
-func PermissionShow(ctx *app.Context) {
+func PermissionShow(ctx *app.HttpContext) {
 	id := ctx.Get("id")
 
 	permission := &model.Permission{}
@@ -48,7 +48,7 @@ func PermissionShow(ctx *app.Context) {
 	ctx.WriteJSON(http.StatusOK, permission)
 }
 
-func PermissionStore(ctx *app.Context) {
+func PermissionStore(ctx *app.HttpContext) {
 	req := &request.StorePermission{}
 	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
@@ -66,7 +66,7 @@ func PermissionStore(ctx *app.Context) {
 	ctx.WriteCreated(permission)
 }
 
-func PermissionUpdate(ctx *app.Context) {
+func PermissionUpdate(ctx *app.HttpContext) {
 	req := &request.StorePermission{}
 	if err := ctx.ValidateBody(req); err != nil {
 		ctx.WriteError(err)
@@ -90,7 +90,7 @@ func PermissionUpdate(ctx *app.Context) {
 	ctx.WriteUpdated(permission)
 }
 
-func PermissionDestroy(ctx *app.Context) {
+func PermissionDestroy(ctx *app.HttpContext) {
 	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
@@ -106,7 +106,7 @@ func PermissionDestroy(ctx *app.Context) {
 	ctx.WriteDeleted(permission)
 }
 
-func PermissionRestore(ctx *app.Context) {
+func PermissionRestore(ctx *app.HttpContext) {
 	id := ctx.Get("id")
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
@@ -122,8 +122,8 @@ func PermissionRestore(ctx *app.Context) {
 	ctx.WriteRestored(permission)
 }
 
-func PermissionForceDelete(ctx *app.Context) {
-	id := ctx.Get("id")
+func PermissionForceDelete(ctx *app.HttpContext) {
+	id := ctx.Params["id"]
 	permission := &model.Permission{}
 	if err := db.FindByHexID(permission, id); err != nil {
 		ctx.WriteError(err)

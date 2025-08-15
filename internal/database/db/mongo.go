@@ -27,6 +27,7 @@ type ConexionMongoDB struct {
 
 var Mongo *ConexionMongoDB
 
+// trae el documento segun el id en hex
 func FindByHexID(model Model, id string) app.Error {
 
 	objectId, err := bson.ObjectIDFromHex(id)
@@ -40,6 +41,7 @@ func FindByHexID(model Model, id string) app.Error {
 	return nil
 }
 
+// trae el documento segun el id
 func FindByID(model Model, id bson.ObjectID) app.Error {
 	filter := bson.D{bson.E{Key: "_id", Value: id}}
 	if err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
@@ -48,6 +50,7 @@ func FindByID(model Model, id bson.ObjectID) app.Error {
 	return nil
 }
 
+// trae todos los documentos segun el campo y el valor
 func FindBy(model Model, result any, field string, value any) app.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
@@ -60,6 +63,7 @@ func FindBy(model Model, result any, field string, value any) app.Error {
 	return nil
 }
 
+// trae el primer documento segun el campo y el valor
 func FindOneBy(model Model, field string, value any) app.Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	if err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(model); err != nil {
@@ -68,6 +72,7 @@ func FindOneBy(model Model, field string, value any) app.Error {
 	return nil
 }
 
+// ejecuta busquedas por el filtro
 func Find(model Model, result any, filter bson.D) app.Error {
 	cursor, err := Mongo.Database.Collection(model.CollectionName()).Find(context.TODO(), filter)
 	if err != nil {
@@ -79,6 +84,15 @@ func Find(model Model, result any, filter bson.D) app.Error {
 	return nil
 }
 
+// trae 1 documento segun el filtro
+func FindOne(model Model, result any, filter bson.D) app.Error {
+	if err := Mongo.Database.Collection(model.CollectionName()).FindOne(context.TODO(), filter).Decode(result); err != nil {
+		return app.Errors.Mongo(err)
+	}
+	return nil
+}
+
+// ejecuta busquedas por agregacion
 func Aggregate(model Model, result any, pipeline mongo.Pipeline) app.Error {
 	cursor, err := Mongo.Database.Collection(model.CollectionName()).Aggregate(context.TODO(), pipeline)
 	if err != nil {
@@ -90,6 +104,7 @@ func Aggregate(model Model, result any, pipeline mongo.Pipeline) app.Error {
 	return nil
 }
 
+// crea el documento
 func Create(model Model) app.Error {
 	if err := model.BeforeCreate(); err != nil {
 		return err
@@ -104,6 +119,7 @@ func Create(model Model) app.Error {
 	return nil
 }
 
+// crea el documento con los datos del validador
 func CreateBy(model Model, validator any) app.Error {
 	if err := Fill(model, validator); err != nil {
 		return err
@@ -111,6 +127,7 @@ func CreateBy(model Model, validator any) app.Error {
 	return Create(model)
 }
 
+// crea varios documentos
 func CreateMany(model Model, data any) app.Error {
 	models, ok := data.([]Model)
 	if !ok {
@@ -133,6 +150,7 @@ func CreateMany(model Model, data any) app.Error {
 	return nil
 }
 
+// actualiza el documento
 func Update(model Model) app.Error {
 	if err := model.BeforeUpdate(); err != nil {
 		return err
@@ -154,6 +172,7 @@ func Update(model Model) app.Error {
 	return nil
 }
 
+// actualiza el documento con los datos del validador
 func UpdateBy(model Model, validator any) (map[string]any, app.Error) {
 	dirty, err := FillDirty(model, validator)
 	if err != nil {
@@ -162,7 +181,8 @@ func UpdateBy(model Model, validator any) (map[string]any, app.Error) {
 	return dirty, Update(model)
 }
 
-func Delete(model Model) app.Error {
+// hace un soft delete al documento
+func SoftDelete(model Model) app.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
 	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deleted_at", Value: time.Now()}}}}
@@ -180,6 +200,7 @@ func Delete(model Model) app.Error {
 	return nil
 }
 
+// restaura el documento eliminado por SoftDelete
 func Restore(model Model) app.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
@@ -198,7 +219,8 @@ func Restore(model Model) app.Error {
 	return nil
 }
 
-func ForceDelete(model Model) app.Error {
+// elimina permanentemente el documento
+func Delete(model Model) app.Error {
 	collection := Mongo.Database.Collection(model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
 
@@ -243,10 +265,12 @@ func CloseMongoConnection() error {
 
 	err := Mongo.Client.Disconnect(context.TODO())
 	if err != nil {
-		return fmt.Errorf("error al cerrar la conexión con MongoDB: %w", err)
+		e := fmt.Errorf("error al cerrar la conexión con MongoDB: %w", err)
+		app.Log.Print(e.Error())
+		return e
 	}
 
-	log.Println("Conexión a MongoDB cerrada correctamente")
+	app.Log.Print("Conexión a MongoDB cerrada correctamente")
 	return nil
 }
 

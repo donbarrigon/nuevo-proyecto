@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -9,16 +9,20 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
 )
 
-func NewHttpServer(port string) *http.Server {
-	timeout := time.Duration(app.Env.SERVER_TIMEOUT) * time.Second
+var routerMap = map[string]*Router{}
+
+func NewHttpServer(port string, routes *Routes) *http.Server {
+	timeout := time.Duration(Env.SERVER_TIMEOUT) * time.Second
+
+	router := &Router{}
+	router.Make(routes)
+	routerMap[port] = router
+
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      NewRouter(),
+		Handler:      router.HandleFunction(),
 		ReadTimeout:  timeout / 2,
 		WriteTimeout: timeout / 2,
 		IdleTimeout:  timeout,
@@ -27,7 +31,7 @@ func NewHttpServer(port string) *http.Server {
 	go func() {
 		startMessage()
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Could not start server: %v\n", err)
+			Log.Error("Could not start server: :error", F{"error", err.Error()})
 		}
 	}()
 
@@ -55,11 +59,11 @@ func HttpServerGracefulShutdown(server *http.Server) {
 	}
 
 	// se cierra la conexion con mono db
-	if err := db.CloseMongoConnection(); err != nil {
-		log.Printf("Error al cerrar la conexión a MongoDB: %v\n", err)
-	} else {
-		log.Println("Conexión a MongoDB cerrada correctamente")
-	}
+	// if err := db.CloseMongoConnection(); err != nil {
+	// 	log.Printf("Error al cerrar la conexión a MongoDB: %v\n", err)
+	// } else {
+	// 	log.Println("Conexión a MongoDB cerrada correctamente")
+	// }
 
 	log.Println("Apagado controlado completado")
 }
@@ -74,5 +78,5 @@ func startMessage() {
 
  🚀 Servidor corriendo en http://localhost:%v
  🌱 Entorno: DESARROLLO
-	`, app.Env.SERVER_PORT))
+	`, Env.SERVER_PORT))
 }

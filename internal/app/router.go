@@ -5,22 +5,22 @@ import (
 	"strings"
 )
 
-type ControllerFun func(ctx *Context)
-type MiddlewareFun func(func(ctx *Context)) func(ctx *Context)
+type ControllerFun func(ctx *HttpContext)
+type MiddlewareFun func(func(ctx *HttpContext)) func(ctx *HttpContext)
 
 type Router struct {
-	path       string
-	isVar      bool
-	index      int
-	controller ControllerFun
-	middleware []MiddlewareFun
-	routers    []*Router
+	path        string
+	isVar       bool
+	index       int
+	controller  ControllerFun
+	middlewares []MiddlewareFun
+	routers     []*Router
 }
 
 type RouterData struct {
-	Params     map[string]string
-	Controller ControllerFun
-	Middleware []MiddlewareFun
+	Params      map[string]string
+	Controller  ControllerFun
+	Middlewares []MiddlewareFun
 }
 
 type Route struct {
@@ -100,6 +100,9 @@ func (r *Routes) SetRoute(method string, path string, ctrl ControllerFun, middle
 	var pathParts []string
 	var isVars []bool
 
+	pathParts = append(pathParts, method)
+	isVars = append(isVars, false)
+
 	for _, part := range segments {
 		if strings.HasPrefix(part, ":") || (strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}")) {
 			part := strings.Trim(part, ":{}")
@@ -166,17 +169,17 @@ func (r *Router) add(index int, route *Route) {
 
 	// si la ruta termina, agrego el controlador
 	newRouter.controller = route.Controller
-	newRouter.middleware = route.Middleware
+	newRouter.middlewares = route.Middleware
 }
 
-func (r *Router) Find(path string, rd *RouterData) {
-	p := strings.Split(strings.Trim(path, "/"), "/")
-	r.find(p, rd)
-}
+// func (r *Router) Find(path string, rd *RouterData) {
+// 	p := strings.Split(strings.Trim(path, "/"), "/")
+// 	r.find(p, rd)
+// }
 
 // busca recursivamente por las ramas del router y si encuentra el controlador lo asigna en rd
 // si el controlador de rd es nil, significa que no encontro la ruta y se debe manejar como 404
-func (r *Router) find(path []string, rd *RouterData) {
+func (r *Router) Find(path []string, rd *RouterData) {
 	for _, router := range r.routers {
 		if router.isVar || path[router.index] == router.path {
 			// si es variable se guarda
@@ -186,16 +189,40 @@ func (r *Router) find(path []string, rd *RouterData) {
 
 			// si el path aun no termina, sigue adelante y si el siguiente no tiene rutas, se para
 			if len(path) > router.index {
-				router.find(path, rd)
+				router.Find(path, rd)
 				return
 			}
 
 			// si es la ultima rama devuelve controlador
 			if router.controller != nil {
 				rd.Controller = router.controller
-				rd.Middleware = router.middleware
+				rd.Middlewares = router.middlewares
 				return
 			}
 		}
 	}
+}
+
+func (router *Router) HandleFunction() http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		rd := &RouterData{
+			Params: map[string]string{},
+		}
+		pathSegments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		router.Find(pathSegments, rd)
+		if rd.Controller != nil {
+			ctx := NewHttpContext(w, r)
+			ctx.Params = rd.Params
+			router.Use(rd.Controller, rd.Middlewares...)(ctx)
+		}
+	}
+}
+
+func (r *Router) Use(function ControllerFun, middlewares ...MiddlewareFun) ControllerFun {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		function = middlewares[i](function)
+	}
+	return function
 }

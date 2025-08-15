@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	"github.com/donbarrigon/nuevo-proyecto/internal/server"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/routes"
 )
 
 func main() {
@@ -12,6 +12,8 @@ func main() {
 
 	db.InitMongoDB()
 
-	httpServer := server.NewHttpServer(app.Env.SERVER_PORT)
-	server.HttpServerGracefulShutdown(httpServer)
+	httpServer := app.NewHttpServer(app.Env.SERVER_PORT, routes.GetApi())
+
+	app.HttpServerGracefulShutdown(httpServer)
+	db.CloseMongoConnection()
 }
