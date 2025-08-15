@@ -1,0 +1,33 @@
+package policy
+
+import (
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/model"
+)
+
+func UserViewAny(ctx *app.HttpContext) app.Error {
+	return ctx.User.Can("view user")
+
+}
+
+func UserView(ctx *app.HttpContext, user *model.User) app.Error {
+	if ctx.User.GetID() == user.ID {
+		return nil
+	}
+	return ctx.User.Can("view user")
+}
+
+func UserCreate(ctx *app.HttpContext) app.Error {
+	return nil
+}
+
+func UserUpdate(ctx *app.HttpContext, user *model.User) app.Error {
+	if ctx.User.GetID() == user.ID {
+		return nil
+	}
+	return ctx.User.Can("update user")
+}
+
+func UserDelete(ctx *app.HttpContext) app.Error {
+	return ctx.User.Can("delete user")
+}

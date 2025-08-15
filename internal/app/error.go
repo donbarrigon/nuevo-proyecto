@@ -329,6 +329,14 @@ func (e *Err) Unauthorized(err error) Error {
 	}
 }
 
+func (e *Err) Forbidden(err error) Error {
+	return &Err{
+		Status:  http.StatusForbidden,
+		Message: "You do not have permission to perform this action.",
+		Err:     err.Error(),
+	}
+}
+
 func (e *Err) HexID(err error) Error {
 	return &Err{
 		Status:  http.StatusBadRequest,
@@ -476,6 +484,15 @@ func (e *Err) Unauthorizedf(format string, ph ...F) Error {
 	return &Err{
 		Status:    http.StatusUnauthorized,
 		Message:   "Unauthorized access",
+		Err:       format,
+		phMessage: ph,
+	}
+}
+
+func (e *Err) Forbiddenf(format string, ph ...F) Error {
+	return &Err{
+		Status:    http.StatusForbidden,
+		Message:   "You do not have permission to perform this action.",
 		Err:       format,
 		phMessage: ph,
 	}

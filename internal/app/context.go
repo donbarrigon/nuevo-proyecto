@@ -16,6 +16,7 @@ import (
 
 type UserInterface interface {
 	GetID() bson.ObjectID
+	Can(permissionName string) Error
 }
 
 type TokenInterface interface {

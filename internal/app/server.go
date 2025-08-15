@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -69,14 +68,14 @@ func HttpServerGracefulShutdown(server *http.Server) {
 }
 
 func startMessage() {
-	log.Println(fmt.Sprintf(`
+	Log.Print(`
    ____   ___  ____  ____  ___  ___  _   _ ____   ___
   / ___| / _ \|  _ \|  _ \|_ _|| __|| \ | |  _ \ / _ \
  | |    | | | | |_) | |_) || ||||__ |  \| | | | | | | |
  | |___ | |_| |  _ <|  _ < | ||||__ | |\  | |_| | |_| |
   \____(_)___/|_| \_\_| \_\___||___||_| \_|____/ \___/
 
- 🚀 Servidor corriendo en http://localhost:%v
+ 🚀 Servidor corriendo en http://localhost:{port} 
  🌱 Entorno: DESARROLLO
-	`, Env.SERVER_PORT))
+	`, F{Key: "port", Value: Env.SERVER_PORT})
 }
