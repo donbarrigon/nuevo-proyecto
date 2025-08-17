@@ -31,7 +31,7 @@ type Country struct {
 	EmojiU         string            `bson:"emojiU,omitempty"          json:"emojiU,omitempty"`
 	CreatedAt      time.Time         `bson:"created_at"                json:"created_at"`
 	UpdatedAt      time.Time         `bson:"updated_at"                json:"updated_at"`
-	app.Orm
+	app.Odm
 }
 
 type CountryTimezone struct {
@@ -59,7 +59,7 @@ type CountrySubregion struct {
 
 func NewCountry() *Country {
 	country := &Country{}
-	country.Orm.Model = country
+	country.Odm.Model = country
 	return country
 }
 

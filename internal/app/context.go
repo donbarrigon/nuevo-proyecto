@@ -21,6 +21,7 @@ type UserInterface interface {
 
 type TokenInterface interface {
 	GetID() bson.ObjectID
+	Can(permissionName string) Error
 }
 
 type Validator interface {
@@ -32,12 +33,16 @@ type MessageResource struct {
 	Data    any    `json:"data"`
 }
 
+type Auth struct {
+	User  UserInterface
+	Token TokenInterface
+}
+
 type HttpContext struct {
 	Writer  http.ResponseWriter
 	Request *http.Request
 	Params  map[string]string
-	User    UserInterface
-	Token   TokenInterface
+	Auth    *Auth
 }
 
 func NewHttpContext(w http.ResponseWriter, r *http.Request) *HttpContext {
@@ -45,6 +50,10 @@ func NewHttpContext(w http.ResponseWriter, r *http.Request) *HttpContext {
 		Writer:  w,
 		Request: r,
 	}
+}
+
+func (a *Auth) Can(permissionName string) Error {
+	return a.Token.Can(permissionName)
 }
 
 func (ctx *HttpContext) Lang() string {

@@ -80,7 +80,8 @@ func Lte(value any) bson.E {
 }
 
 func In(value ...any) bson.E {
-	return bson.E{Key: "$in", Value: bson.A(value)}
+	// return bson.E{Key: "$in", Value: bson.A(value)}
+	return bson.E{Key: "$in", Value: value}
 }
 
 func Nin(value ...any) bson.E {

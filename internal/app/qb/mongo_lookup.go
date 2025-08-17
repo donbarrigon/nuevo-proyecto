@@ -21,7 +21,10 @@ func With(collection string, localField string, foreignField string, as string) 
 }
 
 // HasMany crea un bson.D para realizar una busqueda con relacion hasMany
-func HasMany(collection string, foreignField string) bson.D {
+func HasMany(collection string, foreignField string, with ...bson.D) bson.D {
+	if len(with) > 0 {
+		return hasManyWith(collection, foreignField, with...)
+	}
 	return bson.D{
 		{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: collection},           // colección relacionada
@@ -33,8 +36,8 @@ func HasMany(collection string, foreignField string) bson.D {
 }
 
 // HasManyWith crea un bson.D para realizar una busqueda con relacion hasMany habilitando relaciones en los documentos hijos
-func HasManyWith(collection string, foreignField string, with ...bson.D) bson.D {
-	parentID := collection + "_id"
+func hasManyWith(collection string, foreignField string, with ...bson.D) bson.D {
+	parentID := collection + "_pid"
 
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.D{
@@ -58,7 +61,11 @@ func HasManyWith(collection string, foreignField string, with ...bson.D) bson.D 
 }
 
 // ManyToMany crea un bson.D para realizar una busqueda con relacion manyToMany
-func ManyToMany(collection string, localField string) bson.D {
+func ManyToMany(collection string, localField string, with ...bson.D) bson.D {
+	if len(with) > 0 {
+		return manyToManyWith(collection, localField, with...)
+	}
+
 	return bson.D{
 		{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: collection},       // colección relacionada
@@ -70,8 +77,8 @@ func ManyToMany(collection string, localField string) bson.D {
 }
 
 // ManyToManyWith crea un bson.D para realizar una busqueda con relacion manyToMany habilitando relaciones en los documentos hijos
-func ManyToManyWith(collection string, localField string, with ...bson.D) bson.D {
-	parentID := collection + "_ids"
+func manyToManyWith(collection string, localField string, with ...bson.D) bson.D {
+	parentID := collection + "_pids"
 
 	// Pipeline base: filtrar solo los documentos cuyo _id esté en el array localField
 	pipeline := bson.A{
@@ -97,7 +104,11 @@ func ManyToManyWith(collection string, localField string, with ...bson.D) bson.D
 }
 
 // HasOne crea un bson.D para realizar una busqueda con relacion hasOne
-func HasOne(collection string, foreignField string, as string) (bson.D, bson.D) {
+func HasOne(collection string, foreignField string, as string, with ...bson.D) (bson.D, bson.D) {
+	if len(with) > 0 {
+		return hasOneWith(collection, foreignField, as, with...)
+	}
+
 	return bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: collection},
 			{Key: "localField", Value: "_id"},
@@ -111,8 +122,8 @@ func HasOne(collection string, foreignField string, as string) (bson.D, bson.D) 
 }
 
 // HasOneWith crea un bson.D para realizar una busqueda con relacion hasOne habilitando relaciones en los documentos hijos
-func HasOneWith(collection string, foreignField string, as string, with ...bson.D) []bson.D {
-	parentID := collection + "_id"
+func hasOneWith(collection string, foreignField string, as string, with ...bson.D) (bson.D, bson.D) {
+	parentID := collection + "_pid"
 
 	// pipeline base para filtrar por relación padre-hijo
 	pipeline := bson.A{
@@ -125,18 +136,16 @@ func HasOneWith(collection string, foreignField string, as string, with ...bson.
 		pipeline = append(pipeline, w)
 	}
 
-	return []bson.D{
-		{{Key: "$lookup", Value: bson.D{
+	return bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: collection},
 			{Key: "let", Value: bson.D{{Key: parentID, Value: "$_id"}}},
 			{Key: "pipeline", Value: pipeline},
 			{Key: "as", Value: as},
-		}}},
-		{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$" + as},
-			{Key: "preserveNullAndEmptyArrays", Value: true},
-		}}},
-	}
+		}}}, bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$" + as},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}}}
 }
 
 // BelongsTo crea un bson.D para realizar una busqueda con relacion belongsTo

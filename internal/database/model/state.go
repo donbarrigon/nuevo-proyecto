@@ -24,12 +24,12 @@ type State struct {
 	Timezone    string        `bson:"timezone,omitempty"     json:"timezone,omitempty"`
 	CreatedAt   time.Time     `bson:"created_at"             json:"created_at"`
 	UpdatedAt   time.Time     `bson:"updated_at"             json:"updated_at"`
-	app.Orm
+	app.Odm
 }
 
 func NewState() *State {
 	state := &State{}
-	state.Orm.Model = state
+	state.Odm.Model = state
 	return state
 }
 

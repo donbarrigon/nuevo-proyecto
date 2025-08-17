@@ -15,12 +15,12 @@ type Activity struct {
 	Action       string        `bson:"action"        json:"action"`
 	Changes      any           `bson:"changes"       json:"changes"`
 	CreatedAt    time.Time     `bson:"created_at"    json:"created_at"`
-	app.Orm
+	app.Odm
 }
 
 func NewActivity() *Activity {
 	activity := &Activity{}
-	activity.Orm.Model = activity
+	activity.Odm.Model = activity
 	return activity
 }
 
@@ -47,7 +47,7 @@ func ActivityRecord(model app.Model, action string, changes any) {
 		Action:       action,
 		Changes:      changes,
 	}
-	activity.Orm.Model = activity
+	activity.Odm.Model = activity
 	if err := activity.Create(); err != nil {
 		app.Log.Error("Failed to create activity record", app.F{Key: "error", Value: err})
 	}
@@ -55,7 +55,7 @@ func ActivityRecord(model app.Model, action string, changes any) {
 
 func ActivityManyRecords(model app.Model, action string, changes []any) {
 	activity := &Activity{}
-	activity.Orm.Model = activity
+	activity.Odm.Model = activity
 	data := make([]*Activity, len(changes))
 	for _, change := range changes {
 		if change == nil {

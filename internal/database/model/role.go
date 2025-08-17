@@ -10,12 +10,12 @@ type Role struct {
 	Name          string          `bson:"name"                  json:"name"`
 	PermissionIDs []bson.ObjectID `bson:"permission_ids"        json:"-"`
 	Permissions   []*Permission   `bson:"permissions,omitempty" json:"permissions,omitempty"` // manyToMany
-	app.Orm
+	app.Odm
 }
 
 func NewRole() *Role {
 	role := &Role{}
-	role.Orm.Model = role
+	role.Odm.Model = role
 	return role
 }
 

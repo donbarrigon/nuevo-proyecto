@@ -14,12 +14,12 @@ type SystemLog struct {
 	Line     string            `bson:"line,omitempty"     json:"line,omitempty"`
 	File     string            `bson:"file,omitempty"     json:"file,omitempty"`
 	Context  map[string]string `bson:"context,omitempty"  json:"context,omitempty"`
-	app.Orm
+	app.Odm
 }
 
 func NewSystemLog() *SystemLog {
 	systemLog := &SystemLog{}
-	systemLog.Orm.Model = systemLog
+	systemLog.Odm.Model = systemLog
 	return systemLog
 }
 

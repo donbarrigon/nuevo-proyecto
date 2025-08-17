@@ -22,12 +22,12 @@ type City struct {
 	WikiDataID  *string       `bson:"wikiDataId,omitempty" json:"wikiDataId,omitempty"`
 	CreatedAt   time.Time     `bson:"created_at" json:"created_at"`
 	UpdatedAt   time.Time     `bson:"updated_at" json:"updated_at"`
-	app.Orm
+	app.Odm
 }
 
 func NewCity() *City {
 	city := &City{}
-	city.Orm.Model = city
+	city.Odm.Model = city
 	return city
 }
 

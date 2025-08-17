@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	. "github.com/donbarrigon/nuevo-proyecto/internal/database/qb"
+	. "github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -23,12 +23,22 @@ type User struct {
 	CreatedAt     time.Time       `bson:"created_at"            json:"created_at"`
 	UpdatedAt     time.Time       `bson:"updated_at"            json:"updated_at"`
 	DeletedAt     *time.Time      `bson:"deleted_at,omitempty"  json:"deleted_at,omitempty"`
-	app.Orm
+	app.Odm
+}
+
+type Profile struct {
+	Avatar          string         `bson:"avatar,omitempty"           json:"avatar,omitempty"`
+	FullName        string         `bson:"full_name,omitempty"        json:"full_name,omitempty"`
+	Nickname        string         `bson:"nickname"                   json:"nickname"`
+	PhoneNumber     string         `bson:"phone_number,omitempty"     json:"phone_number,omitempty"`
+	DiscordUsername string         `bson:"discord_username,omitempty" json:"discord_username,omitempty"`
+	CityID          bson.ObjectID  `bson:"city_id"                    json:"city_id"`
+	Preferences     map[string]any `bson:"preferences,omitempty"      json:"preferences,omitempty"`
 }
 
 func NewUser() *User {
 	user := &User{}
-	user.Orm.Model = user
+	user.Odm.Model = user
 	return user
 }
 
@@ -49,7 +59,7 @@ func (u *User) BeforeUpdate() app.Error {
 
 // manyToMany
 func (u *User) WithRoles() bson.D {
-	return ManyToManyWith("roles", "role_ids", ManyToMany("permissions", "permission_ids"))
+	return ManyToMany("roles", "role_ids", ManyToMany("permissions", "permission_ids"))
 }
 
 // manyToMany
@@ -60,11 +70,6 @@ func (u *User) WhithPermissions() bson.D {
 // hasMany
 func (u *User) WithTokens() bson.D {
 	return HasMany("tokens", "user_id")
-}
-
-// hasOne
-func (u *User) WithProfile() (bson.D, bson.D) {
-	return HasOne("profiles", "user_id", "profile")
 }
 
 func (u *User) Can(permissionName string) app.Error {
