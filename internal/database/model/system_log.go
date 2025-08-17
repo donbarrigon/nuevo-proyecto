@@ -14,12 +14,17 @@ type SystemLog struct {
 	Line     string            `bson:"line,omitempty"     json:"line,omitempty"`
 	File     string            `bson:"file,omitempty"     json:"file,omitempty"`
 	Context  map[string]string `bson:"context,omitempty"  json:"context,omitempty"`
+	app.Orm
+}
+
+func NewSystemLog() *SystemLog {
+	systemLog := &SystemLog{}
+	systemLog.Orm.Model = systemLog
+	return systemLog
 }
 
 func (l *SystemLog) CollectionName() string { return "system_logs" }
-
-func (l *SystemLog) GetID() bson.ObjectID { return l.ID }
-
+func (l *SystemLog) GetID() bson.ObjectID   { return l.ID }
 func (l *SystemLog) SetID(id bson.ObjectID) { l.ID = id }
 
 func (l *SystemLog) BeforeCreate() app.Error { return nil }

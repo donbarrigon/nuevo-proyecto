@@ -5,16 +5,48 @@ import (
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
+	. "github.com/donbarrigon/nuevo-proyecto/internal/database/db/qb"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/policy"
 	"github.com/donbarrigon/nuevo-proyecto/internal/http/resource"
+	"github.com/donbarrigon/nuevo-proyecto/internal/http/validator"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func UserShow(ctx *app.Context) {
-	id := ctx.Get("id")
+func UserIndex(ctx *app.HttpContext) {
+	if err := policy.UserViewAny(ctx); err != nil {
+		ctx.WriteError(err)
+		return
+	}
 
+	users := []*model.User{}
+	if err := db.Find(&model.User{}, &users, Document(WithOutTrashed())); err != nil {
+		ctx.WriteError(err)
+		return
+	}
+
+	ctx.WriteJSON(http.StatusOK, users)
+}
+
+func UserShow(ctx *app.HttpContext) {
+	if err := policy.UserViewAny(ctx); err != nil {
+		ctx.WriteError(err)
+		return
+	}
+
+	id := ctx.Params["id"]
 	user := &model.User{}
-	if err := db.FindByHexID(user, id); err != nil {
+	withProfile, unwindProfile := user.WithProfile()
+
+	err := db.AggregateOne(user, mongo.Pipeline{
+		Match(Where("id", Eq(id))),
+		user.WithRoles(),
+		user.WhithPermissions(),
+		withProfile,
+		unwindProfile,
+	})
+	if err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -22,25 +54,28 @@ func UserShow(ctx *app.Context) {
 	ctx.WriteJSON(http.StatusOK, resource.NewUserLoginResource(user, nil))
 }
 
-func UserStore(ctx *app.Context) {
+func UserStore(ctx *app.HttpContext) {
 
-	user := &model.User{}
-	if err := ctx.GetBody(user); err != nil {
+	if err := policy.UserCreate(ctx); err != nil {
 		ctx.WriteError(err)
 		return
 	}
 
-	// if err := user.Validate(ctx.Lang()); err != nil {
-	// 	ctx.WriteError(err)
-	// 	return
-	// }
+	validator := &validator.StoreUser{}
+	if err := ctx.ValidateBody(validator); err != nil {
+		ctx.WriteError(err)
+		return
+	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
+	user := &model.User{}
+	db.Fill(user, validator)
+
+	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if er != nil {
 		ctx.WriteError(&app.Err{
 			Status:  http.StatusInternalServerError,
-			Message: "No se logro encriptar la contraseña",
-			Err:     err.Error(),
+			Message: "Password encryption failed",
+			Err:     er.Error(),
 		})
 		return
 	}
@@ -51,8 +86,8 @@ func UserStore(ctx *app.Context) {
 		return
 	}
 
-	token := model.NewToken(user.ID)
-	if err := db.Create(token); err != nil {
+	token, err := model.NewAccessToken(user.ID)
+	if err != nil {
 		ctx.WriteError(err)
 		return
 	}
@@ -61,7 +96,7 @@ func UserStore(ctx *app.Context) {
 	ctx.WriteJSON(http.StatusOK, res)
 }
 
-func UserUpdate(ctx *app.Context) {
+func UserUpdate(ctx *app.HttpContext) {
 
 	id := ctx.Get("id")
 

@@ -58,11 +58,11 @@ func HttpServerGracefulShutdown(server *http.Server) {
 	}
 
 	// se cierra la conexion con mono db
-	// if err := db.CloseMongoConnection(); err != nil {
-	// 	log.Printf("Error al cerrar la conexión a MongoDB: %v\n", err)
-	// } else {
-	// 	log.Println("Conexión a MongoDB cerrada correctamente")
-	// }
+	if err := CloseMongoDB(); err != nil {
+		log.Printf("Error al cerrar la conexión a MongoDB: %v\n", err)
+	} else {
+		log.Println("Conexión a MongoDB cerrada correctamente")
+	}
 
 	log.Println("Apagado controlado completado")
 }

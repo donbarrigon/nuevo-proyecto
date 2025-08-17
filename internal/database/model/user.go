@@ -5,8 +5,7 @@ import (
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/database/db"
-	. "github.com/donbarrigon/nuevo-proyecto/internal/database/db/querybuilder"
+	. "github.com/donbarrigon/nuevo-proyecto/internal/database/qb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -24,12 +23,17 @@ type User struct {
 	CreatedAt     time.Time       `bson:"created_at"            json:"created_at"`
 	UpdatedAt     time.Time       `bson:"updated_at"            json:"updated_at"`
 	DeletedAt     *time.Time      `bson:"deleted_at,omitempty"  json:"deleted_at,omitempty"`
+	app.Orm
+}
+
+func NewUser() *User {
+	user := &User{}
+	user.Orm.Model = user
+	return user
 }
 
 func (u *User) CollectionName() string { return "users" }
-
-func (u *User) GetID() bson.ObjectID { return u.ID }
-
+func (u *User) GetID() bson.ObjectID   { return u.ID }
 func (u *User) SetID(id bson.ObjectID) { u.ID = id }
 
 func (u *User) BeforeCreate() app.Error {
@@ -59,12 +63,12 @@ func (u *User) WithTokens() bson.D {
 }
 
 // hasOne
-func (u *User) WithProfile() []bson.D {
+func (u *User) WithProfile() (bson.D, bson.D) {
 	return HasOne("profiles", "user_id", "profile")
 }
 
 func (u *User) Can(permissionName string) app.Error {
-	usersCol := db.Mongo.Database.Collection(u.CollectionName())
+	usersCol := app.DB.Collection(u.CollectionName())
 
 	// Pipeline para buscar si el usuario tiene el permiso
 	pipeline := mongo.Pipeline{

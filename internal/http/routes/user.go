@@ -7,24 +7,28 @@ import (
 )
 
 func user(r *app.Routes) {
-	r.Get("/users/{id}", controller.UserShow).
-		Name("users.show")
+
+	r.Post("/users", controller.UserStore).
+		Name("users.store")
 
 	r.Post("/users/login", controller.Login).
 		Name("users.login")
 
-	r.Use(func() {
-		r.Post("/users", controller.UserStore, middleware.Auth).
-			Name("users.store")
+	r.Post("/users/logout", controller.Logout, middleware.Auth).
+		Name("users.logout")
 
-		r.Patch("/users/{id}", controller.UserUpdate, middleware.Auth).
-			Name("users.update")
+	r.Prefix(func() {
+		r.Use(func() {
 
-		r.Delete("/users/{id}", controller.PermissionDestroy, middleware.Auth).
-			Name("users.destroy")
+			r.Get("/users/{id}", controller.UserShow).
+				Name("users.show")
 
-		r.Post("/users/logout", controller.Logout, middleware.Auth).
-			Name("users.logout")
-	}, middleware.Auth)
+			r.Patch("/users/{id}", controller.UserUpdate).
+				Name("users.update")
 
+			r.Delete("/users/{id}", controller.PermissionDestroy).
+				Name("users.destroy")
+
+		}, middleware.Auth)
+	}, "dashboard")
 }

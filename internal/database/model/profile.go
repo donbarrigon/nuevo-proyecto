@@ -15,17 +15,22 @@ type Profile struct {
 	Nickname        string         `bson:"nickname"                   json:"nickname"`
 	PhoneNumber     string         `bson:"phone_number,omitempty"     json:"phone_number,omitempty"`
 	DiscordUsername string         `bson:"discord_username,omitempty" json:"discord_username,omitempty"`
-	CityID          string         `bson:"city_id"                    json:"city_id"`
+	CityID          bson.ObjectID  `bson:"city_id"                    json:"city_id"`
 	Preferences     map[string]any `bson:"preferences,omitempty"      json:"preferences,omitempty"`
 	CreatedAt       time.Time      `bson:"created_at"                 json:"created_at"`
 	UpdatedAt       time.Time      `bson:"updated_at"                 json:"updated_at"`
 	DeletedAt       *time.Time     `bson:"deleted_at,omitempty"       json:"deleted_at,omitempty"`
+	app.Orm
+}
+
+func NewProfile() *Profile {
+	profile := &Profile{}
+	profile.Orm.Model = profile
+	return profile
 }
 
 func (p *Profile) CollectionName() string { return "profiles" }
-
-func (p *Profile) GetID() bson.ObjectID { return p.ID }
-
+func (p *Profile) GetID() bson.ObjectID   { return p.ID }
 func (p *Profile) SetID(id bson.ObjectID) { p.ID = id }
 
 func (p *Profile) BeforeCreate() app.Error {

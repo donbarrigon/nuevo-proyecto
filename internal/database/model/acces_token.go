@@ -16,12 +16,11 @@ type AccessToken struct {
 	Token     string        `bson:"token"         json:"token"`
 	CreatedAt time.Time     `bson:"created_at"    json:"created_at"`
 	ExpiresAt time.Time     `bson:"expires_at"    json:"expires_at"`
+	app.Orm
 }
 
 func (t *AccessToken) CollectionName() string { return "tokens" }
-
-func (t *AccessToken) GetID() bson.ObjectID { return t.ID }
-
+func (t *AccessToken) GetID() bson.ObjectID   { return t.ID }
 func (t *AccessToken) SetID(id bson.ObjectID) { t.ID = id }
 
 func (t *AccessToken) BeforeCreate() app.Error {
@@ -30,24 +29,28 @@ func (t *AccessToken) BeforeCreate() app.Error {
 	return nil
 }
 
-func (t *AccessToken) BefereUpdate() app.Error {
+func (t *AccessToken) BeforeUpdate() app.Error {
 	t.ExpiresAt = time.Now().Add(100 * time.Hour)
 	return nil
 }
 
-func NewAccessToken(userID bson.ObjectID) *AccessToken {
+func NewAccessToken(userID bson.ObjectID) (*AccessToken, app.Error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
 		log.Println("No se creo el token de: " + err.Error())
 	}
-	token := hex.EncodeToString(bytes)
-	tokenModel := &AccessToken{
+	tk := hex.EncodeToString(bytes)
+	token := &AccessToken{
 		//ID:        bson.NewObjectID(),
 		UserID:    userID,
-		Token:     token,
+		Token:     tk,
 		CreatedAt: time.Now(),
 	}
-	return tokenModel
+	token.Orm.Model = token
+
+	err := token.Create()
+
+	return token, err
 }
 
 func (t *AccessToken) Anonymous() *AccessToken {

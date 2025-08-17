@@ -434,7 +434,7 @@ func ValidateRules(req any, rules map[string][]string) Error {
 			}
 		}
 	}
-	return err.Errors()
+	return err
 }
 
 // getOtherFieldValueFromParam es una funcion auxiliar no hace parte de las validaciones

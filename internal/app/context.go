@@ -23,6 +23,10 @@ type TokenInterface interface {
 	GetID() bson.ObjectID
 }
 
+type Validator interface {
+	PrepareForValidation(ctx *HttpContext) Error
+}
+
 type MessageResource struct {
 	Message string `json:"message"`
 	Data    any    `json:"data"`
@@ -61,180 +65,198 @@ func (ctx *HttpContext) GetBody(request any) Error {
 	return nil
 }
 
-func (ctx *HttpContext) ValidateBody(req any) Error {
+func (ctx *HttpContext) ValidateBody(req Validator) Error {
+
 	if err := ctx.GetBody(req); err != nil {
 		return err
 	}
 
-	v := reflect.ValueOf(req)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
+	errPFV := req.PrepareForValidation(ctx)
 
-	switch v.Kind() {
-	case reflect.Slice, reflect.Array:
-		for i := 0; i < v.Len(); i++ {
-			item := v.Index(i).Interface()
-			if err := Validate(item); err != nil {
-				return err
-			}
-		}
-	default:
-		if err := Validate(req); err != nil {
-			return err
-		}
-	}
+	// v := reflect.ValueOf(req)
+	// if v.Kind() == reflect.Ptr {
+	// 	v = v.Elem()
+	// }
 
-	return nil
-}
+	// switch v.Kind() {
+	// case reflect.Slice, reflect.Array:
+	// 	for i := 0; i < v.Len(); i++ {
+	// 		item := v.Index(i).Interface()
+	// 		if err := Validate(item); err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// default:
+	// 	if err := Validate(req); err != nil {
+	// 		return err
+	// 	}
+	// }
 
-func (ctx *HttpContext) GetMultiPartForm(req any) Error {
-	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB
-	if err != nil {
-		return &Err{
-			Status:    http.StatusBadRequest,
-			Message:   "The form could not be processed",
-			Err:       "Failed to parse the form: {error}",
-			phMessage: Fields{{Key: "error", Value: err.Error()}},
-		}
-	}
-
-	form := ctx.Request.MultipartForm
-	if form == nil {
-		return &Err{
-			Status:  http.StatusBadRequest,
-			Message: "Invalid form",
-			Err:     "No valid multipart form found",
-		}
-	}
-
-	v := reflect.ValueOf(req)
-	t := reflect.TypeOf(req)
-
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-		v = v.Elem()
-	}
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fieldValue := v.Field(i)
-
-		tag := field.Tag.Get("json")
-		if tag == "-" {
-			continue
-		}
-
-		var formKey string
-		if tag != "" {
-			formKey = strings.Split(tag, ",")[0]
-		}
-		if formKey == "" {
-			formKey = field.Name
-		}
-
-		values := form.Value[formKey]
-		if len(values) == 0 || !fieldValue.CanSet() {
-			continue
-		}
-
-		switch field.Type.Kind() {
-		case reflect.String:
-			fieldValue.SetString(values[0])
-
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			if intVal, err := strconv.ParseInt(values[0], 10, 64); err == nil {
-				fieldValue.SetInt(intVal)
-			}
-
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			if uintVal, err := strconv.ParseUint(values[0], 10, 64); err == nil {
-				fieldValue.SetUint(uintVal)
-			}
-
-		case reflect.Float32, reflect.Float64:
-			if floatVal, err := strconv.ParseFloat(values[0], 64); err == nil {
-				fieldValue.SetFloat(floatVal)
-			}
-
-		case reflect.Bool:
-			if boolVal, err := strconv.ParseBool(values[0]); err == nil {
-				fieldValue.SetBool(boolVal)
-			}
-
-		case reflect.Slice:
-			elemKind := field.Type.Elem().Kind()
-			slice := reflect.MakeSlice(field.Type, 0, len(values))
-
-			for _, val := range values {
-				var converted reflect.Value
-				switch elemKind {
-				case reflect.String:
-					converted = reflect.ValueOf(val)
-
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					if intVal, err := strconv.ParseInt(val, 10, 64); err == nil {
-						converted = reflect.ValueOf(intVal).Convert(field.Type.Elem())
-					}
-
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					if uintVal, err := strconv.ParseUint(val, 10, 64); err == nil {
-						converted = reflect.ValueOf(uintVal).Convert(field.Type.Elem())
-					}
-
-				case reflect.Float32, reflect.Float64:
-					if floatVal, err := strconv.ParseFloat(val, 64); err == nil {
-						converted = reflect.ValueOf(floatVal).Convert(field.Type.Elem())
-					}
-
-				case reflect.Bool:
-					if boolVal, err := strconv.ParseBool(val); err == nil {
-						converted = reflect.ValueOf(boolVal).Convert(field.Type.Elem())
-					}
-				}
-
-				if converted.IsValid() {
-					slice = reflect.Append(slice, converted)
-				}
-			}
-
-			fieldValue.Set(slice)
-		}
-	}
-
-	return nil
-}
-
-func (ctx *HttpContext) ValidateMultiPartForm(req any) Error {
-	if err := ctx.GetMultiPartForm(req); err != nil {
-		return err
-	}
 	if err := Validate(req); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (ctx *HttpContext) ValidateRequest(req any) Error {
-	contentType := ctx.Request.Header.Get("Content-Type")
-
-	switch {
-	case strings.HasPrefix(contentType, "multipart/form-data"):
-		return ctx.ValidateMultiPartForm(req)
-
-	case strings.HasPrefix(contentType, "application/json"),
-		strings.HasPrefix(contentType, "application/*+json"):
-		return ctx.ValidateBody(req)
-
-	default:
-		return &Err{
-			Status:    http.StatusUnsupportedMediaType,
-			Message:   "Unsupported content type",
-			Err:       "Unsupported content type: {contentType}",
-			phMessage: Fields{{Key: "contentType", Value: contentType}},
+		if errPFV != nil {
+			errMap, phMap := errPFV.GetMap()
+			for key, valor := range errMap {
+				for i, msg := range valor {
+					err.Append(&FieldError{
+						FieldName:    key,
+						Message:      msg,
+						Placeholders: phMap[key][i],
+					})
+				}
+			}
 		}
+		return err.Errors()
 	}
+	return errPFV.Errors()
 }
+
+// func (ctx *HttpContext) GetMultiPartForm(req any) Error {
+// 	err := ctx.Request.ParseMultipartForm(32 << 20) // 32 MB
+// 	if err != nil {
+// 		return &Err{
+// 			Status:    http.StatusBadRequest,
+// 			Message:   "The form could not be processed",
+// 			Err:       "Failed to parse the form: {error}",
+// 			phMessage: Fields{{Key: "error", Value: err.Error()}},
+// 		}
+// 	}
+
+// 	form := ctx.Request.MultipartForm
+// 	if form == nil {
+// 		return &Err{
+// 			Status:  http.StatusBadRequest,
+// 			Message: "Invalid form",
+// 			Err:     "No valid multipart form found",
+// 		}
+// 	}
+
+// 	v := reflect.ValueOf(req)
+// 	t := reflect.TypeOf(req)
+
+// 	if t.Kind() == reflect.Ptr {
+// 		t = t.Elem()
+// 		v = v.Elem()
+// 	}
+
+// 	for i := 0; i < t.NumField(); i++ {
+// 		field := t.Field(i)
+// 		fieldValue := v.Field(i)
+
+// 		tag := field.Tag.Get("json")
+// 		if tag == "-" {
+// 			continue
+// 		}
+
+// 		var formKey string
+// 		if tag != "" {
+// 			formKey = strings.Split(tag, ",")[0]
+// 		}
+// 		if formKey == "" {
+// 			formKey = field.Name
+// 		}
+
+// 		values := form.Value[formKey]
+// 		if len(values) == 0 || !fieldValue.CanSet() {
+// 			continue
+// 		}
+
+// 		switch field.Type.Kind() {
+// 		case reflect.String:
+// 			fieldValue.SetString(values[0])
+
+// 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+// 			if intVal, err := strconv.ParseInt(values[0], 10, 64); err == nil {
+// 				fieldValue.SetInt(intVal)
+// 			}
+
+// 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+// 			if uintVal, err := strconv.ParseUint(values[0], 10, 64); err == nil {
+// 				fieldValue.SetUint(uintVal)
+// 			}
+
+// 		case reflect.Float32, reflect.Float64:
+// 			if floatVal, err := strconv.ParseFloat(values[0], 64); err == nil {
+// 				fieldValue.SetFloat(floatVal)
+// 			}
+
+// 		case reflect.Bool:
+// 			if boolVal, err := strconv.ParseBool(values[0]); err == nil {
+// 				fieldValue.SetBool(boolVal)
+// 			}
+
+// 		case reflect.Slice:
+// 			elemKind := field.Type.Elem().Kind()
+// 			slice := reflect.MakeSlice(field.Type, 0, len(values))
+
+// 			for _, val := range values {
+// 				var converted reflect.Value
+// 				switch elemKind {
+// 				case reflect.String:
+// 					converted = reflect.ValueOf(val)
+
+// 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+// 					if intVal, err := strconv.ParseInt(val, 10, 64); err == nil {
+// 						converted = reflect.ValueOf(intVal).Convert(field.Type.Elem())
+// 					}
+
+// 				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+// 					if uintVal, err := strconv.ParseUint(val, 10, 64); err == nil {
+// 						converted = reflect.ValueOf(uintVal).Convert(field.Type.Elem())
+// 					}
+
+// 				case reflect.Float32, reflect.Float64:
+// 					if floatVal, err := strconv.ParseFloat(val, 64); err == nil {
+// 						converted = reflect.ValueOf(floatVal).Convert(field.Type.Elem())
+// 					}
+
+// 				case reflect.Bool:
+// 					if boolVal, err := strconv.ParseBool(val); err == nil {
+// 						converted = reflect.ValueOf(boolVal).Convert(field.Type.Elem())
+// 					}
+// 				}
+
+// 				if converted.IsValid() {
+// 					slice = reflect.Append(slice, converted)
+// 				}
+// 			}
+
+// 			fieldValue.Set(slice)
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+// func (ctx *HttpContext) ValidateMultiPartForm(req any) Error {
+// 	if err := ctx.GetMultiPartForm(req); err != nil {
+// 		return err
+// 	}
+// 	if err := Validate(req); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+// func (ctx *HttpContext) ValidateRequest(req any) Error {
+// 	contentType := ctx.Request.Header.Get("Content-Type")
+
+// 	switch {
+// 	case strings.HasPrefix(contentType, "multipart/form-data"):
+// 		return ctx.ValidateMultiPartForm(req)
+
+// 	case strings.HasPrefix(contentType, "application/json"),
+// 		strings.HasPrefix(contentType, "application/*+json"):
+// 		return ctx.ValidateBody(req)
+
+// 	default:
+// 		return &Err{
+// 			Status:    http.StatusUnsupportedMediaType,
+// 			Message:   "Unsupported content type",
+// 			Err:       "Unsupported content type: {contentType}",
+// 			phMessage: Fields{{Key: "contentType", Value: contentType}},
+// 		}
+// 	}
+// }
 
 func (ctx *HttpContext) GetParam(param string, defaultValue string) string {
 	if value := ctx.Params[param]; value != "" {

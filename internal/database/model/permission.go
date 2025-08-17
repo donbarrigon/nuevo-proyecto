@@ -8,12 +8,17 @@ import (
 type Permission struct {
 	ID   bson.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name string        `bson:"name"          json:"name"`
+	app.Orm
+}
+
+func NewPermission() *Permission {
+	permission := &Permission{}
+	permission.Orm.Model = permission
+	return permission
 }
 
 func (p *Permission) CollectionName() string { return "permissions" }
-
-func (p *Permission) GetID() bson.ObjectID { return p.ID }
-
+func (p *Permission) GetID() bson.ObjectID   { return p.ID }
 func (p *Permission) SetID(id bson.ObjectID) { p.ID = id }
 
 func (p *Permission) BeforeCreate() app.Error { return nil }

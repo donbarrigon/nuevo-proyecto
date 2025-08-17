@@ -15,6 +15,7 @@ type Error interface {
 	GetStatus() int
 	GetMessage() string
 	GetErr() any
+	GetMap() (map[string][]string, map[string][]Fields)
 	SetStatus(code int)
 	SetMessage(format string, ph ...F)
 	SetErr(format any, ph ...F)
@@ -87,6 +88,10 @@ func (e *Err) GetErr() any {
 		return InterpolatePlaceholders(str, e.phMessage...)
 	}
 	return e.Err
+}
+
+func (e *Err) GetMap() (map[string][]string, map[string][]Fields) {
+	return e.ErrMap, e.phMap
 }
 
 func (e *Err) SetStatus(code int) {
