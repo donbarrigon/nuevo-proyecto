@@ -10,5 +10,5 @@ func Run() {
 }
 
 func add(name string, fun func()) {
-	Seeds = append(Seeds, app.Entry{Key: name, Value: fun})
+	Seeds.Set(name, fun)
 }

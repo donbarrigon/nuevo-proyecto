@@ -303,12 +303,12 @@ func (ctx *HttpContext) ResponseError(err Error) {
 
 func (ctx *HttpContext) ResponseNotFound() {
 	ctx.ResponseError(Errors.NotFoundf("The resource [{method}:{path}] does not exist",
-		Entry{"method", ctx.Request.Method},
-		Entry{"path", ctx.Request.URL.Path},
+		Item{"method", ctx.Request.Method},
+		Item{"path", ctx.Request.URL.Path},
 	))
 }
 
-func (ctx *HttpContext) ResponseMessage(code int, data any, message string, ph ...Entry) {
+func (ctx *HttpContext) ResponseMessage(code int, data any, message string, ph ...Item) {
 	ctx.ResponseJSON(code, &MessageResource{
 		Message: Translate(ctx.Lang(), message, ph...),
 		Data:    data,

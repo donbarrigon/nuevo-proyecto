@@ -1601,7 +1601,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 		var er error
 		id, er = bson.ObjectIDFromHex(currentID)
 		if er != nil {
-			Log.Warning("Failed to convert string [:input_id] to ObjectID :error ", Entry{"error", er.Error()}, Entry{"input_id", currentID})
+			Log.Warning("Failed to convert string [:input_id] to ObjectID :error ", Item{"error", er.Error()}, Item{"input_id", currentID})
 		}
 	}
 
@@ -1613,7 +1613,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 		return nil
 	}
 	if err != nil {
-		Log.Warning("Failed to find document in database: collection: :collection value: :value error: :error ", Entry{"error", err.Error()}, Entry{"collection", collection}, Entry{"value", value})
+		Log.Warning("Failed to find document in database: collection: :collection value: :value error: :error ", Item{"error", err.Error()}, Item{"collection", collection}, Item{"value", value})
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} failed to find document in database.",

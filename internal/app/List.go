@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-type Entry struct {
+type Item struct {
 	Key   string
 	Value any
 }
 
-type List []Entry
+type List []Item
 
 // InterpolatePlaceholders reemplaza placeholders en el mensaje con valores del contexto
 // Soporta formatos: {placeholder} y :placeholder
-func InterpolatePlaceholders(msg string, ctx ...Entry) string {
+func InterpolatePlaceholders(msg string, ctx ...Item) string {
 	if len(ctx) == 0 {
 		return msg
 	}
@@ -35,21 +35,21 @@ func InterpolatePlaceholders(msg string, ctx ...Entry) string {
 }
 
 func (l *List) Set(key string, value any) {
-	*l = append(*l, Entry{Key: key, Value: value})
+	*l = append(*l, Item{Key: key, Value: value})
 }
 
 func (l *List) Get(key string) any {
-	for _, entry := range *l {
-		if entry.Key == key {
-			return entry.Value
+	for _, Item := range *l {
+		if Item.Key == key {
+			return Item.Value
 		}
 	}
 	return nil
 }
 
 func (l *List) Has(key string) bool {
-	for _, entry := range *l {
-		if entry.Key == key {
+	for _, Item := range *l {
+		if Item.Key == key {
 			return true
 		}
 	}
@@ -57,8 +57,8 @@ func (l *List) Has(key string) bool {
 }
 
 func (l *List) Remove(key string) {
-	for i, entry := range *l {
-		if entry.Key == key {
+	for i, Item := range *l {
+		if Item.Key == key {
 			*l = append((*l)[:i], (*l)[i+1:]...)
 			return
 		}
@@ -75,16 +75,16 @@ func (l *List) Len() int {
 
 func (l *List) Keys() []string {
 	keys := make([]string, 0, len(*l))
-	for _, entry := range *l {
-		keys = append(keys, entry.Key)
+	for _, Item := range *l {
+		keys = append(keys, Item.Key)
 	}
 	return keys
 }
 
 func (l *List) Values() []any {
 	values := make([]any, 0, len(*l))
-	for _, entry := range *l {
-		values = append(values, entry.Value)
+	for _, Item := range *l {
+		values = append(values, Item.Value)
 	}
 	return values
 }
@@ -97,6 +97,6 @@ func (l List) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func E(key string, value any) Entry {
-	return Entry{Key: key, Value: value}
+func I(key string, value any) Item {
+	return Item{Key: key, Value: value}
 }
