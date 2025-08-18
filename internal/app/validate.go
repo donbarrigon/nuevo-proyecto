@@ -93,7 +93,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 				err.Append(&FieldError{
 					FieldName:    key,
 					Message:      "Este campo es requerido",
-					Placeholders: EntryList{{"attribute", key}},
+					Placeholders: List{{"attribute", key}},
 				})
 				continue
 			}
@@ -190,7 +190,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 				err.Append(&FieldError{
 					FieldName:    confirmationattribute,
 					Message:      e.Message,
-					Placeholders: EntryList{{"attribute", confirmationattribute}},
+					Placeholders: List{{"attribute", confirmationattribute}},
 				})
 			case "accepted":
 				err.Append(Accepted(key, value.Interface()))
@@ -209,7 +209,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					err.Append(&FieldError{
 						FieldName: key,
 						Message:   "The {attribute} has invalid parameters for digits_between.",
-						Placeholders: EntryList{
+						Placeholders: List{
 							{"attribute", key},
 						},
 					})
@@ -384,7 +384,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					err.Append(&FieldError{
 						FieldName: key,
 						Message:   "The {attribute} has an invalid date format: {error}.",
-						Placeholders: EntryList{
+						Placeholders: List{
 							{"attribute", key},
 							{"error", e.Error()},
 						},
@@ -398,7 +398,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					err.Append(&FieldError{
 						FieldName: key,
 						Message:   "The {attribute} has an invalid date format: {error}.",
-						Placeholders: EntryList{
+						Placeholders: List{
 							{"attribute", key},
 							{"error", e.Error()},
 						},
@@ -423,7 +423,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 						err.Append(&FieldError{
 							FieldName: "start",
 							Message:   "The {attribute} has an invalid date format: {error}.",
-							Placeholders: EntryList{
+							Placeholders: List{
 								{"attribute", "start"},
 								{"error", errStart.Error()},
 							},
@@ -433,7 +433,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 						err.Append(&FieldError{
 							FieldName: "end",
 							Message:   "The {attribute} has an invalid date format: {error}.",
-							Placeholders: EntryList{
+							Placeholders: List{
 								{"attribute", "end"},
 								{"error", errEnd.Error()},
 							},
@@ -477,7 +477,7 @@ func MinNumber[T constraints.Integer | constraints.Float](attribute string, valu
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be at least {limit}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -491,7 +491,7 @@ func MaxNumber[T constraints.Integer | constraints.Float](attribute string, valu
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} may not be greater than {limit}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -505,7 +505,7 @@ func MinString(attribute string, value string, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be at least {limit} characters.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -519,7 +519,7 @@ func MaxString(attribute string, value string, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} may not be greater than {limit} characters.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -533,7 +533,7 @@ func MinSlice(attribute string, value []any, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must have at least {limit} items.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -547,7 +547,7 @@ func MaxSlice(attribute string, value []any, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} may not have more than {limit} items.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -589,7 +589,7 @@ func Required(attribute string, value any) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -608,7 +608,7 @@ func RequiredIf[T comparable](attribute string, value any, other T, param string
 				return &FieldError{
 					FieldName: attribute,
 					Message:   "Invalid condition for required_if rule.",
-					Placeholders: EntryList{
+					Placeholders: List{
 						{"attribute", attribute},
 					},
 				}
@@ -654,7 +654,7 @@ func RequiredIf[T comparable](attribute string, value any, other T, param string
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid parameters for required_if rule.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -672,7 +672,7 @@ func requiredIfError(attribute string, otherField string, otherValue string) *Fi
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} field is required when {other} is {value}.",
-		Placeholders: EntryList{
+		Placeholders: List{
 			{"attribute", attribute},
 			{"other", otherField},
 			{"value", otherValue},
@@ -691,7 +691,7 @@ func RequiredUnless[T comparable](attribute string, value any, other T, param st
 				return &FieldError{
 					FieldName: attribute,
 					Message:   "Invalid parameters for required_unless rule.",
-					Placeholders: EntryList{
+					Placeholders: List{
 						{"attribute", attribute},
 					},
 				}
@@ -737,7 +737,7 @@ func RequiredUnless[T comparable](attribute string, value any, other T, param st
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid parameters for required_unless rule.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -755,7 +755,7 @@ func requiredUnlessError(attribute, other, expected string) *FieldError {
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} field is required unless {other} is in {expected}.",
-		Placeholders: EntryList{
+		Placeholders: List{
 			{"attribute", attribute},
 			{"other", other},
 			{"expected", expected},
@@ -777,7 +777,7 @@ func WithoutAll(attribute string, value any, otherFieldNames []string, otherValu
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when none of {others} are present.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -799,7 +799,7 @@ func Without(attribute string, value any, otherFieldNames []string, otherValues 
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when {others} is empty.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -821,7 +821,7 @@ func WithAll(attribute string, value any, otherFieldNames []string, otherValues 
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when all {others} are present.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -843,7 +843,7 @@ func With(attribute string, value any, otherFieldNames []string, otherValues ...
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when {others} is present.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -857,7 +857,7 @@ func Same[T comparable](attribute string, value T, otherattribute string, other 
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} and {other} must match.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"other", otherattribute},
 			},
@@ -871,7 +871,7 @@ func Different[T comparable](attribute string, value T, otherattribute string, o
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} and {other} must be different.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"other", otherattribute},
 			},
@@ -885,7 +885,7 @@ func Confirmed[T comparable](attribute string, value T, confirmation T) *FieldEr
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} confirmation does not match.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -904,7 +904,7 @@ func Accepted(attribute string, value any) *FieldError {
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} must be accepted.",
-		Placeholders: EntryList{
+		Placeholders: List{
 			{"attribute", attribute},
 		},
 	}
@@ -921,7 +921,7 @@ func Declined(attribute string, value any) *FieldError {
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} must be declined.",
-		Placeholders: EntryList{
+		Placeholders: List{
 			{Key: "attribute", Value: attribute},
 		},
 	}
@@ -933,7 +933,7 @@ func Digits(attribute string, value any, length int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be :digits digits.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"digits", length},
 			},
@@ -949,7 +949,7 @@ func DigitsBetween(attribute string, value any, min, max int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be between :min and :max digits.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"min", min},
 				{"max", max},
@@ -965,7 +965,7 @@ func Email(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid email address.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -979,7 +979,7 @@ func URL(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid URL.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -993,7 +993,7 @@ func UUID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid UUID.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -1007,7 +1007,7 @@ func ULID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid ULID.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1020,7 +1020,7 @@ func ULID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} has an invalid ULID timestamp.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1037,7 +1037,7 @@ func ULID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} has a ULID timestamp in the future.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1051,7 +1051,7 @@ func IP(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid IP address.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1065,7 +1065,7 @@ func IPv4(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid IPv4 address.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1079,7 +1079,7 @@ func IPv6(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid IPv6 address.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1092,7 +1092,7 @@ func MACAddress(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid MAC address.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1105,7 +1105,7 @@ func ASCII(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must only contain ASCII characters.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1118,7 +1118,7 @@ func Lowercase(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be lowercase.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1131,7 +1131,7 @@ func Uppercase(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be uppercase.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1144,7 +1144,7 @@ func Hex(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a hexadecimal string.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1157,7 +1157,7 @@ func HexColor(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a valid hexadecimal color code.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1171,7 +1171,7 @@ func JSON(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a valid JSON string.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1185,7 +1185,7 @@ func Slug(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a valid slug (lowercase letters, numbers, hyphens and underscores only).",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1199,7 +1199,7 @@ func Regex(attribute string, value string, pattern string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid regular expression pattern.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1208,7 +1208,7 @@ func Regex(attribute string, value string, pattern string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field format is invalid.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1222,7 +1222,7 @@ func NotRegex(attribute string, value string, pattern string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid regular expression pattern.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1231,7 +1231,7 @@ func NotRegex(attribute string, value string, pattern string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field contains an invalid value.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1245,7 +1245,7 @@ func Alpha(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1259,7 +1259,7 @@ func AlphaDash(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, dashes and underscores.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1273,7 +1273,7 @@ func AlphaSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters and spaces.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1287,7 +1287,7 @@ func AlphaDashSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, spaces, dashes and underscores.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1301,7 +1301,7 @@ func AlphaNum(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters and numbers.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1315,7 +1315,7 @@ func AlphaNumDash(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers and dashes.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1329,7 +1329,7 @@ func AlphaNumSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, and spaces.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1343,7 +1343,7 @@ func AlphaNumDashSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, spaces, dashes, and underscores.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1357,7 +1357,7 @@ func AlphaAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, including accented characters and ñ.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1371,7 +1371,7 @@ func AlphaDashAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), dashes, and underscores.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1385,7 +1385,7 @@ func AlphaSpacesAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, accented characters, ñ, and spaces.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1399,7 +1399,7 @@ func AlphaDashSpacesAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, spaces, dashes, and underscores.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1413,7 +1413,7 @@ func AlphaNumAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ) and numbers.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1427,7 +1427,7 @@ func AlphaNumDashAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, dashes, and underscores.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1441,7 +1441,7 @@ func AlphaNumSpacesAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, and spaces.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1455,7 +1455,7 @@ func AlphaNumDashSpacesAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, spaces, dashes, and underscores.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1473,7 +1473,7 @@ func Username(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must start and end with a letter or number.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1484,7 +1484,7 @@ func Username(attribute string, value string) *FieldError {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The {attribute} cannot contain consecutive dots or underscores.",
-				Placeholders: EntryList{
+				Placeholders: List{
 					{Key: "attribute", Value: attribute},
 				},
 			}
@@ -1496,7 +1496,7 @@ func Username(attribute string, value string) *FieldError {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The {attribute} may only contain letters, numbers, dots, and underscores.",
-				Placeholders: EntryList{
+				Placeholders: List{
 					{Key: "attribute", Value: attribute},
 				},
 			}
@@ -1511,7 +1511,7 @@ func StartsWith(attribute string, value string, prefix string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must start with {prefix}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "prefix", Value: prefix},
 			},
@@ -1525,7 +1525,7 @@ func EndsWith(attribute string, value string, suffix string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must end with {suffix}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "suffix", Value: suffix},
 			},
@@ -1539,7 +1539,7 @@ func Contains(attribute string, value string, substr string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must contain {substring}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "substring", Value: substr},
 			},
@@ -1553,7 +1553,7 @@ func NotContains(attribute string, value string, substr string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must not contain {substring}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "substring", Value: substr},
 			},
@@ -1571,7 +1571,7 @@ func In[T comparable](attribute string, value T, allowed ...T) *FieldError {
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The selected {attribute} is invalid.",
-		Placeholders: EntryList{
+		Placeholders: List{
 			{Key: "attribute", Value: attribute},
 			{Key: "options", Value: allowed},
 		},
@@ -1584,7 +1584,7 @@ func Nin[T comparable](attribute string, value T, denied ...T) *FieldError {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The selected {attribute} is not allowed.",
-				Placeholders: EntryList{
+				Placeholders: List{
 					{Key: "attribute", Value: attribute},
 					{Key: "restricted", Value: denied},
 				},
@@ -1617,7 +1617,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} failed to find document in database.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1625,7 +1625,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} has already been taken.",
-		Placeholders: EntryList{
+		Placeholders: List{
 			{Key: "attribute", Value: attribute},
 		},
 	}
@@ -1638,7 +1638,7 @@ func UniqueIn[T comparable](attribute string, list []T) *FieldError {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The {attribute} field has a duplicate value.",
-				Placeholders: EntryList{
+				Placeholders: List{
 					{Key: "attribute", Value: attribute},
 					{Key: "value", Value: item},
 				},
@@ -1654,7 +1654,7 @@ func Positive[T constraints.Integer | constraints.Float](attribute string, value
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be greater than 0.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1667,7 +1667,7 @@ func Negative[T constraints.Integer | constraints.Float](attribute string, value
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be less than 0.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1680,7 +1680,7 @@ func Between[T constraints.Integer | constraints.Float](attribute string, value 
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be between {min} and {max}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "min", Value: min},
 				{Key: "max", Value: max},
@@ -1695,7 +1695,7 @@ func Before(attribute string, value time.Time, target time.Time) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date before {date}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "date", Value: target.Format(time.RFC3339)},
 			},
@@ -1709,7 +1709,7 @@ func After(attribute string, value time.Time, target time.Time) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date after {date}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "date", Value: target.Format(time.RFC3339)},
 			},
@@ -1723,7 +1723,7 @@ func BeforeNow(attribute string, value time.Time) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date in the past.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1736,7 +1736,7 @@ func AfterNow(attribute string, value time.Time) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date in the future.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1749,7 +1749,7 @@ func DateBetween(attribute string, value time.Time, start time.Time, end time.Ti
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date between {start} and {end}.",
-			Placeholders: EntryList{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "start", Value: start.Format(time.RFC3339)},
 				{Key: "end", Value: end.Format(time.RFC3339)},

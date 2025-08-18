@@ -24,14 +24,14 @@ type LogLevel int
 type LogFileFormat int
 
 type Logger struct {
-	ID       string    `json:"id,omitempty" yaml:"id,omitempty" id:"time,omitempty"`
-	Time     string    `json:"time,omitempty" yaml:"time,omitempty" xml:"time,omitempty"`
-	Level    LogLevel  `json:"level,omitempty" yaml:"level,omitempty" xml:"level,omitempty"`
-	Message  string    `json:"message" yaml:"message" xml:"message"`
-	Function string    `json:"function,omitempty" yaml:"function,omitempty" xml:"function,omitempty"`
-	Line     string    `json:"line,omitempty" yaml:"line,omitempty" xml:"line,omitempty"`
-	File     string    `json:"file,omitempty" yaml:"file,omitempty" xml:"file,omitempty"`
-	Context  EntryList `json:"context,omitempty" yaml:"context,omitempty" xml:"context,omitempty"`
+	ID       string   `json:"id,omitempty" yaml:"id,omitempty" id:"time,omitempty"`
+	Time     string   `json:"time,omitempty" yaml:"time,omitempty" xml:"time,omitempty"`
+	Level    LogLevel `json:"level,omitempty" yaml:"level,omitempty" xml:"level,omitempty"`
+	Message  string   `json:"message" yaml:"message" xml:"message"`
+	Function string   `json:"function,omitempty" yaml:"function,omitempty" xml:"function,omitempty"`
+	Line     string   `json:"line,omitempty" yaml:"line,omitempty" xml:"line,omitempty"`
+	File     string   `json:"file,omitempty" yaml:"file,omitempty" xml:"file,omitempty"`
+	Context  List     `json:"context,omitempty" yaml:"context,omitempty" xml:"context,omitempty"`
 }
 
 const (
@@ -254,7 +254,7 @@ func (l *Logger) DumpMany(vars ...any) {
 	}
 }
 
-func (l *Logger) output(level LogLevel, msg string, ctx EntryList) {
+func (l *Logger) output(level LogLevel, msg string, ctx List) {
 	// Obtener información del runtime
 	pc, file, line, _ := runtime.Caller(2)
 	funcName := runtime.FuncForPC(pc).Name()

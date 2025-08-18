@@ -23,7 +23,7 @@ func SendMail(subject string, body string, to ...string) {
 
 	err := smtp.SendMail(app.Env.MAIL_HOST+":"+app.Env.MAIL_PORT, auth, app.Env.MAIL_USERNAME, to, msg)
 	if err != nil {
-		app.Log.Error("Failed to send email: to: :to :error", app.F{Key: "error", Value: err}, app.F{Key: "to", Value: to})
+		app.Log.Error("Failed to send email: to: :to :error", app.E("error", err), app.E("to", to))
 		return
 	}
 }
@@ -50,7 +50,7 @@ func sendVerificationEmailEs(user *model.User) {
 
 	vericationCode := model.NewVerificationCode()
 	if err := vericationCode.Generate(user.ID, "email_verification"); err != nil {
-		app.Log.Error("Failed to generate verification code", app.F{Key: "error", Value: err})
+		app.Log.Error("Failed to generate verification code", app.E("error", err))
 		return
 	}
 	subject := "Confirma tu cuenta en " + app.Env.APP_NAME
@@ -75,7 +75,7 @@ func sendEmailChangeNotificationEs(user *model.User, oldEmail string) {
 	// Generamos un código para revertir el cambio
 	revertCode := model.NewVerificationCode()
 	if err := revertCode.Generate(user.ID, "email_change_revert", map[string]string{"old_email": oldEmail}); err != nil {
-		app.Log.Error("Failed to generate revert code", app.F{Key: "error", Value: err})
+		app.Log.Error("Failed to generate revert code", app.E("error", err))
 		return
 	}
 
@@ -105,7 +105,7 @@ func sendEmailChangeNotificationEs(user *model.User, oldEmail string) {
 func sendVerificationEmailEn(user *model.User) {
 	verificationCode := model.NewVerificationCode()
 	if err := verificationCode.Generate(user.ID, "email_verification"); err != nil {
-		app.Log.Error("Failed to generate verification code", app.F{Key: "error", Value: err})
+		app.Log.Error("Failed to generate verification code", app.E("error", err))
 		return
 	}
 
@@ -131,7 +131,7 @@ func sendEmailChangeNotificationEn(user *model.User, oldEmail string) {
 	// Generate a code to revert the change
 	revertCode := model.NewVerificationCode()
 	if err := revertCode.Generate(user.ID, "email_change_revert", map[string]string{"old_email": oldEmail}); err != nil {
-		app.Log.Error("Failed to generate revert code", app.F{Key: "error", Value: err})
+		app.Log.Error("Failed to generate revert code", app.E("error", err))
 		return
 	}
 

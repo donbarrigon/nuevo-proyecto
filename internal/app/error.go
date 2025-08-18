@@ -15,7 +15,7 @@ type Error interface {
 	GetStatus() int
 	GetMessage() string
 	GetErr() any
-	GetMap() (map[string][]string, map[string][]EntryList)
+	GetMap() (map[string][]string, map[string][]List)
 	SetStatus(code int)
 	SetMessage(format string, ph ...Entry)
 	SetErr(format any, ph ...Entry)
@@ -26,18 +26,18 @@ type Error interface {
 }
 
 type Err struct {
-	Status    int                    `json:"-"`
-	Message   string                 `json:"message"`
-	Err       any                    `json:"errors,omitempty"`
-	ErrMap    map[string][]string    `json:"-"`
-	phMessage EntryList              `json:"-"`
-	phMap     map[string][]EntryList `json:"-"`
+	Status    int                 `json:"-"`
+	Message   string              `json:"message"`
+	Err       any                 `json:"errors,omitempty"`
+	ErrMap    map[string][]string `json:"-"`
+	phMessage List                `json:"-"`
+	phMap     map[string][]List   `json:"-"`
 }
 
 type FieldError struct {
 	FieldName    string
 	Message      string
-	Placeholders EntryList
+	Placeholders List
 }
 
 // variable para azucar sintactico
@@ -46,8 +46,8 @@ var Errors = Err{
 	Message:   "",
 	Err:       nil,
 	ErrMap:    make(map[string][]string),
-	phMessage: make(EntryList, 0),
-	phMap:     make(map[string][]EntryList),
+	phMessage: make(List, 0),
+	phMap:     make(map[string][]List),
 }
 
 func (e *Err) New(status int, message string, err any, ph ...Entry) Error {
@@ -63,7 +63,7 @@ func (e *Err) New(status int, message string, err any, ph ...Entry) Error {
 func (e *Err) NewEmpty() Error {
 	return &Err{
 		ErrMap: make(map[string][]string),
-		phMap:  make(map[string][]EntryList),
+		phMap:  make(map[string][]List),
 	}
 }
 
@@ -90,7 +90,7 @@ func (e *Err) GetErr() any {
 	return e.Err
 }
 
-func (e *Err) GetMap() (map[string][]string, map[string][]EntryList) {
+func (e *Err) GetMap() (map[string][]string, map[string][]List) {
 	return e.ErrMap, e.phMap
 }
 
