@@ -13,13 +13,13 @@ func StateView(ctx *app.HttpContext) app.Error {
 }
 
 func StateCreate(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("create state")
+	return ctx.Auth.Can("create state")
 }
 
 func StateUpdate(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("update state")
+	return ctx.Auth.Can("update state")
 }
 
 func StateDelete(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("delete state")
+	return ctx.Auth.Can("delete state")
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"log"
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
@@ -40,7 +39,7 @@ func (t *AccessToken) BeforeUpdate() app.Error {
 func NewAccessToken(userID bson.ObjectID, permissions []string) (*AccessToken, app.Error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		log.Println("No se creo el token de: " + err.Error())
+		app.Log.Warning("Fail to create access token: " + err.Error())
 	}
 	tk := hex.EncodeToString(bytes)
 	token := &AccessToken{
@@ -50,11 +49,16 @@ func NewAccessToken(userID bson.ObjectID, permissions []string) (*AccessToken, a
 		Permissions: permissions,
 		CreatedAt:   time.Now(),
 	}
+	token.Refresh()
 	token.Odm.Model = token
 
 	err := token.Create()
 
 	return token, err
+}
+
+func (t *AccessToken) Refresh() {
+	t.ExpiresAt = time.Now().Add(1 * time.Hour)
 }
 
 func (t *AccessToken) Can(permissionNames ...string) app.Error {

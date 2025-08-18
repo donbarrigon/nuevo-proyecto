@@ -6,15 +6,15 @@ import (
 )
 
 func UserViewAny(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("view user")
+	return ctx.Auth.Can("view user")
 
 }
 
 func UserView(ctx *app.HttpContext, user *model.User) app.Error {
-	if ctx.User.GetID() == user.ID {
+	if ctx.Auth.User.GetID() == user.ID {
 		return nil
 	}
-	return ctx.User.Can("view user")
+	return ctx.Auth.Can("view user")
 }
 
 func UserCreate(ctx *app.HttpContext) app.Error {
@@ -22,12 +22,12 @@ func UserCreate(ctx *app.HttpContext) app.Error {
 }
 
 func UserUpdate(ctx *app.HttpContext, user *model.User) app.Error {
-	if ctx.User.GetID() == user.ID {
+	if ctx.Auth.User.GetID() == user.ID {
 		return nil
 	}
-	return ctx.User.Can("update user")
+	return ctx.Auth.Can("update user")
 }
 
 func UserDelete(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("delete user")
+	return ctx.Auth.Can("delete user")
 }

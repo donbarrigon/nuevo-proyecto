@@ -13,13 +13,13 @@ func CountryView(ctx *app.HttpContext) app.Error {
 }
 
 func CountryCreate(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("create country")
+	return ctx.Auth.Can("create country")
 }
 
 func CountryUpdate(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("update country")
+	return ctx.Auth.Can("update country")
 }
 
 func CountryDelete(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("delete country")
+	return ctx.Auth.Can("delete country")
 }

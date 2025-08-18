@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
@@ -11,10 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/exp/constraints"
 )
 
-func Validate(req any) Error {
+func Validate(ctx *HttpContext, req any) Error {
 	rulesMap := make(map[string][]string)
 
 	t := reflect.TypeOf(req)
@@ -39,10 +42,10 @@ func Validate(req any) Error {
 		}
 	}
 
-	return ValidateRules(req, rulesMap)
+	return ValidateRules(ctx, req, rulesMap)
 }
 
-func ValidateRules(req any, rules map[string][]string) Error {
+func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 	err := Errors.NewEmpty()
 
 	val := reflect.ValueOf(req)
@@ -332,13 +335,19 @@ func ValidateRules(req any, rules map[string][]string) Error {
 					err.Append(Nin(key, value.Float(), floats...))
 				}
 			case "unique":
+				params := strings.Split(param, ",")
+				if len(params) != 2 {
+					err.Appendf(key, "the unique rule must have two parameters")
+				}
+				err.Append(Unique(key, params[0], params[1], value, ctx.Params["id"]))
+			case "unique_in":
 				switch value.Kind() {
 				case reflect.Slice:
 					// convertir a []string si es posible esto hay que revisarlo luego
 					// pendiente por revisar
 					slice := value.Interface()
 					if strSlice, ok := slice.([]string); ok {
-						err.Append(Unique(key, strSlice))
+						err.Append(UniqueIn(key, strSlice))
 					}
 				}
 			case "positive":
@@ -1585,7 +1594,44 @@ func Nin[T comparable](attribute string, value T, denied ...T) *FieldError {
 	return nil
 }
 
-func Unique[T comparable](attribute string, list []T) *FieldError {
+func Unique(attribute string, collection string, field string, value any, currentID string) *FieldError {
+	result := map[string]any{}
+	var id bson.ObjectID
+	if currentID != "" {
+		var er error
+		id, er = bson.ObjectIDFromHex(currentID)
+		if er != nil {
+			Log.Warning("Failed to convert string [:input_id] to ObjectID :error ", F{"error", er.Error()}, F{"input_id", currentID})
+		}
+	}
+
+	err := DB.Collection(collection).FindOne(context.TODO(), bson.D{
+		{Key: field, Value: value},
+		{Key: "_id", Value: bson.D{{Key: "$ne", Value: id}}},
+	}).Decode(&result)
+	if err == mongo.ErrNoDocuments {
+		return nil
+	}
+	if err != nil {
+		Log.Warning("Failed to find document in database: collection: :collection value: :value error: :error ", F{"error", err.Error()}, F{"collection", collection}, F{"value", value})
+		return &FieldError{
+			FieldName: attribute,
+			Message:   "The {attribute} failed to find document in database.",
+			Placeholders: Fields{
+				{Key: "attribute", Value: attribute},
+			},
+		}
+	}
+	return &FieldError{
+		FieldName: attribute,
+		Message:   "The {attribute} has already been taken.",
+		Placeholders: Fields{
+			{Key: "attribute", Value: attribute},
+		},
+	}
+}
+
+func UniqueIn[T comparable](attribute string, list []T) *FieldError {
 	seen := make(map[T]bool)
 	for _, item := range list {
 		if seen[item] {

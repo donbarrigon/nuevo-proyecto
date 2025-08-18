@@ -13,13 +13,13 @@ func CityView(ctx *app.HttpContext) app.Error {
 }
 
 func CityCreate(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("create city")
+	return ctx.Auth.Can("create city")
 }
 
 func CityUpdate(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("update city")
+	return ctx.Auth.Can("update city")
 }
 
 func CityDelete(ctx *app.HttpContext) app.Error {
-	return ctx.User.Can("delete city")
+	return ctx.Auth.Can("delete city")
 }

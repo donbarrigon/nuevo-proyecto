@@ -10,6 +10,7 @@ import (
 type V map[string]any
 
 type Environment struct {
+	APP_NAME   string
 	APP_KEY    string
 	APP_URL    string
 	APP_LOCALE string
@@ -34,19 +35,18 @@ type Environment struct {
 	LOG_DAYS        int
 	LOG_DATE_FORMAT string
 
-	MAIL_MAILER       string
-	MAIL_SCHEME       string
-	MAIL_HOST         string
-	MAIL_PORT         int
-	MAIL_USERNAME     string
-	MAIL_PASSWORD     string
-	MAIL_ENCRYPTION   string
-	MAIL_FROM_ADDRESS string
-	MAIL_FROM_NAME    string
+	MAIL_MAILER     string
+	MAIL_HOST       string
+	MAIL_PORT       string
+	MAIL_USERNAME   string
+	MAIL_PASSWORD   string
+	MAIL_ENCRYPTION string
+	MAIL_FROM_NAME  string
 }
 
 // si se proporciona una ruta, se usa la primera; de lo contrario, se carga el archivo .env por defecto
 var Env = Environment{
+	APP_NAME:   "MiAppGo",
 	APP_KEY:    "base64:AlgunacadenacodificadaenBase64aleatoria==",
 	APP_URL:    "http://localhost",
 	APP_LOCALE: "es",
@@ -70,15 +70,13 @@ var Env = Environment{
 	LOG_DAYS:        14,
 	LOG_DATE_FORMAT: "2006-01-02 15:04:05.000000",
 
-	MAIL_MAILER:       "log",
-	MAIL_SCHEME:       "smtp",
-	MAIL_HOST:         "smtp.gmail.com",
-	MAIL_PORT:         587,
-	MAIL_USERNAME:     "tuemail@gmail.com",
-	MAIL_PASSWORD:     "tu_contraseña_o_app_password",
-	MAIL_ENCRYPTION:   "tls",
-	MAIL_FROM_ADDRESS: "tuemail@gmail.com",
-	MAIL_FROM_NAME:    "MiAppGo",
+	MAIL_MAILER:     "smtp",
+	MAIL_HOST:       "smtp.gmail.com",
+	MAIL_PORT:       "587",
+	MAIL_USERNAME:   "tuemail@gmail.com",
+	MAIL_PASSWORD:   "tu_contraseña_o_app_password",
+	MAIL_ENCRYPTION: "tls",
+	MAIL_FROM_NAME:  "MiAppGo",
 }
 
 func LoadEnv(filepath ...string) {
@@ -132,6 +130,8 @@ func LoadEnv(filepath ...string) {
 		os.Setenv(key, value)
 
 		switch key {
+		case "APP_NAME":
+			Env.APP_NAME = value
 		case "APP_KEY":
 			Env.APP_KEY = value
 		case "APP_URL":
@@ -255,28 +255,16 @@ func LoadEnv(filepath ...string) {
 			Env.LOG_DATE_FORMAT = value
 		case "MAIL_MAILER":
 			Env.MAIL_MAILER = value
-		case "MAIL_SCHEME":
-			Env.MAIL_SCHEME = value
 		case "MAIL_HOST":
 			Env.MAIL_HOST = value
 		case "MAIL_PORT":
-			port, err := strconv.Atoi(value)
-			if err != nil {
-				Log.Warning("Invalid MAIL_PORT value at line {lineNumber}: {invalidValue}",
-					F{"lineNumber", i},
-					F{"invalidValue", value},
-				)
-				continue
-			}
-			Env.MAIL_PORT = port
+			Env.MAIL_PORT = value
 		case "MAIL_USERNAME":
 			Env.MAIL_USERNAME = value
 		case "MAIL_PASSWORD":
 			Env.MAIL_PASSWORD = value
 		case "MAIL_ENCRYPTION":
 			Env.MAIL_ENCRYPTION = value
-		case "MAIL_FROM_ADDRESS":
-			Env.MAIL_FROM_ADDRESS = value
 		case "MAIL_FROM_NAME":
 			Env.MAIL_FROM_NAME = value
 		default:

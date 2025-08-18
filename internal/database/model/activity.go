@@ -37,11 +37,12 @@ func (a *Activity) BeforeUpdate() app.Error {
 	return app.Errors.Unknownf("you tried to modify an activity record")
 }
 
-func ActivityRecord(model app.Model, action string, changes any) {
-	if changes == nil {
-		changes = bson.M{}
+func ActivityRecord(userID string, model app.Model, action string, changes ...any) {
+	if len(changes) == 0 {
+		changes = append(changes, map[string]any{})
 	}
 	activity := &Activity{
+		UserID:       userID,
 		CollectionID: model.GetID(),
 		Collection:   model.CollectionName(),
 		Action:       action,
@@ -53,7 +54,7 @@ func ActivityRecord(model app.Model, action string, changes any) {
 	}
 }
 
-func ActivityManyRecords(model app.Model, action string, changes []any) {
+func ActivityManyRecords(model app.Model, action string, changes ...any) {
 	activity := &Activity{}
 	activity.Odm.Model = activity
 	data := make([]*Activity, len(changes))

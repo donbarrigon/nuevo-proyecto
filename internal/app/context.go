@@ -56,6 +56,10 @@ func (a *Auth) Can(permissionName string) Error {
 	return a.Token.Can(permissionName)
 }
 
+func (a *Auth) UserID() string {
+	return a.User.GetID().Hex()
+}
+
 func (ctx *HttpContext) Lang() string {
 	return ctx.Request.Header.Get("Accept-Language")
 }
@@ -101,7 +105,7 @@ func (ctx *HttpContext) ValidateBody(req Validator) Error {
 	// 	}
 	// }
 
-	if err := Validate(req); err != nil {
+	if err := Validate(ctx, req); err != nil {
 		if errPFV != nil {
 			errMap, phMap := errPFV.GetMap()
 			for key, valor := range errMap {
@@ -281,7 +285,7 @@ func (ctx *HttpContext) GetInput(param string, defaultValue string) string {
 	return defaultValue
 }
 
-func (ctx *HttpContext) WriteJSON(status int, data any) {
+func (ctx *HttpContext) ResponseJSON(status int, data any) {
 	ctx.Writer.Header().Set("Content-Type", "application/json")
 	ctx.Writer.WriteHeader(status)
 
@@ -292,74 +296,36 @@ func (ctx *HttpContext) WriteJSON(status int, data any) {
 	}
 }
 
-func (ctx *HttpContext) WriteError(err Error) {
+func (ctx *HttpContext) ResponseError(err Error) {
 	err.Translate(ctx.Lang())
-	ctx.WriteJSON(err.GetStatus(), err)
+	ctx.ResponseJSON(err.GetStatus(), err)
 }
 
-func (ctx *HttpContext) WriteNotFound() {
-	ctx.WriteError(Errors.NotFoundf("The resource [{method}:{path}] does not exist",
+func (ctx *HttpContext) ResponseNotFound() {
+	ctx.ResponseError(Errors.NotFoundf("The resource [{method}:{path}] does not exist",
 		F{Key: "method", Value: ctx.Request.Method},
 		F{Key: "path", Value: ctx.Request.URL.Path},
 	))
 }
 
-func (ctx *HttpContext) WriteMessage(code int, data any, message string, ph ...F) {
-	ctx.WriteJSON(code, &MessageResource{
+func (ctx *HttpContext) ResponseMessage(code int, data any, message string, ph ...F) {
+	ctx.ResponseJSON(code, &MessageResource{
 		Message: Translate(ctx.Lang(), message, ph...),
 		Data:    data,
 	})
 }
 
-func (ctx *HttpContext) WriteSuccess(data any) {
-	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: Translate(ctx.Lang(), "Request processed successfully"),
-		Data:    data,
-	})
+func (ctx *HttpContext) ResponseOk(data any) {
+	ctx.ResponseJSON(http.StatusOK, data)
 }
 
-func (ctx *HttpContext) WriteCreated(data any) {
-	ctx.WriteJSON(http.StatusCreated, &MessageResource{
-		Message: Translate(ctx.Lang(), "Resource created successfully"),
-		Data:    data,
-	})
+func (ctx *HttpContext) ResponseCreated(data any) {
+	ctx.ResponseJSON(http.StatusCreated, data)
 }
 
-func (ctx *HttpContext) WriteUpdated(data any) {
-	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: Translate(ctx.Lang(), "Resource updated successfully"),
-		Data:    data,
-	})
-}
-
-func (ctx *HttpContext) WriteDeleted(data any) {
-	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: Translate(ctx.Lang(), "Resource deleted successfully"),
-		Data:    data,
-	})
-}
-
-func (ctx *HttpContext) WriteRestored(data any) {
-	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: Translate(ctx.Lang(), "Resource restored successfully"),
-		Data:    data,
-	})
-}
-
-func (ctx *HttpContext) WriteForceDeleted(data any) {
-	ctx.WriteJSON(http.StatusOK, &MessageResource{
-		Message: Translate(ctx.Lang(), "Resource permanently deleted"),
-		Data:    data,
-	})
-}
-
-func (ctx *HttpContext) WriteNoContent() {
+func (ctx *HttpContext) ResponseNoContent() {
 	ctx.Writer.WriteHeader(http.StatusNoContent)
 }
-
-// func (ctx *HttpContext) TT(s string, ph ...F) string {
-// 	return Translate(ctx.Lang(), s, ph...)
-// }
 
 func (ctx *HttpContext) GetQueryFilter(allowFilters map[string][]string) *QueryFilter {
 	query := ctx.Request.URL.Query()
@@ -527,7 +493,7 @@ func (ctx *HttpContext) GetQueryFilter(allowFilters map[string][]string) *QueryF
 	return qf
 }
 
-func (ctx *HttpContext) WriteCSV(fileName string, data any, comma ...rune) {
+func (ctx *HttpContext) ResponseCSV(fileName string, data any, comma ...rune) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Slice {
@@ -536,7 +502,7 @@ func (ctx *HttpContext) WriteCSV(fileName string, data any, comma ...rune) {
 			Message: "Error writing CSV",
 			Err:     "Data is not a slice of structs",
 		}
-		ctx.WriteError(err)
+		ctx.ResponseError(err)
 		return
 	}
 
@@ -551,7 +517,7 @@ func (ctx *HttpContext) WriteCSV(fileName string, data any, comma ...rune) {
 
 	if val.Len() == 0 {
 		err := Errors.NoDocumentsf("No data available")
-		ctx.WriteError(err)
+		ctx.ResponseError(err)
 		return
 	}
 

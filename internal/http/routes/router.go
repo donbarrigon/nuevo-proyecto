@@ -6,10 +6,11 @@ import (
 
 func GetApi() *app.Routes {
 	r := &app.Routes{}
-	// aca todas las funciones que crean rutas
 	r.Prefix(func() {
+		// aca todas las funciones que crean rutas
 		user(r)
-		permission(r)
+		//permission(r)
 	}, "api")
+
 	return r
 }
