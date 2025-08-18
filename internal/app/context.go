@@ -21,7 +21,7 @@ type UserInterface interface {
 
 type TokenInterface interface {
 	GetID() bson.ObjectID
-	Can(permissionName string) Error
+	Can(permissionName ...string) Error
 }
 
 type Validator interface {

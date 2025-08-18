@@ -195,9 +195,9 @@ func (o *Odm) UpdateBy(validator any) (map[string]any, Error) {
 }
 
 // hace un soft delete al documento
-func (o *Odm) SoftDelete(model Model) Error {
-	collection := DB.Collection(model.CollectionName())
-	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+func (o *Odm) SoftDelete() Error {
+	collection := DB.Collection(o.Model.CollectionName())
+	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deleted_at", Value: time.Now()}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
@@ -214,9 +214,9 @@ func (o *Odm) SoftDelete(model Model) Error {
 }
 
 // restaura el documento eliminado por SoftDelete
-func (o *Odm) Restore(model Model) Error {
-	collection := DB.Collection(model.CollectionName())
-	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+func (o *Odm) Restore() Error {
+	collection := DB.Collection(o.Model.CollectionName())
+	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
@@ -233,9 +233,9 @@ func (o *Odm) Restore(model Model) Error {
 }
 
 // elimina permanentemente el documento
-func (o *Odm) Delete(model Model) Error {
-	collection := DB.Collection(model.CollectionName())
-	filter := bson.D{bson.E{Key: "_id", Value: model.GetID()}}
+func (o *Odm) Delete() Error {
+	collection := DB.Collection(o.Model.CollectionName())
+	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 
 	result, err := collection.DeleteOne(context.TODO(), filter)
 	if err != nil {

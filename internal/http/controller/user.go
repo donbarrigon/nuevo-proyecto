@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	. "github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
@@ -24,6 +25,22 @@ func UserIndex(ctx *app.HttpContext) {
 	user := model.NewUser()
 	users := []*model.User{}
 	if err := user.Find(users, Document(WithOutTrashed())); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	ctx.ResponseOk(users)
+}
+
+func UserTrashed(ctx *app.HttpContext) {
+	if err := policy.UserDelete(ctx); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	user := model.NewUser()
+	users := []*model.User{}
+	if err := user.Find(users, Document(OnlyTrashed())); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -170,7 +187,7 @@ func Login(ctx *app.HttpContext) {
 		ctx.ResponseError(err)
 		return
 	}
-	go model.ActivityRecord(user.ID.Hex(), accessToken, "login", accessToken)
+	go model.ActivityRecord(user.ID.Hex(), accessToken, "login")
 
 	ctx.ResponseOk(resource.NewUserLogin(user, accessToken))
 
@@ -319,4 +336,150 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 	go model.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"password": user.Password})
 
 	ctx.ResponseOk(user)
+}
+
+func UserConfirmEmail(ctx *app.HttpContext) {
+
+	verificationCode := model.NewVerificationCode()
+	if err := verificationCode.FindOne(Document(Where("code", Eq(ctx.Params["code"])))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	user := model.NewUser()
+	if err := user.FindOne(Document(Where("_id", Eq(verificationCode.UserID)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	now := time.Now()
+	user.EmailVerifiedAt = &now
+	if err := user.Update(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if err := verificationCode.Delete(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go model.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email_verified_at": user.EmailVerifiedAt})
+
+	ctx.ResponseNoContent()
+}
+
+func UserRevertEmail(ctx *app.HttpContext) {
+	verificationCode := model.NewVerificationCode()
+	if err := verificationCode.FindOne(Document(Where("code", Eq(ctx.Params["code"])))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	user := model.NewUser()
+	if err := user.FindOne(Document(Where("_id", Eq(verificationCode.UserID)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if verificationCode.Metadata["email"] == "" {
+		ctx.ResponseError(&app.Err{
+			Status:  http.StatusBadRequest,
+			Message: "Invalid verification code: metadata email.",
+			Err:     "Invalid verification code: metadata email.",
+		})
+		return
+	}
+
+	now := time.Now()
+	user.EmailVerifiedAt = &now
+	user.Email = verificationCode.Metadata["email"]
+	if err := user.Update(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if err := verificationCode.Delete(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go model.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
+
+	ctx.ResponseNoContent()
+}
+
+func UserDestroy(ctx *app.HttpContext) {
+
+	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
+	if er != nil {
+		ctx.ResponseError(app.Errors.HexID(er))
+		return
+	}
+
+	user := model.NewUser()
+	if err := user.FindOne(Document(Where("_id", Eq(id)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if err := policy.UserDelete(ctx); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if err := user.SoftDelete(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go model.ActivityRecord(ctx.Auth.UserID(), user, "soft-delete", nil)
+
+	ctx.ResponseNoContent()
+}
+
+func UserRestore(ctx *app.HttpContext) {
+	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
+	if er != nil {
+		ctx.ResponseError(app.Errors.HexID(er))
+		return
+	}
+
+	user := model.NewUser()
+	if err := user.FindOne(Document(Where("_id", Eq(id)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if err := policy.UserDelete(ctx); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if err := user.Restore(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go model.ActivityRecord(ctx.Auth.UserID(), user, "restore", nil)
+
+	ctx.ResponseNoContent()
+}
+
+func Logout(ctx *app.HttpContext) {
+
+	accessToken, ok := ctx.Auth.Token.(*model.AccessToken)
+	if !ok {
+		ctx.ResponseError(app.Errors.InternalServerErrorF("Invalid token type:"))
+		return
+	}
+
+	if err := accessToken.Delete(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go model.ActivityRecord(ctx.Auth.UserID(), accessToken, "logout", accessToken)
+
+	ctx.ResponseNoContent()
 }
