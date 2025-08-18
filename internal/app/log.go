@@ -23,22 +23,15 @@ import (
 type LogLevel int
 type LogFileFormat int
 
-type F struct {
-	Key   string
-	Value any
-}
-
-type Fields []F
-
 type Logger struct {
-	ID       string   `json:"id,omitempty" yaml:"id,omitempty" id:"time,omitempty"`
-	Time     string   `json:"time,omitempty" yaml:"time,omitempty" xml:"time,omitempty"`
-	Level    LogLevel `json:"level,omitempty" yaml:"level,omitempty" xml:"level,omitempty"`
-	Message  string   `json:"message" yaml:"message" xml:"message"`
-	Function string   `json:"function,omitempty" yaml:"function,omitempty" xml:"function,omitempty"`
-	Line     string   `json:"line,omitempty" yaml:"line,omitempty" xml:"line,omitempty"`
-	File     string   `json:"file,omitempty" yaml:"file,omitempty" xml:"file,omitempty"`
-	Context  Fields   `json:"context,omitempty" yaml:"context,omitempty" xml:"context,omitempty"`
+	ID       string    `json:"id,omitempty" yaml:"id,omitempty" id:"time,omitempty"`
+	Time     string    `json:"time,omitempty" yaml:"time,omitempty" xml:"time,omitempty"`
+	Level    LogLevel  `json:"level,omitempty" yaml:"level,omitempty" xml:"level,omitempty"`
+	Message  string    `json:"message" yaml:"message" xml:"message"`
+	Function string    `json:"function,omitempty" yaml:"function,omitempty" xml:"function,omitempty"`
+	Line     string    `json:"line,omitempty" yaml:"line,omitempty" xml:"line,omitempty"`
+	File     string    `json:"file,omitempty" yaml:"file,omitempty" xml:"file,omitempty"`
+	Context  EntryList `json:"context,omitempty" yaml:"context,omitempty" xml:"context,omitempty"`
 }
 
 const (
@@ -188,69 +181,61 @@ func (f LogFileFormat) String() string {
 	}
 }
 
-func (f Fields) MarshalJSON() ([]byte, error) {
-	m := make(map[string]any, len(f))
-	for _, field := range f {
-		m[field.Key] = field.Value
-	}
-	return json.Marshal(m)
-}
-
-func (l *Logger) Emergency(msg string, ctx ...F) {
+func (l *Logger) Emergency(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_EMERGENCY {
 		go l.output(LOG_EMERGENCY, msg, ctx)
 	}
 }
 
-func (l *Logger) Alert(msg string, ctx ...F) {
+func (l *Logger) Alert(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_ALERT {
 		go l.output(LOG_ALERT, msg, ctx)
 	}
 }
 
-func (l *Logger) Critical(msg string, ctx ...F) {
+func (l *Logger) Critical(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_CRITICAL {
 		go l.output(LOG_CRITICAL, msg, ctx)
 	}
 }
 
-func (l *Logger) Error(msg string, ctx ...F) {
+func (l *Logger) Error(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_ERROR {
 		go l.output(LOG_ERROR, msg, ctx)
 	}
 }
 
-func (l *Logger) Warning(msg string, ctx ...F) {
+func (l *Logger) Warning(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_WARNING {
 		go l.output(LOG_WARNING, msg, ctx)
 	}
 }
 
-func (l *Logger) Notice(msg string, ctx ...F) {
+func (l *Logger) Notice(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_NOTICE {
 		go l.output(LOG_NOTICE, msg, ctx)
 	}
 }
 
-func (l *Logger) Info(msg string, ctx ...F) {
+func (l *Logger) Info(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_INFO {
 		go l.output(LOG_INFO, msg, ctx)
 	}
 }
 
-func (l *Logger) Debug(msg string, ctx ...F) {
+func (l *Logger) Debug(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_DEBUG {
 		go l.output(LOG_DEBUG, msg, ctx)
 	}
 }
 
-func (l *Logger) Log(level LogLevel, msg string, ctx ...F) {
+func (l *Logger) Log(level LogLevel, msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= level {
 		go l.output(level, msg, ctx)
 	}
 }
 
-func (l *Logger) Print(msg string, ctx ...F) {
+func (l *Logger) Print(msg string, ctx ...Entry) {
 	go l.output(LOG_PRINT, msg, ctx)
 }
 
@@ -269,7 +254,7 @@ func (l *Logger) DumpMany(vars ...any) {
 	}
 }
 
-func (l *Logger) output(level LogLevel, msg string, ctx Fields) {
+func (l *Logger) output(level LogLevel, msg string, ctx EntryList) {
 	// Obtener información del runtime
 	pc, file, line, _ := runtime.Caller(2)
 	funcName := runtime.FuncForPC(pc).Name()
@@ -434,8 +419,8 @@ func (l *Logger) outputRemote() {
 	jsonData, err := json.Marshal(l)
 	if err != nil {
 		Log.Error("Failed to marshal log for remote output",
-			F{"error", err.Error()},
-			F{"log", l},
+			Entry{"error", err.Error()},
+			Entry{"log", l},
 		)
 		return
 	}
@@ -499,9 +484,9 @@ func (l *Logger) outputRemote() {
 
 	// Si llegamos aquí, todos los intentos fallaron
 	Log.Print("Failed to send log to remote server after retries",
-		F{"error", lastError.Error()},
-		F{"url", Env.LOG_URL},
-		F{"attempts", maxRetries},
+		Entry{"error", lastError.Error()},
+		Entry{"url", Env.LOG_URL},
+		Entry{"attempts", maxRetries},
 	)
 }
 
@@ -544,16 +529,16 @@ func (l *Logger) outputNDJSON() string {
 	jsonData, err := json.Marshal(l)
 	var output string
 	if err != nil {
-		msg := Translate(Env.APP_LOCALE, "Log serialization error: {error}", F{"error", err.Error()})
+		msg := Translate(Env.APP_LOCALE, "Log serialization error: {error}", Entry{"error", err.Error()})
 		escapedDump := strings.ReplaceAll(l.formatDump(l), `"`, `\"`)
 		escapedDump = strings.ReplaceAll(escapedDump, "\n", " ")
 		escapedDump = strings.ReplaceAll(escapedDump, "\r", " ")
 		output = InterpolatePlaceholders(`{"level":"ERROR","message":"{msg}","context":"{context}"}`,
-			F{"msg", msg},
-			F{"context", escapedDump},
+			Entry{"msg", msg},
+			Entry{"context", escapedDump},
 		)
 
-		Log.Print(Translate(Env.APP_LOCALE, msg, F{"context", l}))
+		Log.Print(Translate(Env.APP_LOCALE, msg, Entry{"context", l}))
 	} else {
 		output = string(jsonData)
 	}
@@ -620,8 +605,8 @@ func (l *Logger) outputXML() string {
 		}
 		return InterpolatePlaceholders(
 			`<log><level>ERROR</level><message>Log serialization error: {error}</message><context>{context}</context></log>`,
-			F{"error", xmlEscape(err.Error())},
-			F{"context", xmlEscape(l.formatDump(l))},
+			Entry{"error", xmlEscape(err.Error())},
+			Entry{"context", xmlEscape(l.formatDump(l))},
 		)
 	} else {
 		return string(xmlData)
@@ -637,8 +622,8 @@ func (l *Logger) outputYAML() string {
 
 		return InterpolatePlaceholders(
 			"level: ERROR\nmessage: Log serialization error: {error}\ncontext: \"{context}\"",
-			F{"error", err.Error()},
-			F{"context", escapedDump},
+			Entry{"error", err.Error()},
+			Entry{"context", escapedDump},
 		)
 	} else {
 		return string(yamlData)
@@ -708,7 +693,7 @@ func (l *Logger) openFile() *os.File {
 	}
 
 	if err := os.MkdirAll(Env.LOG_PATH, os.ModePerm); err != nil {
-		Log.Print("No se pudo crear el directorio de logs: {error}\n", F{"error", err})
+		Log.Print("No se pudo crear el directorio de logs: {error}\n", Entry{"error", err})
 		return nil
 	}
 
@@ -716,7 +701,7 @@ func (l *Logger) openFile() *os.File {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		Log.Print("Failed to create log directory: {error}\n", F{"error", err})
+		Log.Print("Failed to create log directory: {error}\n", Entry{"error", err})
 		return nil
 	}
 	return file

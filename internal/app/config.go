@@ -87,7 +87,7 @@ func LoadEnv(filepath ...string) {
 
 	file, err := os.Open(f)
 	if err != nil {
-		Log.Warning("Environment file (.env) not found at location {file}", F{"file", f})
+		Log.Warning("Environment file (.env) not found at location {file}", Entry{"file", f})
 		return
 	}
 	defer file.Close()
@@ -106,8 +106,8 @@ func LoadEnv(filepath ...string) {
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
 			Log.Warning("Syntax error in environment variables at line {lineNumber}: {rawLine}",
-				F{"lineNumber", i},
-				F{"rawLine", line})
+				Entry{"lineNumber", i},
+				Entry{"rawLine", line})
 			continue
 		}
 
@@ -121,8 +121,8 @@ func LoadEnv(filepath ...string) {
 
 		if key == "" {
 			Log.Warning("Empty key detected while loading environment variables at line {lineNumber}: {rawLine}",
-				F{"lineNumber", i},
-				F{"rawLine", line},
+				Entry{"lineNumber", i},
+				Entry{"rawLine", line},
 			)
 			continue
 		}
@@ -245,8 +245,8 @@ func LoadEnv(filepath ...string) {
 			days, err := strconv.Atoi(value)
 			if err != nil {
 				Log.Warning("Invalid LOG_DAYS value at line {lineNumber}: {value}",
-					F{"lineNumber", i},
-					F{"value", value},
+					Entry{"lineNumber", i},
+					Entry{"value", value},
 				)
 				continue
 			}
@@ -269,22 +269,22 @@ func LoadEnv(filepath ...string) {
 			Env.MAIL_FROM_NAME = value
 		default:
 			Log.Warning("{envKey} is not a valid environment variable name",
-				F{"envKey", key},
+				Entry{"envKey", key},
 			)
 		}
 	}
 
 	if scanner.Err() != nil {
 		Log.Warning("Critical failure loading environment variables from file {file}\nerror: {error}",
-			F{"file", f},
-			F{"error", scanner.Err().Error()},
-			F{"env", Env},
+			Entry{"file", f},
+			Entry{"error", scanner.Err().Error()},
+			Entry{"env", Env},
 		)
 		return
 	}
 
 	Log.Info("Environment variables loaded successfully from file {file}",
-		F{"file", f},
-		F{"env", Env},
+		Entry{"file", f},
+		Entry{"env", Env},
 	)
 }

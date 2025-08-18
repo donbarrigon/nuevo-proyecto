@@ -75,7 +75,7 @@ func (t *AccessToken) Can(permissionNames ...string) app.Error {
 		return app.Errors.Forbidden(err)
 	}
 	if result.ExpiresAt.Before(time.Now()) {
-		return app.Errors.Forbiddenf("access denied: token expired at :expires_at", app.F{Key: "expires_at", Value: result.ExpiresAt})
+		return app.Errors.Forbiddenf("access denied: token expired at :expires_at", app.Entry{Key: "expires_at", Value: result.ExpiresAt})
 	}
 	return nil
 }

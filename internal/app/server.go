@@ -30,7 +30,7 @@ func NewHttpServer(port string, routes *Routes) *http.Server {
 	go func() {
 		startMessage()
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			Log.Error("Could not start server: :error", F{"error", err.Error()})
+			Log.Error("Could not start server: :error", Entry{"error", err.Error()})
 		}
 	}()
 
@@ -77,5 +77,5 @@ func startMessage() {
 
  🚀 Servidor corriendo en http://localhost:{port} 
  🌱 Entorno: DESARROLLO
-	`, F{Key: "port", Value: Env.SERVER_PORT})
+	`, Entry{"port", Env.SERVER_PORT})
 }

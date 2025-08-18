@@ -283,24 +283,3 @@ func (l *Logger) formatDump(val any) string {
 		return fmt.Sprintf("%s: %v", t.Kind(), v.Interface())
 	}
 }
-
-// InterpolatePlaceholders reemplaza placeholders en el mensaje con valores del contexto
-// Soporta formatos: {placeholder} y :placeholder
-func InterpolatePlaceholders(msg string, ctx ...F) string {
-	if len(ctx) == 0 {
-		return msg
-	}
-
-	for _, field := range ctx {
-		// Crear ambos formatos de placeholder
-		placeholder1 := fmt.Sprintf("{%s}", field.Key) // Formato {key}
-		placeholder2 := fmt.Sprintf(":%s", field.Key)  // Formato :key
-		valueStr := fmt.Sprint(field.Value)
-
-		// Reemplazar ambos formatos
-		msg = strings.ReplaceAll(msg, placeholder1, valueStr)
-		msg = strings.ReplaceAll(msg, placeholder2, valueStr)
-	}
-
-	return msg
-}

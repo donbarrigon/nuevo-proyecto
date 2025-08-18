@@ -71,7 +71,7 @@ func (ctx *HttpContext) GetBody(request any) Error {
 			Status:    http.StatusBadRequest,
 			Message:   "The request body is invalid",
 			Err:       "Could not decode the request body: {error}",
-			phMessage: Fields{{Key: "error", Value: err.Error()}},
+			phMessage: EntryList{{"error", err.Error()}},
 		}
 	}
 	defer ctx.Request.Body.Close()
@@ -303,12 +303,12 @@ func (ctx *HttpContext) ResponseError(err Error) {
 
 func (ctx *HttpContext) ResponseNotFound() {
 	ctx.ResponseError(Errors.NotFoundf("The resource [{method}:{path}] does not exist",
-		F{Key: "method", Value: ctx.Request.Method},
-		F{Key: "path", Value: ctx.Request.URL.Path},
+		Entry{"method", ctx.Request.Method},
+		Entry{"path", ctx.Request.URL.Path},
 	))
 }
 
-func (ctx *HttpContext) ResponseMessage(code int, data any, message string, ph ...F) {
+func (ctx *HttpContext) ResponseMessage(code int, data any, message string, ph ...Entry) {
 	ctx.ResponseJSON(code, &MessageResource{
 		Message: Translate(ctx.Lang(), message, ph...),
 		Data:    data,
