@@ -37,6 +37,8 @@ type Routes struct {
 	middlewares []MiddlewareFun
 }
 
+var Routers = map[string]*Router{}
+
 func NewRoutes() *Routes {
 	return &Routes{
 		routes:      []*Route{},
@@ -114,8 +116,6 @@ func (r *Routes) SetRoute(method string, path string, ctrl ControllerFun, middle
 		}
 	}
 
-	pathParts = append(pathParts, method)
-
 	newRoute := &Route{
 		Path:       pathParts,
 		IsVar:      isVars,
@@ -162,8 +162,9 @@ func (r *Router) add(index int, route *Route) {
 	r.routers = append(r.routers, newRouter)
 
 	// si la ruta aun no termina, sigo adelante con el nuevo router
-	if index < len(route.Path) {
-		newRouter.add(index+1, route)
+	nextIndex := index + 1
+	if nextIndex < len(route.Path) {
+		newRouter.add(nextIndex, route)
 		return
 	}
 
@@ -181,14 +182,17 @@ func (r *Router) add(index int, route *Route) {
 // si el controlador de rd es nil, significa que no encontro la ruta y se debe manejar como 404
 func (r *Router) Find(path []string, rd *RouterData) {
 	for _, router := range r.routers {
+		// Log.Print(router.path)
 		if router.isVar || path[router.index] == router.path {
 			// si es variable se guarda
 			if router.isVar {
 				rd.Params[router.path] = path[router.index]
 			}
 
+			// Log.Print(">>" + router.path + "<<")
+
 			// si el path aun no termina, sigue adelante y si el siguiente no tiene rutas, se para
-			if len(path) > router.index {
+			if len(path) > router.index+1 {
 				router.Find(path, rd)
 				return
 			}
@@ -203,20 +207,24 @@ func (r *Router) Find(path []string, rd *RouterData) {
 	}
 }
 
-func (router *Router) HandleFunction() http.HandlerFunc {
+func (router *Router) HandlerFunction() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := NewHttpContext(w, r)
 
 		rd := &RouterData{
 			Params: map[string]string{},
 		}
-		pathSegments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		pathSegments := []string{r.Method}
+		pathSegments = append(pathSegments, strings.Split(strings.Trim(r.URL.Path, "/"), "/")...)
 		router.Find(pathSegments, rd)
+
 		if rd.Controller != nil {
-			ctx := NewHttpContext(w, r)
 			ctx.Params = rd.Params
 			router.Use(rd.Controller, rd.Middlewares...)(ctx)
+			return
 		}
+		ctx.ResponseNotFound()
 	}
 }
 

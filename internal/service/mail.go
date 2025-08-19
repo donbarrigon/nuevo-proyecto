@@ -9,6 +9,11 @@ import (
 )
 
 func SendMail(subject string, body string, to ...string) {
+
+	if app.Env.MAIL_USERNAME == "tuemail@gmail.com" {
+		app.Log.Warning("Failed to send email: no email configured")
+		return
+	}
 	auth := smtp.PlainAuth("", app.Env.MAIL_USERNAME, app.Env.MAIL_PASSWORD, app.Env.MAIL_HOST)
 
 	msg := []byte(

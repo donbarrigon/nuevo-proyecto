@@ -151,7 +151,7 @@ func (e *Err) Append(err *FieldError) {
 }
 
 func (e *Err) Errors() Error {
-	if e.ErrMap == nil {
+	if len(e.ErrMap) == 0 {
 		return nil
 	}
 	e.Status = http.StatusUnprocessableEntity
@@ -170,7 +170,7 @@ func (e *Err) Mongo(err error) Error {
 
 	switch {
 	case errors.Is(err, mongo.ErrNoDocuments):
-		return Errors.NoDocuments(err)
+		return Errors.NotFound(err)
 	case errors.Is(err, mongo.ErrClientDisconnected):
 		return Errors.ClientDisconnected(err)
 	case errors.Is(err, mongo.ErrNilDocument):

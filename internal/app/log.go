@@ -52,28 +52,24 @@ const (
 	LOG_FLAG_TIMESTAMP       = 1 << iota // 1     - Agrega la fecha y hora formateada según LOG_DATE_FORMAT
 	LOG_FLAG_LONGFILE                    // 2     - Ruta completa del archivo y número de línea: /a/b/c/d.go:23
 	LOG_FLAG_SHORTFILE                   // 4     - Solo el nombre del archivo y línea: d.go:23
-	LOG_FLAG_RELATIVEFILE                // 8     - Ruta relativa al directorio del proyecto
-	LOG_FLAG_FUNCTION                    // 16    - Nombre de la función desde donde se llamó
-	LOG_FLAG_LINE                        // 32    - Solo el número de línea (sin ruta de archivo)
-	LOG_FLAG_PREFIX                      // 64    - Agrega un prefijo antes del mensaje (por ejemplo: [DEBUG])
-	LOG_FLAG_CONSOLE_AS_JSON             // 128   - Salida en formato JSON en la consola
-	LOG_FLAG_CONSOLE_COLOR               // 256   - salida en consola con solor segun el lv
-	LOG_FLAG_CONTEXT                     // 512   - Agrega el contexto de la petición al log
-	LOG_FLAG_DUMP                        // 1024  - Las variables las se imprimen de forma detallada
-	LOG_FLAG_ID                          // 2048  - Genera un ID único en formato hexadecimal string (bson.ObjectID.Hex())
+	LOG_FLAG_FUNCTION                    // 8    - Nombre de la función desde donde se llamó
+	LOG_FLAG_LINE                        // 16    - Solo el número de línea (sin ruta de archivo)
+	LOG_FLAG_PREFIX                      // 32    - Agrega un prefijo antes del mensaje (por ejemplo: [DEBUG])
+	LOG_FLAG_CONSOLE_AS_JSON             // 64   - Salida en formato JSON en la consola
+	LOG_FLAG_CONSOLE_COLOR               // 128   - salida en consola con solor segun el lv
+	LOG_FLAG_CONTEXT                     // 256   - Agrega el contexto de la petición al log
+	LOG_FLAG_ID                          // 512  - Genera un ID único en formato hexadecimal string (bson.ObjectID.Hex())
 
 	// Combinación de todos los flags
 	LOG_FLAG_ALL = LOG_FLAG_TIMESTAMP |
 		LOG_FLAG_LONGFILE |
 		LOG_FLAG_SHORTFILE |
-		LOG_FLAG_RELATIVEFILE |
 		LOG_FLAG_FUNCTION |
 		LOG_FLAG_LINE |
 		LOG_FLAG_PREFIX |
-		LOG_FLAG_CONSOLE_AS_JSON |
-		LOG_FLAG_CONTEXT |
-		LOG_FLAG_DUMP |
-		LOG_FLAG_ID
+		// LOG_FLAG_CONSOLE_AS_JSON |
+		LOG_FLAG_CONTEXT
+	// LOG_FLAG_ID
 )
 
 const (
@@ -259,15 +255,6 @@ func (l *Logger) output(level LogLevel, msg string, ctx List) {
 	pc, file, line, _ := runtime.Caller(2)
 	funcName := runtime.FuncForPC(pc).Name()
 
-	// Si RELATIVEFILE está activado
-	if Env.LOG_FLAGS&LOG_FLAG_RELATIVEFILE != 0 {
-		if wd, err := os.Getwd(); err == nil {
-			if rel, err := filepath.Rel(wd, file); err == nil {
-				file = rel
-			}
-		}
-	}
-
 	// Si SHORTFILE está activado
 	if Env.LOG_FLAGS&LOG_FLAG_SHORTFILE != 0 {
 		file = filepath.Base(file)
@@ -299,7 +286,7 @@ func (l *Logger) output(level LogLevel, msg string, ctx List) {
 		Item.Line = strconv.Itoa(line)
 	}
 
-	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE) != 0 {
+	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE) != 0 {
 		Item.File = file
 	}
 
@@ -308,7 +295,7 @@ func (l *Logger) output(level LogLevel, msg string, ctx List) {
 	//}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || level == LOG_PRINT {
-		l.outputConsole()
+		Item.outputConsole()
 		if level == LOG_PRINT {
 			return
 		}
@@ -330,18 +317,10 @@ func (l *Logger) output(level LogLevel, msg string, ctx List) {
 
 func (l *Logger) outputConsole() {
 	if Env.LOG_FLAGS&LOG_FLAG_CONSOLE_AS_JSON != 0 {
-		if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(l.Context) > 0 {
-			fmt.Println(l.formatDump(l))
-		} else {
-			data, _ := json.MarshalIndent(l, "", "  ")
-			fmt.Println(string(data))
-		}
+		data, _ := json.MarshalIndent(l, "", "  ")
+		fmt.Println(string(data))
 	} else {
 		fmt.Println(l.outputPlain(true))
-		// Detalle de argumentos
-		if Env.LOG_FLAGS&LOG_FLAG_DUMP != 0 && len(l.Context) > 0 {
-			fmt.Println("\nargs: " + l.formatDump(l.Context))
-		}
 	}
 }
 
@@ -518,7 +497,7 @@ func (l *Logger) outputPlain(withColor bool) string {
 	if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
 		b.WriteString(fmt.Sprintf(" [%s]", l.Function))
 	}
-	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE|LOG_FLAG_LINE) != 0 {
+	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_LINE) != 0 {
 		b.WriteString(fmt.Sprintf(" (%s:%s)", l.File, l.Line))
 	}
 
@@ -567,7 +546,7 @@ func (l *Logger) outputCSV() string {
 		record = append(record, l.Function)
 	}
 
-	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE) != 0 {
+	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE) != 0 {
 		record = append(record, l.File)
 	}
 
@@ -655,7 +634,7 @@ func (l *Logger) outputLTSV() string {
 		b.WriteString("function:" + escape(l.Function) + "\t")
 	}
 
-	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE|LOG_FLAG_RELATIVEFILE) != 0 {
+	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE) != 0 {
 		b.WriteString("file:" + escape(l.File) + "\t")
 	}
 

@@ -82,17 +82,17 @@ func UserStore(ctx *app.HttpContext) {
 		return
 	}
 
-	validator := &validator.StoreUser{}
-	if err := ctx.ValidateBody(validator); err != nil {
+	req := &validator.StoreUser{}
+	if err := ctx.ValidateBody(req); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
 	user := model.NewUser()
-	user.Email = validator.Email
-	app.Fill(user.Profile, validator)
+	user.Email = req.Email
+	app.Fill(user.Profile, req)
 
-	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(validator.Password), bcrypt.DefaultCost)
+	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if er != nil {
 		ctx.ResponseError(&app.Err{
 			Status:  http.StatusInternalServerError,
@@ -105,10 +105,10 @@ func UserStore(ctx *app.HttpContext) {
 
 	role := model.NewRole()
 	if err := role.FindOne(Document(Where("name", Eq("user")))); err != nil {
-		ctx.ResponseError(err)
-		return
+		app.Log.Warning("User role does not exist. Run the seed command to populate initial data.", app.I("error", err))
+	} else {
+		user.RoleIDs = []bson.ObjectID{role.ID}
 	}
-	user.RoleIDs = []bson.ObjectID{role.ID}
 
 	if err := user.Create(); err != nil {
 		ctx.ResponseError(err)
@@ -118,7 +118,7 @@ func UserStore(ctx *app.HttpContext) {
 	go model.ActivityRecord(user.ID.Hex(), user, "create", user)
 	go service.SendVerificationEmail(user)
 
-	Login(ctx)
+	runLogin(ctx, req.Email, req.Password)
 }
 
 func Login(ctx *app.HttpContext) {
@@ -129,9 +129,13 @@ func Login(ctx *app.HttpContext) {
 		return
 	}
 
+	runLogin(ctx, validator.Email, validator.Password)
+}
+func runLogin(ctx *app.HttpContext, email string, password string) {
+
 	user := model.NewUser()
 	err := user.AggregateOne(mongo.Pipeline{
-		Match(Where("email", Eq(validator.Email))),
+		Match(Where("email", Eq(email))),
 		user.WithRoles(),
 		user.WhithPermissions(),
 	})
@@ -144,7 +148,7 @@ func Login(ctx *app.HttpContext) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(validator.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		ctx.ResponseError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "Invalid login credentials.",

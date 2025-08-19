@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,18 +9,16 @@ import (
 	"time"
 )
 
-var routerMap = map[string]*Router{}
-
 func NewHttpServer(port string, routes *Routes) *http.Server {
 	timeout := time.Duration(Env.SERVER_TIMEOUT) * time.Second
 
 	router := &Router{}
 	router.Make(routes)
-	routerMap[port] = router
+	Routers[port] = router
 
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      router.HandleFunction(),
+		Handler:      router.HandlerFunction(),
 		ReadTimeout:  timeout / 2,
 		WriteTimeout: timeout / 2,
 		IdleTimeout:  timeout,
@@ -44,7 +41,7 @@ func HttpServerGracefulShutdown(server *http.Server) {
 
 	// Espera por la señal de terminación
 	<-sigChan
-	log.Println("Iniciando apagado controlado del servidor...")
+	Log.Info("Iniciando apagado controlado del servidor...")
 
 	// Crea un contexto con timeout para el shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -52,23 +49,23 @@ func HttpServerGracefulShutdown(server *http.Server) {
 
 	//se cierra el servidor HTTP para que no acepte nuevas conexiones
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Servidor forzado a cerrar: %v\n", err)
+		Log.Warning("Servidor forzado a cerrar: :err", Item{"err", err.Error()})
 	} else {
-		log.Println("Servidor HTTP detenido correctamente")
+		Log.Info("Servidor HTTP detenido correctamente")
 	}
 
 	// se cierra la conexion con mono db
 	if err := CloseMongoDB(); err != nil {
-		log.Printf("Error al cerrar la conexión a MongoDB: %v\n", err)
+		Log.Warning("Error al cerrar la conexión a MongoDB: :err", Item{"err", err.Error()})
 	} else {
-		log.Println("Conexión a MongoDB cerrada correctamente")
+		Log.Info("Conexión a MongoDB cerrada correctamente")
 	}
 
-	log.Println("Apagado controlado completado")
+	Log.Info("Apagado controlado completado")
 }
 
 func startMessage() {
-	Log.Print(`
+	Log.Info(`
    ____   ___  ____  ____  ___  ___  _   _ ____   ___
   / ___| / _ \|  _ \|  _ \|_ _|| __|| \ | |  _ \ / _ \
  | |    | | | | |_) | |_) || ||||__ |  \| | | | | | | |

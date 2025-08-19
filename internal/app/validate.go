@@ -185,13 +185,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 			case "confirmed":
 				confirmationattribute := key + "_confirmation"
 				confirmationValue := getOtherFieldValueFromParam(val, confirmationattribute)
-				e := Confirmed(key, value.Interface(), confirmationValue)
-				err.Append(e)
-				err.Append(&FieldError{
-					FieldName:    confirmationattribute,
-					Message:      e.Message,
-					Placeholders: List{{"attribute", confirmationattribute}},
-				})
+				err.Append(Confirmed(key, value.Interface(), confirmationValue))
 			case "accepted":
 				err.Append(Accepted(key, value.Interface()))
 			case "declined":
@@ -443,7 +437,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 			}
 		}
 	}
-	return err
+	return err.Errors()
 }
 
 // getOtherFieldValueFromParam es una funcion auxiliar no hace parte de las validaciones
@@ -1194,8 +1188,10 @@ func Slug(attribute string, value string) *FieldError {
 }
 
 func Regex(attribute string, value string, pattern string) *FieldError {
+
 	re, err := regexp.Compile(pattern)
 	if err != nil {
+		Log.Warning("Invalid regular expression pattern: :pattern", Item{"pattern", pattern})
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid regular expression pattern.",
@@ -1203,6 +1199,7 @@ func Regex(attribute string, value string, pattern string) *FieldError {
 				{Key: "attribute", Value: attribute},
 			},
 		}
+
 	}
 	if !re.MatchString(value) {
 		return &FieldError{

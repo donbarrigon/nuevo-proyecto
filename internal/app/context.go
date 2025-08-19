@@ -85,26 +85,9 @@ func (ctx *HttpContext) ValidateBody(req Validator) Error {
 	}
 
 	errPFV := req.PrepareForValidation(ctx)
-
-	// v := reflect.ValueOf(req)
-	// if v.Kind() == reflect.Ptr {
-	// 	v = v.Elem()
-	// }
-
-	// switch v.Kind() {
-	// case reflect.Slice, reflect.Array:
-	// 	for i := 0; i < v.Len(); i++ {
-	// 		item := v.Index(i).Interface()
-	// 		if err := Validate(item); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// default:
-	// 	if err := Validate(req); err != nil {
-	// 		return err
-	// 	}
-	// }
-
+	if errPFV != nil {
+		errPFV = errPFV.Errors()
+	}
 	if err := Validate(ctx, req); err != nil {
 		if errPFV != nil {
 			errMap, phMap := errPFV.GetMap()
@@ -120,7 +103,7 @@ func (ctx *HttpContext) ValidateBody(req Validator) Error {
 		}
 		return err.Errors()
 	}
-	return errPFV.Errors()
+	return errPFV
 }
 
 // func (ctx *HttpContext) GetMultiPartForm(req any) Error {

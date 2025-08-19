@@ -15,7 +15,7 @@ type User struct {
 	Email           string          `bson:"email"                   json:"email"`
 	Password        string          `bson:"password"                json:"-"`
 	AccessTokens    []*AccessToken  `bson:"access_tokens,omitempty" json:"access_tokens,omitempty"` // hasMany
-	Profile         *Profile        `bson:"profile,omitempty"       json:"profile,omitempty"`       //hasOne
+	Profile         *Profile        `bson:"profile,omitempty"       json:"profile,omitempty"`
 	RoleIDs         []bson.ObjectID `bson:"role_ids"                json:"-"`
 	Roles           []*Role         `bson:"roles,omitempty"         json:"roles,omitempty"` // manyToMany
 	PermissionIDs   []bson.ObjectID `bson:"permission_ids"          json:"-"`
@@ -39,6 +39,7 @@ type Profile struct {
 
 func NewUser() *User {
 	user := &User{}
+	user.Profile = &Profile{}
 	user.Odm.Model = user
 	return user
 }

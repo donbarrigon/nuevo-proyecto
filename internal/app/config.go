@@ -65,7 +65,7 @@ var Env = Environment{
 	LOG_OUTPUT:      LOG_OUTPUT_CONSOLE | LOG_OUTPUT_FILE | LOG_OUTPUT_DATABASE | LOG_OUTPUT_REMOTE,
 	LOG_URL:         "http://127.0.0.1/debug/log",
 	LOG_URL_TOKEN:   "",
-	LOG_PATH:        "log.json",
+	LOG_PATH:        "log",
 	LOG_CHANNEL:     "daily",
 	LOG_DAYS:        14,
 	LOG_DATE_FORMAT: "2006-01-02 15:04:05.000000",
@@ -195,8 +195,6 @@ func LoadEnv(filepath ...string) {
 					flags |= LOG_FLAG_LONGFILE
 				case "SHORTFILE":
 					flags |= LOG_FLAG_SHORTFILE
-				case "RELATIVEFILE":
-					flags |= LOG_FLAG_RELATIVEFILE
 				case "FUNCTION":
 					flags |= LOG_FLAG_FUNCTION
 				case "LINE":
@@ -207,8 +205,6 @@ func LoadEnv(filepath ...string) {
 					flags |= LOG_FLAG_CONSOLE_AS_JSON
 				case "CONTEXT":
 					flags |= LOG_FLAG_CONTEXT
-				case "DUMP":
-					flags |= LOG_FLAG_DUMP
 				}
 			}
 			Env.LOG_FLAGS = flags
