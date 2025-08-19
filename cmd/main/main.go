@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/http/routes"
+	"github.com/donbarrigon/nuevo-proyecto/internal/shared/routes"
 )
 
 func main() {
