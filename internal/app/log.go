@@ -24,14 +24,14 @@ type LogLevel int
 type LogFileFormat int
 
 type Logger struct {
-	ID       string   `json:"id,omitempty" yaml:"id,omitempty" id:"time,omitempty"`
-	Time     string   `json:"time,omitempty" yaml:"time,omitempty" xml:"time,omitempty"`
-	Level    LogLevel `json:"level,omitempty" yaml:"level,omitempty" xml:"level,omitempty"`
+	ID       string   `json:"id,omEntrypty" yaml:"id,omEntrypty" id:"time,omEntrypty"`
+	Time     string   `json:"time,omEntrypty" yaml:"time,omEntrypty" xml:"time,omEntrypty"`
+	Level    LogLevel `json:"level,omEntrypty" yaml:"level,omEntrypty" xml:"level,omEntrypty"`
 	Message  string   `json:"message" yaml:"message" xml:"message"`
-	Function string   `json:"function,omitempty" yaml:"function,omitempty" xml:"function,omitempty"`
-	Line     string   `json:"line,omitempty" yaml:"line,omitempty" xml:"line,omitempty"`
-	File     string   `json:"file,omitempty" yaml:"file,omitempty" xml:"file,omitempty"`
-	Context  List     `json:"context,omitempty" yaml:"context,omitempty" xml:"context,omitempty"`
+	Function string   `json:"function,omEntrypty" yaml:"function,omEntrypty" xml:"function,omEntrypty"`
+	Line     string   `json:"line,omEntrypty" yaml:"line,omEntrypty" xml:"line,omEntrypty"`
+	File     string   `json:"file,omEntrypty" yaml:"file,omEntrypty" xml:"file,omEntrypty"`
+	Context  List     `json:"context,omEntrypty" yaml:"context,omEntrypty" xml:"context,omEntrypty"`
 }
 
 const (
@@ -177,61 +177,61 @@ func (f LogFileFormat) String() string {
 	}
 }
 
-func (l *Logger) Emergency(msg string, ctx ...Item) {
+func (l *Logger) Emergency(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_EMERGENCY {
 		go l.output(LOG_EMERGENCY, msg, ctx)
 	}
 }
 
-func (l *Logger) Alert(msg string, ctx ...Item) {
+func (l *Logger) Alert(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_ALERT {
 		go l.output(LOG_ALERT, msg, ctx)
 	}
 }
 
-func (l *Logger) Critical(msg string, ctx ...Item) {
+func (l *Logger) Critical(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_CRITICAL {
 		go l.output(LOG_CRITICAL, msg, ctx)
 	}
 }
 
-func (l *Logger) Error(msg string, ctx ...Item) {
+func (l *Logger) Error(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_ERROR {
 		go l.output(LOG_ERROR, msg, ctx)
 	}
 }
 
-func (l *Logger) Warning(msg string, ctx ...Item) {
+func (l *Logger) Warning(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_WARNING {
 		go l.output(LOG_WARNING, msg, ctx)
 	}
 }
 
-func (l *Logger) Notice(msg string, ctx ...Item) {
+func (l *Logger) Notice(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_NOTICE {
 		go l.output(LOG_NOTICE, msg, ctx)
 	}
 }
 
-func (l *Logger) Info(msg string, ctx ...Item) {
+func (l *Logger) Info(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_INFO {
 		go l.output(LOG_INFO, msg, ctx)
 	}
 }
 
-func (l *Logger) Debug(msg string, ctx ...Item) {
+func (l *Logger) Debug(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_DEBUG {
 		go l.output(LOG_DEBUG, msg, ctx)
 	}
 }
 
-func (l *Logger) Log(level LogLevel, msg string, ctx ...Item) {
+func (l *Logger) Log(level LogLevel, msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= level {
 		go l.output(level, msg, ctx)
 	}
 }
 
-func (l *Logger) Print(msg string, ctx ...Item) {
+func (l *Logger) Print(msg string, ctx ...Entry) {
 	go l.output(LOG_PRINT, msg, ctx)
 }
 
@@ -264,53 +264,53 @@ func (l *Logger) output(level LogLevel, msg string, ctx List) {
 	msg = InterpolatePlaceholders(msg, ctx...)
 
 	// Crear estructura de log
-	Item := &Logger{
+	Entry := &Logger{
 		Level:   level,
 		Message: msg,
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_ID != 0 {
-		Item.ID = bson.NewObjectID().Hex()
+		Entry.ID = bson.NewObjectID().Hex()
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 		now := time.Now().Format(Env.LOG_DATE_FORMAT)
-		Item.Time = now
+		Entry.Time = now
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
-		Item.Function = funcName
+		Entry.Function = funcName
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_LINE != 0 {
-		Item.Line = strconv.Itoa(line)
+		Entry.Line = strconv.Itoa(line)
 	}
 
 	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE) != 0 {
-		Item.File = file
+		Entry.File = file
 	}
 
 	//if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && ctx != nil {
-	Item.Context = ctx
+	Entry.Context = ctx
 	//}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || level == LOG_PRINT {
-		Item.outputConsole()
+		Entry.outputConsole()
 		if level == LOG_PRINT {
 			return
 		}
 	}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_FILE != 0 {
-		Item.outputFile()
+		Entry.outputFile()
 	}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_DATABASE != 0 {
-		Item.outputDatabase()
+		Entry.outputDatabase()
 	}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_REMOTE != 0 {
-		Item.outputRemote()
+		Entry.outputRemote()
 	}
 
 }
@@ -398,8 +398,8 @@ func (l *Logger) outputRemote() {
 	jsonData, err := json.Marshal(l)
 	if err != nil {
 		Log.Error("Failed to marshal log for remote output",
-			Item{"error", err.Error()},
-			Item{"log", l},
+			Entry{"error", err.Error()},
+			Entry{"log", l},
 		)
 		return
 	}
@@ -463,9 +463,9 @@ func (l *Logger) outputRemote() {
 
 	// Si llegamos aquí, todos los intentos fallaron
 	Log.Print("Failed to send log to remote server after retries",
-		Item{"error", lastError.Error()},
-		Item{"url", Env.LOG_URL},
-		Item{"attempts", maxRetries},
+		Entry{"error", lastError.Error()},
+		Entry{"url", Env.LOG_URL},
+		Entry{"attempts", maxRetries},
 	)
 }
 
@@ -508,16 +508,16 @@ func (l *Logger) outputNDJSON() string {
 	jsonData, err := json.Marshal(l)
 	var output string
 	if err != nil {
-		msg := Translate(Env.APP_LOCALE, "Log serialization error: {error}", Item{"error", err.Error()})
+		msg := Translate(Env.APP_LOCALE, "Log serialization error: {error}", Entry{"error", err.Error()})
 		escapedDump := strings.ReplaceAll(l.formatDump(l), `"`, `\"`)
 		escapedDump = strings.ReplaceAll(escapedDump, "\n", " ")
 		escapedDump = strings.ReplaceAll(escapedDump, "\r", " ")
 		output = InterpolatePlaceholders(`{"level":"ERROR","message":"{msg}","context":"{context}"}`,
-			Item{"msg", msg},
-			Item{"context", escapedDump},
+			Entry{"msg", msg},
+			Entry{"context", escapedDump},
 		)
 
-		Log.Print(Translate(Env.APP_LOCALE, msg, Item{"context", l}))
+		Log.Print(Translate(Env.APP_LOCALE, msg, Entry{"context", l}))
 	} else {
 		output = string(jsonData)
 	}
@@ -584,8 +584,8 @@ func (l *Logger) outputXML() string {
 		}
 		return InterpolatePlaceholders(
 			`<log><level>ERROR</level><message>Log serialization error: {error}</message><context>{context}</context></log>`,
-			Item{"error", xmlEscape(err.Error())},
-			Item{"context", xmlEscape(l.formatDump(l))},
+			Entry{"error", xmlEscape(err.Error())},
+			Entry{"context", xmlEscape(l.formatDump(l))},
 		)
 	} else {
 		return string(xmlData)
@@ -601,8 +601,8 @@ func (l *Logger) outputYAML() string {
 
 		return InterpolatePlaceholders(
 			"level: ERROR\nmessage: Log serialization error: {error}\ncontext: \"{context}\"",
-			Item{"error", err.Error()},
-			Item{"context", escapedDump},
+			Entry{"error", err.Error()},
+			Entry{"context", escapedDump},
 		)
 	} else {
 		return string(yamlData)
@@ -672,7 +672,7 @@ func (l *Logger) openFile() *os.File {
 	}
 
 	if err := os.MkdirAll(Env.LOG_PATH, os.ModePerm); err != nil {
-		Log.Print("No se pudo crear el directorio de logs: {error}\n", Item{"error", err})
+		Log.Print("No se pudo crear el directorio de logs: {error}\n", Entry{"error", err})
 		return nil
 	}
 
@@ -680,7 +680,7 @@ func (l *Logger) openFile() *os.File {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		Log.Print("Failed to create log directory: {error}\n", Item{"error", err})
+		Log.Print("Failed to create log directory: {error}\n", Entry{"error", err})
 		return nil
 	}
 	return file
@@ -693,17 +693,17 @@ func (l *Logger) deleteOldFiles() {
 		if Env.LOG_CHANNEL == "daily" && Env.LOG_DAYS > 0 {
 			entries, _ := os.ReadDir(Env.LOG_PATH)
 			cutoff := now.AddDate(0, 0, -Env.LOG_DAYS)
-			for _, Item := range entries {
-				if Item.IsDir() {
+			for _, Entry := range entries {
+				if Entry.IsDir() {
 					continue
 				}
-				name := Item.Name()
+				name := Entry.Name()
 				if !strings.HasSuffix(name, ".log") {
 					continue
 				}
 				datePart := strings.TrimSuffix(name, ".log")
-				ItemDate, err := time.Parse("2006-01-02", datePart)
-				if err == nil && ItemDate.Before(cutoff) {
+				EntryDate, err := time.Parse("2006-01-02", datePart)
+				if err == nil && EntryDate.Before(cutoff) {
 					_ = os.Remove(filepath.Join(Env.LOG_PATH, name))
 				}
 			}
@@ -728,16 +728,16 @@ func (l *Logger) deleteOldFiles() {
 			}
 
 			// Eliminar logs fuera del rango de semanas válidas
-			for _, Item := range entries {
-				if Item.IsDir() || !strings.HasSuffix(Item.Name(), ".log") {
+			for _, Entry := range entries {
+				if Entry.IsDir() || !strings.HasSuffix(Entry.Name(), ".log") {
 					continue
 				}
-				name := strings.TrimSuffix(Item.Name(), ".log")
+				name := strings.TrimSuffix(Entry.Name(), ".log")
 
 				// Formato semanal esperado: YYYY-Wxx
 				if strings.Count(name, "-") == 1 && strings.Contains(name, "W") && len(name) == 8 {
 					if !validWeeks[name] {
-						_ = os.Remove(filepath.Join(Env.LOG_PATH, Item.Name()))
+						_ = os.Remove(filepath.Join(Env.LOG_PATH, Entry.Name()))
 					}
 				}
 			}
@@ -760,16 +760,16 @@ func (l *Logger) deleteOldFiles() {
 			}
 
 			// Eliminar archivos fuera del rango permitido
-			for _, Item := range entries {
-				if Item.IsDir() || !strings.HasSuffix(Item.Name(), ".log") {
+			for _, Entry := range entries {
+				if Entry.IsDir() || !strings.HasSuffix(Entry.Name(), ".log") {
 					continue
 				}
-				name := strings.TrimSuffix(Item.Name(), ".log")
+				name := strings.TrimSuffix(Entry.Name(), ".log")
 
 				// Formato YYYY-MM
 				if len(name) == 7 && strings.Count(name, "-") == 1 {
 					if !validMonths[name] {
-						_ = os.Remove(filepath.Join(Env.LOG_PATH, Item.Name()))
+						_ = os.Remove(filepath.Join(Env.LOG_PATH, Entry.Name()))
 					}
 				}
 			}

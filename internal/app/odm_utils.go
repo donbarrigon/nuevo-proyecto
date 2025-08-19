@@ -30,8 +30,8 @@ func InitMongoDB() error {
 	DB = DBClient.Database(Env.DB_DATABASE)
 
 	Log.Info("Conectado exitosamente a MongoDB: :con - Base de datos: :db",
-		Item{"con", Env.DB_CONNECTION_STRING},
-		Item{"con", Env.DB_DATABASE})
+		Entry{"con", Env.DB_CONNECTION_STRING},
+		Entry{"con", Env.DB_DATABASE})
 	return nil
 }
 
@@ -172,7 +172,7 @@ func FillDirty(model any, request any) (map[string]any, Error) {
 				// Si no tiene tag bson, usamos el nombre del campo en minúsculas
 				bsonTag = strings.ToLower(fieldName)
 			} else {
-				// Si tiene tag bson, extraemos solo el nombre (sin opciones como ",omitempty")
+				// Si tiene tag bson, extraemos solo el nombre (sin opciones como ",omEntrypty")
 				if commaIndex := strings.Index(bsonTag, ","); commaIndex != -1 {
 					bsonTag = bsonTag[:commaIndex]
 				}
@@ -261,7 +261,7 @@ func FillDirty(model any, request any) (map[string]any, Error) {
 // 		return strings.ToLower(defaultName)
 // 	}
 
-// 	// Extraemos solo el nombre, ignorando opciones como ",omitempty"
+// 	// Extraemos solo el nombre, ignorando opciones como ",omEntrypty"
 // 	if commaIndex := strings.Index(bsonTag, ","); commaIndex != -1 {
 // 		return bsonTag[:commaIndex]
 // 	}

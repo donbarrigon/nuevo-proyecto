@@ -27,7 +27,7 @@ func NewHttpServer(port string, routes *Routes) *http.Server {
 	go func() {
 		startMessage()
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			Log.Error("Could not start server: :error", Item{"error", err.Error()})
+			Log.Error("Could not start server: :error", Entry{"error", err.Error()})
 		}
 	}()
 
@@ -49,14 +49,14 @@ func HttpServerGracefulShutdown(server *http.Server) {
 
 	//se cierra el servidor HTTP para que no acepte nuevas conexiones
 	if err := server.Shutdown(ctx); err != nil {
-		Log.Warning("Servidor forzado a cerrar: :err", Item{"err", err.Error()})
+		Log.Warning("Servidor forzado a cerrar: :err", Entry{"err", err.Error()})
 	} else {
 		Log.Info("Servidor HTTP detenido correctamente")
 	}
 
 	// se cierra la conexion con mono db
 	if err := CloseMongoDB(); err != nil {
-		Log.Warning("Error al cerrar la conexión a MongoDB: :err", Item{"err", err.Error()})
+		Log.Warning("Error al cerrar la conexión a MongoDB: :err", Entry{"err", err.Error()})
 	} else {
 		Log.Info("Conexión a MongoDB cerrada correctamente")
 	}
@@ -74,5 +74,5 @@ func startMessage() {
 
  🚀 Servidor corriendo en http://localhost:{port} 
  🌱 Entorno: DESARROLLO
-	`, Item{"port", Env.SERVER_PORT})
+	`, Entry{"port", Env.SERVER_PORT})
 }

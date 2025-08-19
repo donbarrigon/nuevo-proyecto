@@ -50,7 +50,7 @@ func ActivityRecord(userID string, model app.Model, action string, changes ...an
 	}
 	activity.Odm.Model = activity
 	if err := activity.Create(); err != nil {
-		app.Log.Error("Failed to create activity record", app.Item{Key: "error", Value: err})
+		app.Log.Error("Failed to create activity record", app.Entry{Key: "error", Value: err})
 	}
 }
 
@@ -70,6 +70,6 @@ func ActivityManyRecords(model app.Model, action string, changes ...any) {
 		})
 	}
 	if err := activity.CreateMany(data); err != nil {
-		app.Log.Error("Failed to create activity record", app.Item{Key: "error", Value: err})
+		app.Log.Error("Failed to create activity record", app.Entry{Key: "error", Value: err})
 	}
 }

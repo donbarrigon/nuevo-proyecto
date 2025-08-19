@@ -105,7 +105,7 @@ func UserStore(ctx *app.HttpContext) {
 
 	role := model.NewRole()
 	if err := role.FindOne(Document(Where("name", Eq("user")))); err != nil {
-		app.Log.Warning("User role does not exist. Run the seed command to populate initial data.", app.I("error", err))
+		app.Log.Warning("User role does not exist. Run the seed command to populate initial data.", app.E("error", err))
 	} else {
 		user.RoleIDs = []bson.ObjectID{role.ID}
 	}
@@ -123,13 +123,13 @@ func UserStore(ctx *app.HttpContext) {
 
 func Login(ctx *app.HttpContext) {
 
-	validator := &validator.UserLogin{}
-	if err := ctx.GetBody(validator); err != nil {
+	req := &validator.UserLogin{}
+	if err := ctx.GetBody(req); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	runLogin(ctx, validator.Email, validator.Password)
+	runLogin(ctx, req.Email, req.Password)
 }
 func runLogin(ctx *app.HttpContext, email string, password string) {
 
@@ -199,8 +199,8 @@ func runLogin(ctx *app.HttpContext, email string, password string) {
 
 func UserUpdateEmail(ctx *app.HttpContext) {
 
-	validator := &validator.UpdateUserEmail{}
-	if err := ctx.ValidateBody(validator); err != nil {
+	req := &validator.UpdateUserEmail{}
+	if err := ctx.ValidateBody(req); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -222,7 +222,7 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(validator.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		ctx.ResponseError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "Invalid login credentials.",
@@ -232,7 +232,7 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 	}
 
 	oldEmail := user.Email
-	user.Email = validator.Email
+	user.Email = req.Email
 	user.EmailVerifiedAt = nil
 	if err := user.Update(); err != nil {
 		ctx.ResponseError(err)
@@ -248,8 +248,8 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 
 func UserUpdateProfile(ctx *app.HttpContext) {
 
-	validator := &validator.UpdateUserProfile{}
-	if err := ctx.ValidateBody(validator); err != nil {
+	req := &validator.UpdateUserProfile{}
+	if err := ctx.ValidateBody(req); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -271,7 +271,7 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 		return
 	}
 
-	dirty, err := app.FillDirty(user.Profile, validator)
+	dirty, err := app.FillDirty(user.Profile, req)
 	if err != nil {
 		ctx.ResponseError(err)
 		return
@@ -289,8 +289,8 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 
 func UserUpdatePassword(ctx *app.HttpContext) {
 
-	validator := &validator.UpdateUserPassword{}
-	if err := ctx.ValidateBody(validator); err != nil {
+	req := &validator.UpdateUserPassword{}
+	if err := ctx.ValidateBody(req); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -312,7 +312,7 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(validator.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		ctx.ResponseError(&app.Err{
 			Status:  http.StatusUnauthorized,
 			Message: "Invalid login credentials.",
@@ -321,7 +321,7 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 		return
 	}
 
-	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(validator.Password), bcrypt.DefaultCost)
+	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if er != nil {
 		ctx.ResponseError(&app.Err{
 			Status:  http.StatusInternalServerError,

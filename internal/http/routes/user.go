@@ -26,29 +26,28 @@ func user(r *app.Routes) {
 	r.Post("users/logout", controller.Logout, middleware.Auth).
 		Name("users.logout")
 
-	r.Prefix(func() {
-		r.Use(func() {
-			r.Get("users", controller.UserIndex).
-				Name("users.index")
+	r.Prefix("dashboard", func() {
 
-			r.Get("users/trashed", controller.UserTrashed).
-				Name("users.trashed")
+		r.Get("users", controller.UserIndex).
+			Name("users.index")
 
-			r.Patch("users/:id/profile", controller.UserUpdateProfile).
-				Name("users.update-profile")
+		r.Get("users/trashed", controller.UserTrashed).
+			Name("users.trashed")
 
-			r.Patch("users/:id/email", controller.UserUpdateEmail).
-				Name("users.update-email")
+		r.Patch("users/:id/profile", controller.UserUpdateProfile).
+			Name("users.update-profile")
 
-			r.Patch("users/:id/password", controller.UserUpdatePassword).
-				Name("users.update-password")
+		r.Patch("users/:id/email", controller.UserUpdateEmail).
+			Name("users.update-email")
 
-			r.Delete("users/:id", controller.UserDestroy).
-				Name("users.destroy")
+		r.Patch("users/:id/password", controller.UserUpdatePassword).
+			Name("users.update-password")
 
-			r.Patch("users/:id/restore", controller.UserDestroy).
-				Name("users.restore")
+		r.Delete("users/:id", controller.UserDestroy).
+			Name("users.destroy")
 
-		}, middleware.Auth)
-	}, "dashboard")
+		r.Patch("users/:id/restore", controller.UserDestroy).
+			Name("users.restore")
+
+	}, middleware.Auth)
 }

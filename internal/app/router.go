@@ -75,13 +75,14 @@ func (r *Routes) Head(path string, ctrl ControllerFun, middlewares ...Middleware
 	return r.SetRoute(http.MethodHead, path, ctrl, middlewares...)
 }
 
-func (r *Routes) Prefix(callback func(), prefix ...string) {
-	for i, p := range prefix {
-		prefix[i] = strings.Trim(p, "/")
-	}
-	r.prefixes = append(r.prefixes, prefix...)
+func (r *Routes) Prefix(prefix string, callback func(), middlewares ...MiddlewareFun) {
+	prefixes := strings.Split(strings.Trim(prefix, "/"), "/")
+
+	r.prefixes = append(r.prefixes, prefixes...)
+	r.middlewares = append(r.middlewares, middlewares...)
 	callback()
-	r.prefixes = r.prefixes[:len(r.prefixes)-len(prefix)]
+	r.prefixes = r.prefixes[:len(r.prefixes)-len(prefixes)]
+	r.middlewares = r.middlewares[:len(r.middlewares)-len(middlewares)]
 }
 
 func (r *Routes) Use(callback func(), middlewares ...MiddlewareFun) {
@@ -126,6 +127,9 @@ func (r *Routes) SetRoute(method string, path string, ctrl ControllerFun, middle
 	r.routes = append(r.routes, newRoute)
 	return r
 }
+
+// --------------------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------------------
 
 // construlle las rutas optimizadas para luego buscar
 // toma el array de rutas y las convierte en ramas

@@ -11,19 +11,19 @@ import (
 )
 
 type User struct {
-	ID              bson.ObjectID   `bson:"_id,omitempty"           json:"id"`
-	Email           string          `bson:"email"                   json:"email"`
-	Password        string          `bson:"password"                json:"-"`
-	AccessTokens    []*AccessToken  `bson:"access_tokens,omitempty" json:"access_tokens,omitempty"` // hasMany
-	Profile         *Profile        `bson:"profile,omitempty"       json:"profile,omitempty"`
-	RoleIDs         []bson.ObjectID `bson:"role_ids"                json:"-"`
-	Roles           []*Role         `bson:"roles,omitempty"         json:"roles,omitempty"` // manyToMany
-	PermissionIDs   []bson.ObjectID `bson:"permission_ids"          json:"-"`
-	Permissions     []*Permission   `bson:"permissions,omitempty"   json:"permissions,omitempty"` // manyToMany
-	EmailVerifiedAt *time.Time      `bson:"email_verified_at"       json:"email_verified_at"`
-	CreatedAt       time.Time       `bson:"created_at"              json:"created_at"`
-	UpdatedAt       time.Time       `bson:"updated_at"              json:"updated_at"`
-	DeletedAt       *time.Time      `bson:"deleted_at,omitempty"    json:"deleted_at,omitempty"`
+	ID              bson.ObjectID   `bson:"_id,omitempty"               json:"id"`
+	Email           string          `bson:"email"                       json:"email"`
+	Password        string          `bson:"password"                    json:"-"`
+	AccessTokens    []*AccessToken  `bson:"access_tokens,omitempty"     json:"access_tokens,omitempty"` // hasMany
+	Profile         *Profile        `bson:"profile,omitempty"           json:"profile,omitempty"`
+	RoleIDs         []bson.ObjectID `bson:"role_ids"                    json:"-"`
+	Roles           []*Role         `bson:"roles,omitempty"             json:"roles,omitempty"` // manyToMany
+	PermissionIDs   []bson.ObjectID `bson:"permission_ids"              json:"-"`
+	Permissions     []*Permission   `bson:"permissions,omitempty"       json:"permissions,omitempty"` // manyToMany
+	EmailVerifiedAt *time.Time      `bson:"email_verified_at,omitempty" json:"email_verified_at,omitempty"`
+	CreatedAt       time.Time       `bson:"created_at"                  json:"created_at"`
+	UpdatedAt       time.Time       `bson:"updated_at"                  json:"updated_at"`
+	DeletedAt       *time.Time      `bson:"deleted_at,omitempty"        json:"deleted_at,omitempty"`
 	app.Odm
 }
 
@@ -39,8 +39,8 @@ type Profile struct {
 
 func NewUser() *User {
 	user := &User{}
-	user.Profile = &Profile{}
 	user.Odm.Model = user
+	user.Profile = &Profile{}
 	return user
 }
 

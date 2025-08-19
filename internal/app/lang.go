@@ -2,7 +2,7 @@ package app
 
 import "fmt"
 
-func Translate(lang string, format string, fields ...Item) string {
+func Translate(lang string, format string, fields ...Entry) string {
 	if words, ok := TranslateMap[lang]; ok {
 
 		if msg, found := words[format]; found {

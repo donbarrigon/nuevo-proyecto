@@ -86,7 +86,7 @@ func (o *Odm) Find(result any, filter bson.D) Error {
 // trae 1 documento segun el filtro
 func (o *Odm) FindOne(filter bson.D, opts ...options.Lister[options.FindOneOptions]) Error {
 	if err := DB.Collection(o.Model.CollectionName()).FindOne(context.TODO(), filter, opts...).Decode(o.Model); err != nil {
-		Log.Warning("Failed to FindOne :error", Item{"collection", o.Model.CollectionName()}, Item{"filter", filter}, Item{"opts", opts}, Item{"error", err.Error()})
+		Log.Warning("Failed to FindOne :error", Entry{"collection", o.Model.CollectionName()}, Entry{"filter", filter}, Entry{"opts", opts}, Entry{"error", err.Error()})
 		return Errors.Mongo(err)
 	}
 	return nil

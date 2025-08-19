@@ -34,7 +34,7 @@ func Validate(ctx *HttpContext, req any) Error {
 		if ruleTag != "" {
 			rules := strings.Split(ruleTag, "|")
 			jsonTag := field.Tag.Get("json")
-			jsonName := strings.Split(jsonTag, ",")[0] // Por si el tag es "name,omitempty"
+			jsonName := strings.Split(jsonTag, ",")[0] // Por si el tag es "name,omEntrypty"
 			if jsonName == "" {
 				jsonName = field.Name // fallback al nombre del campo si no hay tag
 			}
@@ -526,7 +526,7 @@ func MinSlice(attribute string, value []any, limit int) *FieldError {
 	if len(value) < limit {
 		return &FieldError{
 			FieldName: attribute,
-			Message:   "The {attribute} must have at least {limit} items.",
+			Message:   "The {attribute} must have at least {limit} Entrys.",
 			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
@@ -540,7 +540,7 @@ func MaxSlice(attribute string, value []any, limit int) *FieldError {
 	if len(value) > limit {
 		return &FieldError{
 			FieldName: attribute,
-			Message:   "The {attribute} may not have more than {limit} items.",
+			Message:   "The {attribute} may not have more than {limit} Entrys.",
 			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
@@ -1191,7 +1191,7 @@ func Regex(attribute string, value string, pattern string) *FieldError {
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		Log.Warning("Invalid regular expression pattern: :pattern", Item{"pattern", pattern})
+		Log.Warning("Invalid regular expression pattern: :pattern", Entry{"pattern", pattern})
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid regular expression pattern.",
@@ -1598,7 +1598,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 		var er error
 		id, er = bson.ObjectIDFromHex(currentID)
 		if er != nil {
-			Log.Warning("Failed to convert string [:input_id] to ObjectID :error ", Item{"error", er.Error()}, Item{"input_id", currentID})
+			Log.Warning("Failed to convert string [:input_id] to ObjectID :error ", Entry{"error", er.Error()}, Entry{"input_id", currentID})
 		}
 	}
 
@@ -1610,7 +1610,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 		return nil
 	}
 	if err != nil {
-		Log.Warning("Failed to find document in database: collection: :collection value: :value error: :error ", Item{"error", err.Error()}, Item{"collection", collection}, Item{"value", value})
+		Log.Warning("Failed to find document in database: collection: :collection value: :value error: :error ", Entry{"error", err.Error()}, Entry{"collection", collection}, Entry{"value", value})
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} failed to find document in database.",
@@ -1630,18 +1630,18 @@ func Unique(attribute string, collection string, field string, value any, curren
 
 func UniqueIn[T comparable](attribute string, list []T) *FieldError {
 	seen := make(map[T]bool)
-	for _, item := range list {
-		if seen[item] {
+	for _, Entry := range list {
+		if seen[Entry] {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The {attribute} field has a duplicate value.",
 				Placeholders: List{
 					{Key: "attribute", Value: attribute},
-					{Key: "value", Value: item},
+					{Key: "value", Value: Entry},
 				},
 			}
 		}
-		seen[item] = true
+		seen[Entry] = true
 	}
 	return nil
 }

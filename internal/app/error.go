@@ -17,18 +17,18 @@ type Error interface {
 	GetErr() any
 	GetMap() (map[string][]string, map[string][]List)
 	SetStatus(code int)
-	SetMessage(format string, ph ...Item)
-	SetErr(format any, ph ...Item)
-	Translate(lang string)                         // traduce el error
-	Append(err *FieldError)                        // agrega error si es que hay con struct.
-	Appendf(field string, text string, ph ...Item) // agrega error si es que hay con valores por separado.
-	Errors() Error                                 // para el retorno de multiples errores usado en el request
+	SetMessage(format string, ph ...Entry)
+	SetErr(format any, ph ...Entry)
+	Translate(lang string)                          // traduce el error
+	Append(err *FieldError)                         // agrega error si es que hay con struct.
+	Appendf(field string, text string, ph ...Entry) // agrega error si es que hay con valores por separado.
+	Errors() Error                                  // para el retorno de multiples errores usado en el request
 }
 
 type Err struct {
 	Status    int                 `json:"-"`
 	Message   string              `json:"message"`
-	Err       any                 `json:"errors,omitempty"`
+	Err       any                 `json:"errors,omEntrypty"`
 	ErrMap    map[string][]string `json:"-"`
 	phMessage List                `json:"-"`
 	phMap     map[string][]List   `json:"-"`
@@ -50,7 +50,7 @@ var Errors = Err{
 	phMap:     make(map[string][]List),
 }
 
-func (e *Err) New(status int, message string, err any, ph ...Item) Error {
+func (e *Err) New(status int, message string, err any, ph ...Entry) Error {
 	return &Err{
 		Status:    status,
 		Message:   message,
@@ -98,7 +98,7 @@ func (e *Err) SetStatus(code int) {
 	e.Status = code
 }
 
-func (e *Err) SetMessage(format string, ph ...Item) {
+func (e *Err) SetMessage(format string, ph ...Entry) {
 	e.Message = format
 	if len(e.phMessage) == 0 {
 		e.phMessage = ph
@@ -107,7 +107,7 @@ func (e *Err) SetMessage(format string, ph ...Item) {
 	}
 }
 
-func (e *Err) SetErr(format any, ph ...Item) {
+func (e *Err) SetErr(format any, ph ...Entry) {
 	e.Err = format
 	if len(e.phMessage) == 0 {
 		e.phMessage = ph
@@ -136,7 +136,7 @@ func (e *Err) Translate(l string) {
 	}
 }
 
-func (e *Err) Appendf(field string, text string, ph ...Item) {
+func (e *Err) Appendf(field string, text string, ph ...Entry) {
 	if text != "" {
 		e.ErrMap[field] = append(e.ErrMap[field], text)
 		e.phMap[field] = append(e.phMap[field], ph)
@@ -350,7 +350,7 @@ func (e *Err) HexID(err error) Error {
 	}
 }
 
-func (e *Err) NotFoundf(format string, ph ...Item) Error {
+func (e *Err) NotFoundf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusNotFound,
 		Message:   "Resource not found",
@@ -359,7 +359,7 @@ func (e *Err) NotFoundf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) NoDocumentsf(format string, ph ...Item) Error {
+func (e *Err) NoDocumentsf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusNotFound,
 		Message:   "No records found",
@@ -368,7 +368,7 @@ func (e *Err) NoDocumentsf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) ClientDisconnectedf(format string, ph ...Item) Error {
+func (e *Err) ClientDisconnectedf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Client disconnected",
@@ -377,7 +377,7 @@ func (e *Err) ClientDisconnectedf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) BadRequestf(format string, ph ...Item) Error {
+func (e *Err) BadRequestf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusBadRequest,
 		Message:   "Invalid request",
@@ -386,7 +386,7 @@ func (e *Err) BadRequestf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Timeoutf(format string, ph ...Item) Error {
+func (e *Err) Timeoutf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusRequestTimeout,
 		Message:   "Request timeout",
@@ -395,7 +395,7 @@ func (e *Err) Timeoutf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Writef(format string, ph ...Item) Error {
+func (e *Err) Writef(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Database write error",
@@ -404,7 +404,7 @@ func (e *Err) Writef(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Updatef(format string, ph ...Item) Error {
+func (e *Err) Updatef(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Database update error",
@@ -413,7 +413,7 @@ func (e *Err) Updatef(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Deletef(format string, ph ...Item) Error {
+func (e *Err) Deletef(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Database deletion error",
@@ -422,7 +422,7 @@ func (e *Err) Deletef(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Restoref(format string, ph ...Item) Error {
+func (e *Err) Restoref(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Database restore error",
@@ -431,7 +431,7 @@ func (e *Err) Restoref(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) ForceDeletef(format string, ph ...Item) Error {
+func (e *Err) ForceDeletef(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Permanent deletion error",
@@ -440,7 +440,7 @@ func (e *Err) ForceDeletef(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Commandf(format string, ph ...Item) Error {
+func (e *Err) Commandf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Database command error",
@@ -449,7 +449,7 @@ func (e *Err) Commandf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) BulkWritef(format string, ph ...Item) Error {
+func (e *Err) BulkWritef(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusBadRequest,
 		Message:   "Bulk write operation error",
@@ -458,7 +458,7 @@ func (e *Err) BulkWritef(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Driverf(format string, ph ...Item) Error {
+func (e *Err) Driverf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusBadGateway,
 		Message:   "Database driver error",
@@ -467,7 +467,7 @@ func (e *Err) Driverf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Unknownf(format string, ph ...Item) Error {
+func (e *Err) Unknownf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Unexpected system error",
@@ -476,7 +476,7 @@ func (e *Err) Unknownf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) InternalServerErrorF(format string, ph ...Item) Error {
+func (e *Err) InternalServerErrorF(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Internal server error",
@@ -485,7 +485,7 @@ func (e *Err) InternalServerErrorF(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Unauthorizedf(format string, ph ...Item) Error {
+func (e *Err) Unauthorizedf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusUnauthorized,
 		Message:   "Unauthorized access",
@@ -494,7 +494,7 @@ func (e *Err) Unauthorizedf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) Forbiddenf(format string, ph ...Item) Error {
+func (e *Err) Forbiddenf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusForbidden,
 		Message:   "You do not have permission to perform this action.",
@@ -503,7 +503,7 @@ func (e *Err) Forbiddenf(format string, ph ...Item) Error {
 	}
 }
 
-func (e *Err) HexIDf(format string, ph ...Item) Error {
+func (e *Err) HexIDf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusBadRequest,
 		Message:   "Invalid hexadecimal identifier",
