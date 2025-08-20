@@ -10,7 +10,7 @@ func GetApi() *app.Routes {
 	r.Prefix("api", func() {
 		// aca todas las funciones que crean rutas
 		auth.User(r)
-		//permission(r)
+
 	})
 
 	return r

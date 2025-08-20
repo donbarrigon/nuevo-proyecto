@@ -474,7 +474,7 @@ func Logout(ctx *app.HttpContext) {
 
 	accessToken, ok := ctx.Auth.Token.(*model.AccessToken)
 	if !ok {
-		ctx.ResponseError(app.Errors.InternalServerErrorF("Invalid token type:"))
+		ctx.ResponseError(app.Errors.InternalServerErrorf("Invalid token type:"))
 		return
 	}
 

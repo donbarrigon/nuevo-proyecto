@@ -476,7 +476,7 @@ func (e *Err) Unknownf(format string, ph ...Entry) Error {
 	}
 }
 
-func (e *Err) InternalServerErrorF(format string, ph ...Entry) Error {
+func (e *Err) InternalServerErrorf(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
 		Message:   "Internal server error",
