@@ -103,7 +103,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 		}
 
 		if isRequired {
-			if e := Required(key, value.Interface()); e != nil {
+			if e := ValidateRequired(key, value.Interface()); e != nil {
 				err.Append(e)
 				continue
 			}
@@ -131,32 +131,32 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 				limit, _ := strconv.Atoi(param)
 				switch value.Kind() {
 				case reflect.String:
-					err.Append(MinString(key, value.String(), limit))
+					err.Append(ValidateMinString(key, value.String(), limit))
 				case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-					err.Append(MinNumber(key, value.Int(), int64(limit)))
+					err.Append(ValidateMinNumber(key, value.Int(), int64(limit)))
 				case reflect.Float32, reflect.Float64:
-					err.Append(MinNumber(key, value.Float(), float64(limit)))
+					err.Append(ValidateMinNumber(key, value.Float(), float64(limit)))
 				case reflect.Slice, reflect.Array:
-					err.Append(MinSlice(key, value.Interface().([]any), limit))
+					err.Append(ValidateMinSlice(key, value.Interface().([]any), limit))
 				}
 			case "max":
 				limit, _ := strconv.Atoi(param)
 				switch value.Kind() {
 				case reflect.String:
-					err.Append(MaxString(key, value.String(), limit))
+					err.Append(ValidateMaxString(key, value.String(), limit))
 				case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-					err.Append(MaxNumber(key, value.Int(), int64(limit)))
+					err.Append(ValidateMaxNumber(key, value.Int(), int64(limit)))
 				case reflect.Float32, reflect.Float64:
-					err.Append(MaxNumber(key, value.Float(), float64(limit)))
+					err.Append(ValidateMaxNumber(key, value.Float(), float64(limit)))
 				case reflect.Slice, reflect.Array:
-					err.Append(MaxSlice(key, value.Interface().([]any), limit))
+					err.Append(ValidateMaxSlice(key, value.Interface().([]any), limit))
 				}
 			case "required_if":
 				otherValue := getOtherFieldValueFromParam(val, param)
-				err.Append(RequiredIf(key, value.Interface(), otherValue, param))
+				err.Append(ValidateRequiredIf(key, value.Interface(), otherValue, param))
 			case "required_unless":
 				otherValue := getOtherFieldValueFromParam(val, param)
-				err.Append(RequiredUnless(key, value.Interface(), otherValue, param))
+				err.Append(ValidateRequiredUnless(key, value.Interface(), otherValue, param))
 			case "required_without", "required_with", "required_without_all", "required_with_all":
 				otherKeys := strings.Split(param, ",")
 				otherFields := make([]any, 0, len(otherKeys))
@@ -166,39 +166,39 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 
 				switch rule {
 				case "required_without_all":
-					err.Append(WithoutAll(key, value.Interface(), otherKeys, otherFields...))
+					err.Append(ValidateWithoutAll(key, value.Interface(), otherKeys, otherFields...))
 				case "required_without":
-					err.Append(Without(key, value.Interface(), otherKeys, otherFields...))
+					err.Append(ValidateWithout(key, value.Interface(), otherKeys, otherFields...))
 				case "required_with_all":
-					err.Append(WithAll(key, value.Interface(), otherKeys, otherFields...))
+					err.Append(ValidateWithAll(key, value.Interface(), otherKeys, otherFields...))
 				case "required_with":
-					err.Append(With(key, value.Interface(), otherKeys, otherFields...))
+					err.Append(ValidateWith(key, value.Interface(), otherKeys, otherFields...))
 				}
 			case "same":
 				otherValue := getOtherFieldValueFromParam(val, param)
-				err.Append(Same(key, value.Interface(), param, otherValue))
+				err.Append(ValidateSame(key, value.Interface(), param, otherValue))
 
 			case "different":
 				otherValue := getOtherFieldValueFromParam(val, param)
-				err.Append(Different(key, value.Interface(), param, otherValue))
+				err.Append(ValidateDifferent(key, value.Interface(), param, otherValue))
 
 			case "confirmed":
 				confirmationattribute := key + "_confirmation"
 				confirmationValue := getOtherFieldValueFromParam(val, confirmationattribute)
-				err.Append(Confirmed(key, value.Interface(), confirmationValue))
+				err.Append(ValidateConfirmed(key, value.Interface(), confirmationValue))
 			case "accepted":
-				err.Append(Accepted(key, value.Interface()))
+				err.Append(ValidateAccepted(key, value.Interface()))
 			case "declined":
-				err.Append(Declined(key, value.Interface()))
+				err.Append(ValidateDeclined(key, value.Interface()))
 			case "digits":
 				limit, _ := strconv.Atoi(param)
-				err.Append(Digits(key, value.Interface(), limit))
+				err.Append(ValidateDigits(key, value.Interface(), limit))
 			case "digits_between":
 				rangeParts := strings.Split(param, ",")
 				if len(rangeParts) == 2 {
 					min, _ := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
 					max, _ := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
-					err.Append(DigitsBetween(key, value.Interface(), min, max))
+					err.Append(ValidateDigitsBetween(key, value.Interface(), min, max))
 				} else {
 					err.Append(&FieldError{
 						FieldName: key,
@@ -209,86 +209,86 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					})
 				}
 			case "email":
-				err.Append(Email(key, value.String()))
+				err.Append(ValidateEmail(key, value.String()))
 			case "url":
-				err.Append(URL(key, value.String()))
+				err.Append(ValidateURL(key, value.String()))
 			case "uuid":
-				err.Append(UUID(key, value.String()))
+				err.Append(ValidateUUID(key, value.String()))
 			case "ulid":
-				err.Append(ULID(key, value.String()))
+				err.Append(ValidateULID(key, value.String()))
 			case "ip":
-				err.Append(IP(key, value.String()))
+				err.Append(ValidateIP(key, value.String()))
 			case "ipv4":
-				err.Append(IPv4(key, value.String()))
+				err.Append(ValidateIPv4(key, value.String()))
 			case "ipv6":
-				err.Append(IPv6(key, value.String()))
+				err.Append(ValidateIPv6(key, value.String()))
 			case "mac", "mac_address":
-				err.Append(MACAddress(key, value.String()))
+				err.Append(ValidateMACAddress(key, value.String()))
 			case "ascii":
-				err.Append(ASCII(key, value.String()))
+				err.Append(ValidateASCII(key, value.String()))
 			case "lowercase":
-				err.Append(Lowercase(key, value.String()))
+				err.Append(ValidateLowercase(key, value.String()))
 			case "uppercase":
-				err.Append(Uppercase(key, value.String()))
+				err.Append(ValidateUppercase(key, value.String()))
 			case "hex":
-				err.Append(Hex(key, value.String()))
+				err.Append(ValidateHex(key, value.String()))
 			case "hex_color":
-				err.Append(HexColor(key, value.String()))
+				err.Append(ValidateHexColor(key, value.String()))
 			case "json":
-				err.Append(JSON(key, value.String()))
+				err.Append(ValidateJSON(key, value.String()))
 			case "slug":
-				err.Append(Slug(key, value.String()))
+				err.Append(ValidateSlug(key, value.String()))
 			case "regex":
-				err.Append(Regex(key, value.String(), param))
+				err.Append(ValidateRegex(key, value.String(), param))
 			case "not_regex":
-				err.Append(NotRegex(key, value.String(), param))
+				err.Append(ValidateNotRegex(key, value.String(), param))
 			case "alpha":
-				err.Append(Alpha(key, value.String()))
+				err.Append(ValidateAlpha(key, value.String()))
 			case "alpha_dash":
-				err.Append(AlphaDash(key, value.String()))
+				err.Append(ValidateAlphaDash(key, value.String()))
 			case "alpha_espaces":
-				err.Append(AlphaSpaces(key, value.String()))
+				err.Append(ValidateAlphaSpaces(key, value.String()))
 			case "alpha_dash_espaces":
-				err.Append(AlphaDashSpaces(key, value.String()))
+				err.Append(ValidateAlphaDashSpaces(key, value.String()))
 			case "alpha_num":
-				err.Append(AlphaNum(key, value.String()))
+				err.Append(ValidateAlphaNum(key, value.String()))
 			case "alpha_num_dash":
-				err.Append(AlphaNumDash(key, value.String()))
+				err.Append(ValidateAlphaNumDash(key, value.String()))
 			case "alpha_num_espaces":
-				err.Append(AlphaNumSpaces(key, value.String()))
+				err.Append(ValidateAlphaNumSpaces(key, value.String()))
 			case "alpha_num_dash_spaces":
-				err.Append(AlphaNumDashSpaces(key, value.String()))
+				err.Append(ValidateAlphaNumDashSpaces(key, value.String()))
 			case "alpha_accents":
-				err.Append(AlphaAccents(key, value.String()))
+				err.Append(ValidateAlphaAccents(key, value.String()))
 			case "alpha_dash_accents":
-				err.Append(AlphaDashAccents(key, value.String()))
+				err.Append(ValidateAlphaDashAccents(key, value.String()))
 			case "alpha_spaces_accents":
-				err.Append(AlphaSpacesAccents(key, value.String()))
+				err.Append(ValidateAlphaSpacesAccents(key, value.String()))
 			case "alpha_dash_spaces_accents":
-				err.Append(AlphaDashSpacesAccents(key, value.String()))
+				err.Append(ValidateAlphaDashSpacesAccents(key, value.String()))
 			case "alpha_num_accents":
-				err.Append(AlphaNumAccents(key, value.String()))
+				err.Append(ValidateAlphaNumAccents(key, value.String()))
 			case "alpha_num_dash_accents":
-				err.Append(AlphaNumDashAccents(key, value.String()))
+				err.Append(ValidateAlphaNumDashAccents(key, value.String()))
 			case "alpha_num_spaces_accents":
-				err.Append(AlphaNumSpacesAccents(key, value.String()))
+				err.Append(ValidateAlphaNumSpacesAccents(key, value.String()))
 			case "alpha_num_dash_spaces_accents":
-				err.Append(AlphaNumDashSpacesAccents(key, value.String()))
+				err.Append(ValidateAlphaNumDashSpacesAccents(key, value.String()))
 			case "username", "user_name":
-				err.Append(Username(key, value.String()))
+				err.Append(ValidateUsername(key, value.String()))
 			case "starts_with":
-				err.Append(StartsWith(key, value.String(), param))
+				err.Append(ValidateStartsWith(key, value.String(), param))
 			case "ends_with":
-				err.Append(EndsWith(key, value.String(), param))
+				err.Append(ValidateEndsWith(key, value.String(), param))
 			case "contains":
-				err.Append(Contains(key, value.String(), param))
+				err.Append(ValidateContains(key, value.String(), param))
 			case "not_contains":
-				err.Append(NotContains(key, value.String(), param))
+				err.Append(ValidateNotContains(key, value.String(), param))
 			case "in":
 				values := strings.Split(param, ",")
 				switch value.Kind() {
 				case reflect.String:
-					err.Append(In(key, value.String(), values...))
+					err.Append(ValidateIn(key, value.String(), values...))
 				case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 					ints := make([]int64, 0, len(values))
 					for _, v := range values {
@@ -296,7 +296,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 							ints = append(ints, n)
 						}
 					}
-					err.Append(In(key, value.Int(), ints...))
+					err.Append(ValidateIn(key, value.Int(), ints...))
 				case reflect.Float32, reflect.Float64:
 					floats := make([]float64, 0, len(values))
 					for _, v := range values {
@@ -304,13 +304,13 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 							floats = append(floats, f)
 						}
 					}
-					err.Append(In(key, value.Float(), floats...))
+					err.Append(ValidateIn(key, value.Float(), floats...))
 				}
 			case "nin", "not_in":
 				values := strings.Split(param, ",")
 				switch value.Kind() {
 				case reflect.String:
-					err.Append(Nin(key, value.String(), values...))
+					err.Append(ValidateNin(key, value.String(), values...))
 				case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 					ints := make([]int64, 0, len(values))
 					for _, v := range values {
@@ -318,7 +318,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 							ints = append(ints, n)
 						}
 					}
-					err.Append(Nin(key, value.Int(), ints...))
+					err.Append(ValidateNin(key, value.Int(), ints...))
 				case reflect.Float32, reflect.Float64:
 					floats := make([]float64, 0, len(values))
 					for _, v := range values {
@@ -326,14 +326,32 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 							floats = append(floats, f)
 						}
 					}
-					err.Append(Nin(key, value.Float(), floats...))
+					err.Append(ValidateNin(key, value.Float(), floats...))
+				}
+			case "exists":
+				params := strings.Split(param, ",")
+				if len(params) != 2 {
+					err.Appendf(key, "the exists rule must have two parameters")
+				} else {
+					var v any
+					if strings.HasSuffix(params[1], "_id") {
+						var er error
+						v, er = bson.ObjectIDFromHex(value.String())
+						if er != nil {
+							err.Appendf(key, "the value is not a valid id: :error", Entry{"error", er})
+						}
+					} else {
+						v = value
+					}
+					err.Append(ValidateExists(key, params[0], params[1], v))
 				}
 			case "unique":
 				params := strings.Split(param, ",")
 				if len(params) != 2 {
 					err.Appendf(key, "the unique rule must have two parameters")
+				} else {
+					err.Append(ValidateUnique(key, params[0], params[1], value, ctx.Params["id"]))
 				}
-				err.Append(Unique(key, params[0], params[1], value, ctx.Params["id"]))
 			case "unique_in":
 				switch value.Kind() {
 				case reflect.Slice:
@@ -341,22 +359,22 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					// pendiente por revisar
 					slice := value.Interface()
 					if strSlice, ok := slice.([]string); ok {
-						err.Append(UniqueIn(key, strSlice))
+						err.Append(ValidateUniqueIn(key, strSlice))
 					}
 				}
 			case "positive":
 				switch value.Kind() {
 				case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-					err.Append(Positive(key, value.Int()))
+					err.Append(ValidatePositive(key, value.Int()))
 				case reflect.Float32, reflect.Float64:
-					err.Append(Positive(key, value.Float()))
+					err.Append(ValidatePositive(key, value.Float()))
 				}
 			case "negative":
 				switch value.Kind() {
 				case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-					err.Append(Negative(key, value.Int()))
+					err.Append(ValidateNegative(key, value.Int()))
 				case reflect.Float32, reflect.Float64:
-					err.Append(Negative(key, value.Float()))
+					err.Append(ValidateNegative(key, value.Float()))
 				}
 			case "between":
 				rangeVals := strings.Split(param, ",")
@@ -365,11 +383,11 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 						min, _ := strconv.ParseInt(rangeVals[0], 10, 64)
 						max, _ := strconv.ParseInt(rangeVals[1], 10, 64)
-						err.Append(Between(key, value.Int(), min, max))
+						err.Append(ValidateBetween(key, value.Int(), min, max))
 					case reflect.Float32, reflect.Float64:
 						min, _ := strconv.ParseFloat(rangeVals[0], 64)
 						max, _ := strconv.ParseFloat(rangeVals[1], 64)
-						err.Append(Between(key, value.Float(), min, max))
+						err.Append(ValidateBetween(key, value.Float(), min, max))
 					}
 				}
 			case "before":
@@ -385,7 +403,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					})
 					continue
 				}
-				err.Append(Before(key, value.Interface().(time.Time), t))
+				err.Append(ValidateBefore(key, value.Interface().(time.Time), t))
 			case "after":
 				t, e := time.Parse(time.RFC3339, param)
 				if e != nil {
@@ -399,18 +417,18 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					})
 					continue
 				}
-				err.Append(After(key, value.Interface().(time.Time), t))
+				err.Append(ValidateAfter(key, value.Interface().(time.Time), t))
 			case "before_now":
-				err.Append(BeforeNow(key, value.Interface().(time.Time)))
+				err.Append(ValidateBeforeNow(key, value.Interface().(time.Time)))
 			case "after_now":
-				err.Append(AfterNow(key, value.Interface().(time.Time)))
+				err.Append(ValidateAfterNow(key, value.Interface().(time.Time)))
 			case "date_between":
 				rangeVals := strings.Split(param, ",")
 				if len(rangeVals) == 2 {
 					start, errStart := time.Parse(time.RFC3339, rangeVals[0])
 					end, errEnd := time.Parse(time.RFC3339, rangeVals[1])
 					if errStart == nil && errEnd == nil {
-						err.Append(DateBetween(key, value.Interface().(time.Time), start, end))
+						err.Append(ValidateDateBetween(key, value.Interface().(time.Time), start, end))
 						continue
 					}
 					if errStart != nil {
@@ -466,7 +484,7 @@ func getOtherFieldValueFromParam(val reflect.Value, param string) any {
 	return nil
 }
 
-func MinNumber[T constraints.Integer | constraints.Float](attribute string, value T, limit T) *FieldError {
+func ValidateMinNumber[T constraints.Integer | constraints.Float](attribute string, value T, limit T) *FieldError {
 	if value < limit {
 		return &FieldError{
 			FieldName: attribute,
@@ -480,7 +498,7 @@ func MinNumber[T constraints.Integer | constraints.Float](attribute string, valu
 	return nil
 }
 
-func MaxNumber[T constraints.Integer | constraints.Float](attribute string, value T, limit T) *FieldError {
+func ValidateMaxNumber[T constraints.Integer | constraints.Float](attribute string, value T, limit T) *FieldError {
 	if value > limit {
 		return &FieldError{
 			FieldName: attribute,
@@ -494,7 +512,7 @@ func MaxNumber[T constraints.Integer | constraints.Float](attribute string, valu
 	return nil
 }
 
-func MinString(attribute string, value string, limit int) *FieldError {
+func ValidateMinString(attribute string, value string, limit int) *FieldError {
 	if len(value) < limit {
 		return &FieldError{
 			FieldName: attribute,
@@ -508,7 +526,7 @@ func MinString(attribute string, value string, limit int) *FieldError {
 	return nil
 }
 
-func MaxString(attribute string, value string, limit int) *FieldError {
+func ValidateMaxString(attribute string, value string, limit int) *FieldError {
 	if len(value) > limit {
 		return &FieldError{
 			FieldName: attribute,
@@ -522,7 +540,7 @@ func MaxString(attribute string, value string, limit int) *FieldError {
 	return nil
 }
 
-func MinSlice(attribute string, value []any, limit int) *FieldError {
+func ValidateMinSlice(attribute string, value []any, limit int) *FieldError {
 	if len(value) < limit {
 		return &FieldError{
 			FieldName: attribute,
@@ -536,7 +554,7 @@ func MinSlice(attribute string, value []any, limit int) *FieldError {
 	return nil
 }
 
-func MaxSlice(attribute string, value []any, limit int) *FieldError {
+func ValidateMaxSlice(attribute string, value []any, limit int) *FieldError {
 	if len(value) > limit {
 		return &FieldError{
 			FieldName: attribute,
@@ -578,7 +596,7 @@ func isEmpty(value any) bool {
 	}
 }
 
-func Required(attribute string, value any) *FieldError {
+func ValidateRequired(attribute string, value any) *FieldError {
 	if isEmpty(value) {
 		return &FieldError{
 			FieldName: attribute,
@@ -591,7 +609,7 @@ func Required(attribute string, value any) *FieldError {
 	return nil
 }
 
-func RequiredIf[T comparable](attribute string, value any, other T, param string) *FieldError {
+func ValidateRequiredIf[T comparable](attribute string, value any, other T, param string) *FieldError {
 	comparisons := []string{">=", "<=", "!=", ">", "<", "=="}
 	actual := fmt.Sprintf("%v", other)
 
@@ -674,7 +692,7 @@ func requiredIfError(attribute string, otherField string, otherValue string) *Fi
 	}
 }
 
-func RequiredUnless[T comparable](attribute string, value any, other T, param string) *FieldError {
+func ValidateRequiredUnless[T comparable](attribute string, value any, other T, param string) *FieldError {
 	comparisons := []string{">=", "<=", "!=", ">", "<", "=="}
 	actual := fmt.Sprintf("%v", other)
 
@@ -758,7 +776,7 @@ func requiredUnlessError(attribute, other, expected string) *FieldError {
 }
 
 // WithoutAll verifica si el campo debe estar presente cuando todos los otros campos están vacíos
-func WithoutAll(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
+func ValidateWithoutAll(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
 	allEmpty := true
 	for _, val := range otherValues {
 		if !isEmpty(val) {
@@ -780,7 +798,7 @@ func WithoutAll(attribute string, value any, otherFieldNames []string, otherValu
 	return nil
 }
 
-func Without(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
+func ValidateWithout(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
 	anyEmpty := false
 	for _, val := range otherValues {
 		if isEmpty(val) {
@@ -802,7 +820,7 @@ func Without(attribute string, value any, otherFieldNames []string, otherValues 
 	return nil
 }
 
-func WithAll(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
+func ValidateWithAll(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
 	allFilled := true
 	for _, val := range otherValues {
 		if isEmpty(val) {
@@ -824,7 +842,7 @@ func WithAll(attribute string, value any, otherFieldNames []string, otherValues 
 	return nil
 }
 
-func With(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
+func ValidateWith(attribute string, value any, otherFieldNames []string, otherValues ...any) *FieldError {
 	anyFilled := false
 	for _, val := range otherValues {
 		if !isEmpty(val) {
@@ -846,7 +864,7 @@ func With(attribute string, value any, otherFieldNames []string, otherValues ...
 	return nil
 }
 
-func Same[T comparable](attribute string, value T, otherattribute string, other T) *FieldError {
+func ValidateSame[T comparable](attribute string, value T, otherattribute string, other T) *FieldError {
 	if value != other {
 		return &FieldError{
 			FieldName: attribute,
@@ -860,7 +878,7 @@ func Same[T comparable](attribute string, value T, otherattribute string, other 
 	return nil
 }
 
-func Different[T comparable](attribute string, value T, otherattribute string, other T) *FieldError {
+func ValidateDifferent[T comparable](attribute string, value T, otherattribute string, other T) *FieldError {
 	if value == other {
 		return &FieldError{
 			FieldName: attribute,
@@ -874,7 +892,7 @@ func Different[T comparable](attribute string, value T, otherattribute string, o
 	return nil
 }
 
-func Confirmed[T comparable](attribute string, value T, confirmation T) *FieldError {
+func ValidateConfirmed[T comparable](attribute string, value T, confirmation T) *FieldError {
 	if value != confirmation {
 		return &FieldError{
 			FieldName: attribute,
@@ -887,7 +905,7 @@ func Confirmed[T comparable](attribute string, value T, confirmation T) *FieldEr
 	return nil
 }
 
-func Accepted(attribute string, value any) *FieldError {
+func ValidateAccepted(attribute string, value any) *FieldError {
 	v := fmt.Sprintf("%v", value)
 	acceptedValues := []string{"yes", "on", "1", "true"}
 	for _, a := range acceptedValues {
@@ -904,7 +922,7 @@ func Accepted(attribute string, value any) *FieldError {
 	}
 }
 
-func Declined(attribute string, value any) *FieldError {
+func ValidateDeclined(attribute string, value any) *FieldError {
 	v := fmt.Sprintf("%v", value)
 	declinedValues := []string{"no", "off", "0", "false"}
 	for _, d := range declinedValues {
@@ -921,7 +939,7 @@ func Declined(attribute string, value any) *FieldError {
 	}
 }
 
-func Digits(attribute string, value any, length int) *FieldError {
+func ValidateDigits(attribute string, value any, length int) *FieldError {
 	v := fmt.Sprintf("%v", value)
 	if len(v) != length || !regexp.MustCompile(`^\d+$`).MatchString(v) {
 		return &FieldError{
@@ -936,7 +954,7 @@ func Digits(attribute string, value any, length int) *FieldError {
 	return nil
 }
 
-func DigitsBetween(attribute string, value any, min, max int) *FieldError {
+func ValidateDigitsBetween(attribute string, value any, min, max int) *FieldError {
 	v := fmt.Sprintf("%v", value)
 	length := len(v)
 	if length < min || length > max || !regexp.MustCompile(`^\d+$`).MatchString(v) {
@@ -953,7 +971,7 @@ func DigitsBetween(attribute string, value any, min, max int) *FieldError {
 	return nil
 }
 
-func Email(attribute, value string) *FieldError {
+func ValidateEmail(attribute, value string) *FieldError {
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(value) {
 		return &FieldError{
@@ -967,7 +985,7 @@ func Email(attribute, value string) *FieldError {
 	return nil
 }
 
-func URL(attribute, value string) *FieldError {
+func ValidateURL(attribute, value string) *FieldError {
 	urlRegex := regexp.MustCompile(`^(https?://)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(/[\w\-\./?%&=]*)?$`)
 	if !urlRegex.MatchString(value) {
 		return &FieldError{
@@ -981,7 +999,7 @@ func URL(attribute, value string) *FieldError {
 	return nil
 }
 
-func UUID(attribute, value string) *FieldError {
+func ValidateUUID(attribute, value string) *FieldError {
 	uuidRegex := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89ab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
 	if !uuidRegex.MatchString(value) {
 		return &FieldError{
@@ -995,7 +1013,7 @@ func UUID(attribute, value string) *FieldError {
 	return nil
 }
 
-func ULID(attribute, value string) *FieldError {
+func ValidateULID(attribute, value string) *FieldError {
 	ulidRegex := regexp.MustCompile(`^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$`)
 	if !ulidRegex.MatchString(value) {
 		return &FieldError{
@@ -1040,7 +1058,7 @@ func ULID(attribute, value string) *FieldError {
 	return nil
 }
 
-func IP(attribute, value string) *FieldError {
+func ValidateIP(attribute, value string) *FieldError {
 	if net.ParseIP(value) == nil {
 		return &FieldError{
 			FieldName: attribute,
@@ -1053,7 +1071,7 @@ func IP(attribute, value string) *FieldError {
 	return nil
 }
 
-func IPv4(attribute, value string) *FieldError {
+func ValidateIPv4(attribute, value string) *FieldError {
 	ip := net.ParseIP(value)
 	if ip == nil || ip.To4() == nil {
 		return &FieldError{
@@ -1067,7 +1085,7 @@ func IPv4(attribute, value string) *FieldError {
 	return nil
 }
 
-func IPv6(attribute, value string) *FieldError {
+func ValidateIPv6(attribute, value string) *FieldError {
 	ip := net.ParseIP(value)
 	if ip == nil || ip.To4() != nil || strings.Contains(ip.String(), "::ffff:") {
 		return &FieldError{
@@ -1081,7 +1099,7 @@ func IPv6(attribute, value string) *FieldError {
 	return nil
 }
 
-func MACAddress(attribute, value string) *FieldError {
+func ValidateMACAddress(attribute, value string) *FieldError {
 	if _, err := net.ParseMAC(value); err != nil {
 		return &FieldError{
 			FieldName: attribute,
@@ -1094,7 +1112,7 @@ func MACAddress(attribute, value string) *FieldError {
 	return nil
 }
 
-func ASCII(attribute, value string) *FieldError {
+func ValidateASCII(attribute, value string) *FieldError {
 	if !regexp.MustCompile(`^[\x00-\x7F]+$`).MatchString(value) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1107,7 +1125,7 @@ func ASCII(attribute, value string) *FieldError {
 	return nil
 }
 
-func Lowercase(attribute, value string) *FieldError {
+func ValidateLowercase(attribute, value string) *FieldError {
 	if value != strings.ToLower(value) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1120,7 +1138,7 @@ func Lowercase(attribute, value string) *FieldError {
 	return nil
 }
 
-func Uppercase(attribute, value string) *FieldError {
+func ValidateUppercase(attribute, value string) *FieldError {
 	if value != strings.ToUpper(value) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1133,7 +1151,7 @@ func Uppercase(attribute, value string) *FieldError {
 	return nil
 }
 
-func Hex(attribute, value string) *FieldError {
+func ValidateHex(attribute, value string) *FieldError {
 	if !regexp.MustCompile(`^[0-9a-fA-F]+$`).MatchString(value) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1146,7 +1164,7 @@ func Hex(attribute, value string) *FieldError {
 	return nil
 }
 
-func HexColor(attribute, value string) *FieldError {
+func ValidateHexColor(attribute, value string) *FieldError {
 	if !regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}){1,2}$`).MatchString(value) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1159,7 +1177,7 @@ func HexColor(attribute, value string) *FieldError {
 	return nil
 }
 
-func JSON(attribute string, value string) *FieldError {
+func ValidateJSON(attribute string, value string) *FieldError {
 	var js map[string]interface{}
 	if err := json.Unmarshal([]byte(value), &js); err != nil {
 		return &FieldError{
@@ -1173,7 +1191,7 @@ func JSON(attribute string, value string) *FieldError {
 	return nil
 }
 
-func Slug(attribute string, value string) *FieldError {
+func ValidateSlug(attribute string, value string) *FieldError {
 	slugRegex := regexp.MustCompile(`^[a-z0-9]+(?:[-_][a-z0-9]+)*$`)
 	if !slugRegex.MatchString(value) {
 		return &FieldError{
@@ -1187,11 +1205,11 @@ func Slug(attribute string, value string) *FieldError {
 	return nil
 }
 
-func Regex(attribute string, value string, pattern string) *FieldError {
+func ValidateRegex(attribute string, value string, pattern string) *FieldError {
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		Log.Warning("Invalid regular expression pattern: :pattern", Entry{"pattern", pattern})
+		PrintWarning("Invalid regular expression pattern: :pattern", Entry{"pattern", pattern})
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid regular expression pattern.",
@@ -1213,7 +1231,7 @@ func Regex(attribute string, value string, pattern string) *FieldError {
 	return nil
 }
 
-func NotRegex(attribute string, value string, pattern string) *FieldError {
+func ValidateNotRegex(attribute string, value string, pattern string) *FieldError {
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		return &FieldError{
@@ -1236,7 +1254,7 @@ func NotRegex(attribute string, value string, pattern string) *FieldError {
 	return nil
 }
 
-func Alpha(attribute string, value string) *FieldError {
+func ValidateAlpha(attribute string, value string) *FieldError {
 	alphaRegex := regexp.MustCompile(`^[a-zA-Z]+$`)
 	if !alphaRegex.MatchString(value) {
 		return &FieldError{
@@ -1250,7 +1268,7 @@ func Alpha(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaDash(attribute string, value string) *FieldError {
+func ValidateAlphaDash(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1264,7 +1282,7 @@ func AlphaDash(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaSpaces(attribute string, value string) *FieldError {
+func ValidateAlphaSpaces(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z\s]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1278,7 +1296,7 @@ func AlphaSpaces(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaDashSpaces(attribute string, value string) *FieldError {
+func ValidateAlphaDashSpaces(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9_\s-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1292,7 +1310,7 @@ func AlphaDashSpaces(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNum(attribute string, value string) *FieldError {
+func ValidateAlphaNum(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1306,7 +1324,7 @@ func AlphaNum(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNumDash(attribute string, value string) *FieldError {
+func ValidateAlphaNumDash(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1320,7 +1338,7 @@ func AlphaNumDash(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNumSpaces(attribute string, value string) *FieldError {
+func ValidateAlphaNumSpaces(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9\s]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1334,7 +1352,7 @@ func AlphaNumSpaces(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNumDashSpaces(attribute string, value string) *FieldError {
+func ValidateAlphaNumDashSpaces(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9_\s-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1348,7 +1366,7 @@ func AlphaNumDashSpaces(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaAccents(attribute string, value string) *FieldError {
+func ValidateAlphaAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1362,7 +1380,7 @@ func AlphaAccents(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaDashAccents(attribute string, value string) *FieldError {
+func ValidateAlphaDashAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ_-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1376,7 +1394,7 @@ func AlphaDashAccents(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaSpacesAccents(attribute string, value string) *FieldError {
+func ValidateAlphaSpacesAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1390,7 +1408,7 @@ func AlphaSpacesAccents(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaDashSpacesAccents(attribute string, value string) *FieldError {
+func ValidateAlphaDashSpacesAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ_\s-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1404,7 +1422,7 @@ func AlphaDashSpacesAccents(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNumAccents(attribute string, value string) *FieldError {
+func ValidateAlphaNumAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1418,7 +1436,7 @@ func AlphaNumAccents(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNumDashAccents(attribute string, value string) *FieldError {
+func ValidateAlphaNumDashAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ_-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1432,7 +1450,7 @@ func AlphaNumDashAccents(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNumSpacesAccents(attribute string, value string) *FieldError {
+func ValidateAlphaNumSpacesAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1446,7 +1464,7 @@ func AlphaNumSpacesAccents(attribute string, value string) *FieldError {
 	return nil
 }
 
-func AlphaNumDashSpacesAccents(attribute string, value string) *FieldError {
+func ValidateAlphaNumDashSpacesAccents(attribute string, value string) *FieldError {
 	regex := regexp.MustCompile(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ_\s-]+$`)
 	if !regex.MatchString(value) {
 		return &FieldError{
@@ -1465,7 +1483,7 @@ func isAlphaNumeric(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 }
 
-func Username(attribute string, value string) *FieldError {
+func ValidateUsername(attribute string, value string) *FieldError {
 	if len(value) == 0 || !isAlphaNumeric(rune(value[0])) || !isAlphaNumeric(rune(value[len(value)-1])) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1503,7 +1521,7 @@ func Username(attribute string, value string) *FieldError {
 	return nil
 }
 
-func StartsWith(attribute string, value string, prefix string) *FieldError {
+func ValidateStartsWith(attribute string, value string, prefix string) *FieldError {
 	if !strings.HasPrefix(value, prefix) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1517,7 +1535,7 @@ func StartsWith(attribute string, value string, prefix string) *FieldError {
 	return nil
 }
 
-func EndsWith(attribute string, value string, suffix string) *FieldError {
+func ValidateEndsWith(attribute string, value string, suffix string) *FieldError {
 	if !strings.HasSuffix(value, suffix) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1531,7 +1549,7 @@ func EndsWith(attribute string, value string, suffix string) *FieldError {
 	return nil
 }
 
-func Contains(attribute string, value string, substr string) *FieldError {
+func ValidateContains(attribute string, value string, substr string) *FieldError {
 	if !strings.Contains(value, substr) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1545,7 +1563,7 @@ func Contains(attribute string, value string, substr string) *FieldError {
 	return nil
 }
 
-func NotContains(attribute string, value string, substr string) *FieldError {
+func ValidateNotContains(attribute string, value string, substr string) *FieldError {
 	if strings.Contains(value, substr) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1559,7 +1577,7 @@ func NotContains(attribute string, value string, substr string) *FieldError {
 	return nil
 }
 
-func In[T comparable](attribute string, value T, allowed ...T) *FieldError {
+func ValidateIn[T comparable](attribute string, value T, allowed ...T) *FieldError {
 	for _, v := range allowed {
 		if value == v {
 			return nil
@@ -1575,7 +1593,7 @@ func In[T comparable](attribute string, value T, allowed ...T) *FieldError {
 	}
 }
 
-func Nin[T comparable](attribute string, value T, denied ...T) *FieldError {
+func ValidateNin[T comparable](attribute string, value T, denied ...T) *FieldError {
 	for _, v := range denied {
 		if value == v {
 			return &FieldError{
@@ -1591,14 +1609,51 @@ func Nin[T comparable](attribute string, value T, denied ...T) *FieldError {
 	return nil
 }
 
-func Unique(attribute string, collection string, field string, value any, currentID string) *FieldError {
+func ValidateExists(attribute string, collection string, field string, value any) *FieldError {
+	result := map[string]any{}
+
+	err := DB.Collection(collection).FindOne(context.TODO(), bson.D{
+		{Key: field, Value: value},
+	}).Decode(&result)
+
+	if err == mongo.ErrNoDocuments {
+		// No existe → error
+		return &FieldError{
+			FieldName: attribute,
+			Message:   "The {attribute} does not exist.",
+			Placeholders: List{
+				{Key: "attribute", Value: attribute},
+			},
+		}
+	}
+
+	if err != nil {
+		// Error inesperado en la consulta
+		PrintWarning("Failed to check existence in database: collection: :collection value: :value error: :error ",
+			Entry{"error", err.Error()},
+			Entry{"collection", collection},
+			Entry{"value", value},
+		)
+		return &FieldError{
+			FieldName: attribute,
+			Message:   "The {attribute} failed to check existence in database.",
+			Placeholders: List{
+				{Key: "attribute", Value: attribute},
+			},
+		}
+	}
+
+	return nil
+}
+
+func ValidateUnique(attribute string, collection string, field string, value any, currentID string) *FieldError {
 	result := map[string]any{}
 	var id bson.ObjectID
 	if currentID != "" {
 		var er error
 		id, er = bson.ObjectIDFromHex(currentID)
 		if er != nil {
-			Log.Warning("Failed to convert string [:input_id] to ObjectID :error ", Entry{"error", er.Error()}, Entry{"input_id", currentID})
+			PrintWarning("Failed to convert string [:input_id] to ObjectID :error ", Entry{"error", er.Error()}, Entry{"input_id", currentID})
 		}
 	}
 
@@ -1610,7 +1665,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 		return nil
 	}
 	if err != nil {
-		Log.Warning("Failed to find document in database: collection: :collection value: :value error: :error ", Entry{"error", err.Error()}, Entry{"collection", collection}, Entry{"value", value})
+		PrintWarning("Failed to find document in database: collection: :collection value: :value error: :error ", Entry{"error", err.Error()}, Entry{"collection", collection}, Entry{"value", value})
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} failed to find document in database.",
@@ -1628,7 +1683,7 @@ func Unique(attribute string, collection string, field string, value any, curren
 	}
 }
 
-func UniqueIn[T comparable](attribute string, list []T) *FieldError {
+func ValidateUniqueIn[T comparable](attribute string, list []T) *FieldError {
 	seen := make(map[T]bool)
 	for _, Entry := range list {
 		if seen[Entry] {
@@ -1646,7 +1701,7 @@ func UniqueIn[T comparable](attribute string, list []T) *FieldError {
 	return nil
 }
 
-func Positive[T constraints.Integer | constraints.Float](attribute string, value T) *FieldError {
+func ValidatePositive[T constraints.Integer | constraints.Float](attribute string, value T) *FieldError {
 	if value <= 0 {
 		return &FieldError{
 			FieldName: attribute,
@@ -1659,7 +1714,7 @@ func Positive[T constraints.Integer | constraints.Float](attribute string, value
 	return nil
 }
 
-func Negative[T constraints.Integer | constraints.Float](attribute string, value T) *FieldError {
+func ValidateNegative[T constraints.Integer | constraints.Float](attribute string, value T) *FieldError {
 	if value >= 0 {
 		return &FieldError{
 			FieldName: attribute,
@@ -1672,7 +1727,7 @@ func Negative[T constraints.Integer | constraints.Float](attribute string, value
 	return nil
 }
 
-func Between[T constraints.Integer | constraints.Float](attribute string, value T, min T, max T) *FieldError {
+func ValidateBetween[T constraints.Integer | constraints.Float](attribute string, value T, min T, max T) *FieldError {
 	if value < min || value > max {
 		return &FieldError{
 			FieldName: attribute,
@@ -1687,7 +1742,7 @@ func Between[T constraints.Integer | constraints.Float](attribute string, value 
 	return nil
 }
 
-func Before(attribute string, value time.Time, target time.Time) *FieldError {
+func ValidateBefore(attribute string, value time.Time, target time.Time) *FieldError {
 	if !value.Before(target) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1701,7 +1756,7 @@ func Before(attribute string, value time.Time, target time.Time) *FieldError {
 	return nil
 }
 
-func After(attribute string, value time.Time, target time.Time) *FieldError {
+func ValidateAfter(attribute string, value time.Time, target time.Time) *FieldError {
 	if !value.After(target) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1715,7 +1770,7 @@ func After(attribute string, value time.Time, target time.Time) *FieldError {
 	return nil
 }
 
-func BeforeNow(attribute string, value time.Time) *FieldError {
+func ValidateBeforeNow(attribute string, value time.Time) *FieldError {
 	if value.After(time.Now()) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1728,7 +1783,7 @@ func BeforeNow(attribute string, value time.Time) *FieldError {
 	return nil
 }
 
-func AfterNow(attribute string, value time.Time) *FieldError {
+func ValidateAfterNow(attribute string, value time.Time) *FieldError {
 	if value.Before(time.Now()) {
 		return &FieldError{
 			FieldName: attribute,
@@ -1741,7 +1796,7 @@ func AfterNow(attribute string, value time.Time) *FieldError {
 	return nil
 }
 
-func DateBetween(attribute string, value time.Time, start time.Time, end time.Time) *FieldError {
+func ValidateDateBetween(attribute string, value time.Time, start time.Time, end time.Time) *FieldError {
 	if value.Before(start) || value.After(end) {
 		return &FieldError{
 			FieldName: attribute,

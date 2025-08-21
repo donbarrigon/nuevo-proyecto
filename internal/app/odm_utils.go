@@ -29,7 +29,7 @@ func InitMongoDB() error {
 	}
 	DB = DBClient.Database(Env.DB_DATABASE)
 
-	Log.Info("Conectado exitosamente a MongoDB: :con - Base de datos: :db",
+	PrintInfo("Conectado exitosamente a MongoDB: :con - Base de datos: :db",
 		Entry{"con", Env.DB_CONNECTION_STRING},
 		Entry{"con", Env.DB_DATABASE})
 	return nil
@@ -44,7 +44,7 @@ func CloseMongoDB() error {
 	err := DBClient.Disconnect(context.TODO())
 	if err != nil {
 		e := fmt.Errorf("error al cerrar la conexión con MongoDB: %w", err)
-		Log.Print(e.Error())
+		Print(e.Error())
 		return e
 	}
 

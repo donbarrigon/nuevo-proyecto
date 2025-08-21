@@ -1,0 +1,105 @@
+package seed
+
+import (
+	"github.com/donbarrigon/nuevo-proyecto/internal/shared/model"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+func Permissions() {
+	// acciones o verbos de autorización
+	var actions = map[string][]string{
+		"crud": {
+			"view",   // ver un recurso
+			"create", // crear un recurso
+			"update", // modificar un recurso
+			"delete", // eliminar un recurso
+		},
+
+		"moderator": {
+			"approve", // aprobar contenido pendiente
+			"reject",  // rechazar contenido reportado o pendiente
+			"publish", // publicar contenido en nombre de la comunidad
+			"lock",    // cerrar un hilo, comentario o bloquear contenido
+			"warn",    // advertir a un usuario
+			"mute",    // silenciar temporalmente a un usuario
+			"suspend", // suspender la cuenta de un usuario
+			"ban",     // bloquear permanentemente a un usuario
+			"kick",    // expulsar a un usuario de un grupo/canal
+			"enable",  // reactivar un recurso
+			"disable", // desactivar un recurso
+			"archive", // archivar contenido viejo o inactivo
+			"restore", // restaurar contenido archivado
+			"import",  // importar datos o recursos
+			"export",  // exportar datos o recursos
+		},
+
+		"user": {
+			"comment",   // escribir un comentario
+			"reply",     // responder a un comentario
+			"mention",   // mencionar a otro usuario (@user)
+			"tag",       // etiquetar un recurso o persona
+			"share",     // compartir un recurso
+			"like",      // dar un me gusta
+			"react",     // reaccionar con un emoji u otra acción
+			"follow",    // seguir a un usuario o recurso
+			"invite",    // invitar a alguien a la comunidad
+			"join",      // unirse a un grupo o canal
+			"report",    // reportar contenido o usuario
+			"vote",      // votar en encuestas o contenido
+			"subscribe", // suscribirse a un recurso o canal
+			"bookmark",  // guardar como favorito
+			"highlight", // resaltar un texto o recurso
+			"pin",       // fijar contenido importante
+			"lock",      // bloquear tu propio contenido (ej: cerrar comentarios)
+		},
+	}
+	// slice con los nombres de los modelos
+	models := []string{"user", "role", "permission", "city", "state", "country"}
+
+	// slice con las referencias de los permisos
+	adminPermissions := []bson.ObjectID{}
+	crudPermissions := []bson.ObjectID{}
+	moderatorPermissions := []bson.ObjectID{}
+	userPermissions := []bson.ObjectID{}
+
+	// rol de usuario
+	for _, action := range actions["user"] {
+		permission := model.NewPermission()
+		permission.Name = action
+		userPermissions = append(userPermissions, permission.ID)
+	}
+	roleUser := model.NewRole()
+	roleUser.Name = "user"
+	roleUser.PermissionIDs = userPermissions
+	roleUser.Create()
+
+	// rol de moderador
+	for _, action := range actions["moderator"] {
+		permission := model.NewPermission()
+		permission.Name = action
+		moderatorPermissions = append(moderatorPermissions, permission.ID)
+	}
+	roleModerator := model.NewRole()
+	roleModerator.Name = "moderator"
+	roleModerator.PermissionIDs = moderatorPermissions
+	roleModerator.Create()
+
+	// rol de admin
+	for _, m := range models {
+		for _, action := range actions["crud"] {
+			permission := model.NewPermission()
+			permission.Name = action + " " + m
+			crudPermissions = append(crudPermissions, permission.ID)
+		}
+	}
+
+	adminPermissions = append(adminPermissions, crudPermissions...)
+	adminPermissions = append(adminPermissions, moderatorPermissions...)
+	adminPermissions = append(adminPermissions, userPermissions...)
+
+	roleAdmin := model.NewRole()
+	roleAdmin.Name = "admin"
+	roleAdmin.PermissionIDs = adminPermissions
+	roleAdmin.Create()
+
+}

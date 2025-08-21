@@ -27,7 +27,7 @@ func NewHttpServer(port string, routes *Routes) *http.Server {
 	go func() {
 		startMessage()
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			Log.Error("Could not start server: :error", Entry{"error", err.Error()})
+			PrintError("Could not start server: :error", Entry{"error", err.Error()})
 		}
 	}()
 
@@ -41,7 +41,7 @@ func HttpServerGracefulShutdown(server *http.Server) {
 
 	// Espera por la señal de terminación
 	<-sigChan
-	Log.Info("Iniciando apagado controlado del servidor...")
+	PrintInfo("Iniciando apagado controlado del servidor...")
 
 	// Crea un contexto con timeout para el shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -49,23 +49,23 @@ func HttpServerGracefulShutdown(server *http.Server) {
 
 	//se cierra el servidor HTTP para que no acepte nuevas conexiones
 	if err := server.Shutdown(ctx); err != nil {
-		Log.Warning("Servidor forzado a cerrar: :err", Entry{"err", err.Error()})
+		PrintWarning("Servidor forzado a cerrar: :err", Entry{"err", err.Error()})
 	} else {
-		Log.Info("Servidor HTTP detenido correctamente")
+		PrintInfo("Servidor HTTP detenido correctamente")
 	}
 
 	// se cierra la conexion con mono db
 	if err := CloseMongoDB(); err != nil {
-		Log.Warning("Error al cerrar la conexión a MongoDB: :err", Entry{"err", err.Error()})
+		PrintWarning("Error al cerrar la conexión a MongoDB: :err", Entry{"err", err.Error()})
 	} else {
-		Log.Info("Conexión a MongoDB cerrada correctamente")
+		PrintInfo("Conexión a MongoDB cerrada correctamente")
 	}
 
-	Log.Info("Apagado controlado completado")
+	PrintInfo("Apagado controlado completado")
 }
 
 func startMessage() {
-	Log.Info(`
+	PrintInfo(`
    ____   ___  ____  ____  ___  ___  _   _ ____   ___
   / ___| / _ \|  _ \|  _ \|_ _|| __|| \ | |  _ \ / _ \
  | |    | | | | |_) | |_) || ||||__ |  \| | | | | | | |

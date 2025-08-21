@@ -89,7 +89,7 @@ func LoadEnv(filepath ...string) {
 
 	file, err := os.Open(f)
 	if err != nil {
-		Log.Warning("Environment file (.env) not found at location {file}", Entry{"file", f})
+		PrintWarning("Environment file (.env) not found at location {file}", Entry{"file", f})
 		return
 	}
 	defer file.Close()
@@ -107,7 +107,7 @@ func LoadEnv(filepath ...string) {
 
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			Log.Warning("Syntax error in environment variables at line {lineNumber}: {rawLine}",
+			PrintWarning("Syntax error in environment variables at line {lineNumber}: {rawLine}",
 				Entry{"lineNumber", i},
 				Entry{"rawLine", line})
 			continue
@@ -122,7 +122,7 @@ func LoadEnv(filepath ...string) {
 		value = strings.Trim(value, `"'`)
 
 		if key == "" {
-			Log.Warning("Empty key detected while loading environment variables at line {lineNumber}: {rawLine}",
+			PrintWarning("Empty key detected while loading environment variables at line {lineNumber}: {rawLine}",
 				Entry{"lineNumber", i},
 				Entry{"rawLine", line},
 			)
@@ -247,7 +247,7 @@ func LoadEnv(filepath ...string) {
 		case "LOG_DAYS":
 			days, err := strconv.Atoi(value)
 			if err != nil {
-				Log.Warning("Invalid LOG_DAYS value at line {lineNumber}: {value}",
+				PrintWarning("Invalid LOG_DAYS value at line {lineNumber}: {value}",
 					Entry{"lineNumber", i},
 					Entry{"value", value},
 				)
@@ -271,14 +271,14 @@ func LoadEnv(filepath ...string) {
 		case "MAIL_FROM_NAME":
 			Env.MAIL_FROM_NAME = value
 		default:
-			Log.Warning("{envKey} is not a valid environment variable name",
+			PrintWarning("{envKey} is not a valid environment variable name",
 				Entry{"envKey", key},
 			)
 		}
 	}
 
 	if scanner.Err() != nil {
-		Log.Warning("Critical failure loading environment variables from file {file}\nerror: {error}",
+		PrintWarning("Critical failure loading environment variables from file {file}\nerror: {error}",
 			Entry{"file", f},
 			Entry{"error", scanner.Err().Error()},
 			Entry{"env", Env},
@@ -286,7 +286,7 @@ func LoadEnv(filepath ...string) {
 		return
 	}
 
-	Log.Info("Environment variables loaded successfully from file {file}",
+	PrintInfo("Environment variables loaded successfully from file {file}",
 		Entry{"file", f},
 		Entry{"env", Env},
 	)

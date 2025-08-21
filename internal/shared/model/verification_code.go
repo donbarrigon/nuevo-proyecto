@@ -42,7 +42,7 @@ func (v *VerificationCode) BeforeUpdate() app.Error { return nil }
 func (v *VerificationCode) Generate(id bson.ObjectID, t string, metadata ...map[string]string) app.Error {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		app.Log.Warning("Fail to create verification code: " + err.Error())
+		app.PrintWarning("Fail to create verification code: " + err.Error())
 		return app.Errors.InternalServerError(err)
 	}
 	code := hex.EncodeToString(bytes)

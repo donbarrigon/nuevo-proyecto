@@ -105,7 +105,7 @@ func UserStore(ctx *app.HttpContext) {
 
 	role := model.NewRole()
 	if err := role.FindOne(Document(Where("name", Eq("user")))); err != nil {
-		app.Log.Warning("User role does not exist. Run the seed command to populate initial data.", app.E("error", err))
+		app.PrintWarning("User role does not exist. Run the seed command to populate initial data.", app.E("error", err))
 	} else {
 		user.RoleIDs = []bson.ObjectID{role.ID}
 	}

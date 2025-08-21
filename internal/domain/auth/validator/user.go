@@ -12,7 +12,7 @@ type StoreUser struct {
 	Nickname             string         `json:"nickname"                   rules:"required|username|max:255"`
 	PhoneNumber          string         `json:"phone_number,omitempty"     rules:"max:255|regex:^\\+[1-9]\\d{1,14}$"`
 	DiscordUsername      string         `json:"discord_username,omitempty" rules:"max:255"`
-	CityID               string         `json:"city_id"                    rules:"required|max:255"`
+	CityID               string         `json:"city_id"                    rules:"required|max:255|exists:cities,_id"`
 	Preferences          map[string]any `json:"preferences,omitempty"`
 }
 

@@ -86,7 +86,7 @@ func (o *Odm) Find(result any, filter bson.D) Error {
 // trae 1 documento segun el filtro
 func (o *Odm) FindOne(filter bson.D, opts ...options.Lister[options.FindOneOptions]) Error {
 	if err := DB.Collection(o.Model.CollectionName()).FindOne(context.TODO(), filter, opts...).Decode(o.Model); err != nil {
-		Log.Warning("Failed to FindOne :error", Entry{"collection", o.Model.CollectionName()}, Entry{"filter", filter}, Entry{"opts", opts}, Entry{"error", err.Error()})
+		PrintWarning("Failed to FindOne :error", Entry{"collection", o.Model.CollectionName()}, Entry{"filter", filter}, Entry{"opts", opts}, Entry{"error", err.Error()})
 		return Errors.Mongo(err)
 	}
 	return nil
@@ -147,7 +147,7 @@ func (o *Odm) CreateBy(validator any) Error {
 func (o *Odm) CreateMany(data any) Error {
 	models, ok := data.([]Model)
 	if !ok {
-		return Errors.InternalServerErrorF("type assertion failed in CreateMany")
+		return Errors.InternalServerErrorf("type assertion failed in CreateMany")
 	}
 	for _, m := range models {
 		if err := m.BeforeCreate(); err != nil {

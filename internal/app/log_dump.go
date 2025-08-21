@@ -12,7 +12,7 @@ func (l *Logger) formatDump(val any) string {
 
 	// Si es puntero, desreferenciar
 	isPtr := false
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		isPtr = true
 		if v.IsNil() {
 			return fmt.Sprintf("*%s(nil)", t.Elem().Kind())

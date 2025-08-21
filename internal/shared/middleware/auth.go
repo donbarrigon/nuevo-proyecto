@@ -8,7 +8,7 @@ func Auth(next func(ctx *app.HttpContext)) func(ctx *app.HttpContext) {
 
 	return func(ctx *app.HttpContext) {
 
-		app.Log.Print("Auth middleware")
+		app.Print("Auth middleware")
 		next(ctx)
 
 		// authHeader := ctx.Request.Header.Get("Authorization")

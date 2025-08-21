@@ -88,8 +88,6 @@ const (
 	LOG_FILE_FORMAT_LTSV                        // 5 - LTSV (Labelled Tab-separated Values)
 )
 
-var Log = Logger{}
-
 func (lv LogLevel) String() string {
 	switch lv {
 	case LOG_OFF:
@@ -177,62 +175,112 @@ func (f LogFileFormat) String() string {
 	}
 }
 
-func (l *Logger) Emergency(msg string, ctx ...Entry) {
+func PrintEmergency(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_EMERGENCY {
-		go l.output(LOG_EMERGENCY, msg, ctx)
+		l := &Logger{
+			Level:   LOG_EMERGENCY,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Alert(msg string, ctx ...Entry) {
+func PrintAlert(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_ALERT {
-		go l.output(LOG_ALERT, msg, ctx)
+		l := &Logger{
+			Level:   LOG_ALERT,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Critical(msg string, ctx ...Entry) {
+func PrintCritical(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_CRITICAL {
-		go l.output(LOG_CRITICAL, msg, ctx)
+		l := &Logger{
+			Level:   LOG_CRITICAL,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Error(msg string, ctx ...Entry) {
+func PrintError(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_ERROR {
-		go l.output(LOG_ERROR, msg, ctx)
+		l := &Logger{
+			Level:   LOG_ERROR,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Warning(msg string, ctx ...Entry) {
+func PrintWarning(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_WARNING {
-		go l.output(LOG_WARNING, msg, ctx)
+		l := &Logger{
+			Level:   LOG_WARNING,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Notice(msg string, ctx ...Entry) {
+func PrintNotice(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_NOTICE {
-		go l.output(LOG_NOTICE, msg, ctx)
+		l := &Logger{
+			Level:   LOG_NOTICE,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Info(msg string, ctx ...Entry) {
+func PrintInfo(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_INFO {
-		go l.output(LOG_INFO, msg, ctx)
+		l := &Logger{
+			Level:   LOG_INFO,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Debug(msg string, ctx ...Entry) {
+func PrintDebug(msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= LOG_DEBUG {
-		go l.output(LOG_DEBUG, msg, ctx)
+		l := &Logger{
+			Level:   LOG_DEBUG,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Log(level LogLevel, msg string, ctx ...Entry) {
+func PrintLog(level LogLevel, msg string, ctx ...Entry) {
 	if Env.LOG_LEVEL >= level {
-		go l.output(level, msg, ctx)
+		l := &Logger{
+			Level:   LOG_PRINT,
+			Message: msg,
+			Context: ctx,
+		}
+		go l.output()
 	}
 }
 
-func (l *Logger) Print(msg string, ctx ...Entry) {
-	go l.output(LOG_PRINT, msg, ctx)
+func Print(msg string, ctx ...Entry) {
+	l := &Logger{
+		Level:   LOG_PRINT,
+		Message: msg,
+		Context: ctx,
+	}
+	go l.output()
 }
 
 func (l *Logger) Dump(a any) {
@@ -250,7 +298,7 @@ func (l *Logger) DumpMany(vars ...any) {
 	}
 }
 
-func (l *Logger) output(level LogLevel, msg string, ctx List) {
+func (l *Logger) output() {
 	// Obtener información del runtime
 	pc, file, line, _ := runtime.Caller(2)
 	funcName := runtime.FuncForPC(pc).Name()
@@ -261,56 +309,50 @@ func (l *Logger) output(level LogLevel, msg string, ctx List) {
 	}
 
 	// Preparar mensaje
-	msg = InterpolatePlaceholders(msg, ctx...)
-
-	// Crear estructura de log
-	Entry := &Logger{
-		Level:   level,
-		Message: msg,
-	}
+	l.Message = InterpolatePlaceholders(l.Message, l.Context...)
 
 	if Env.LOG_FLAGS&LOG_FLAG_ID != 0 {
-		Entry.ID = bson.NewObjectID().Hex()
+		l.ID = bson.NewObjectID().Hex()
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_TIMESTAMP != 0 {
 		now := time.Now().Format(Env.LOG_DATE_FORMAT)
-		Entry.Time = now
+		l.Time = now
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_FUNCTION != 0 {
-		Entry.Function = funcName
+		l.Function = funcName
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_LINE != 0 {
-		Entry.Line = strconv.Itoa(line)
+		l.Line = strconv.Itoa(line)
 	}
 
 	if Env.LOG_FLAGS&(LOG_FLAG_LONGFILE|LOG_FLAG_SHORTFILE) != 0 {
-		Entry.File = file
+		l.File = file
 	}
 
 	//if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && ctx != nil {
-	Entry.Context = ctx
+	// l.Context = ctx
 	//}
 
-	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || level == LOG_PRINT {
-		Entry.outputConsole()
-		if level == LOG_PRINT {
+	if Env.LOG_OUTPUT&LOG_OUTPUT_CONSOLE != 0 || l.Level == LOG_PRINT {
+		l.outputConsole()
+		if l.Level == LOG_PRINT {
 			return
 		}
 	}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_FILE != 0 {
-		Entry.outputFile()
+		l.outputFile()
 	}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_DATABASE != 0 {
-		Entry.outputDatabase()
+		l.outputDatabase()
 	}
 
 	if Env.LOG_OUTPUT&LOG_OUTPUT_REMOTE != 0 {
-		Entry.outputRemote()
+		l.outputRemote()
 	}
 
 }
@@ -397,7 +439,7 @@ func (l *Logger) outputRemote() {
 	// Convertir el log a JSON
 	jsonData, err := json.Marshal(l)
 	if err != nil {
-		Log.Error("Failed to marshal log for remote output",
+		PrintError("Failed to marshal log for remote output",
 			Entry{"error", err.Error()},
 			Entry{"log", l},
 		)
@@ -462,7 +504,7 @@ func (l *Logger) outputRemote() {
 	}
 
 	// Si llegamos aquí, todos los intentos fallaron
-	Log.Print("Failed to send log to remote server after retries",
+	Print("Failed to send log to remote server after retries",
 		Entry{"error", lastError.Error()},
 		Entry{"url", Env.LOG_URL},
 		Entry{"attempts", maxRetries},
@@ -517,7 +559,7 @@ func (l *Logger) outputNDJSON() string {
 			Entry{"context", escapedDump},
 		)
 
-		Log.Print(Translate(Env.APP_LOCALE, msg, Entry{"context", l}))
+		Print(Translate(Env.APP_LOCALE, msg, Entry{"context", l}))
 	} else {
 		output = string(jsonData)
 	}
@@ -672,7 +714,7 @@ func (l *Logger) openFile() *os.File {
 	}
 
 	if err := os.MkdirAll(Env.LOG_PATH, os.ModePerm); err != nil {
-		Log.Print("No se pudo crear el directorio de logs: {error}\n", Entry{"error", err})
+		Print("No se pudo crear el directorio de logs: {error}\n", Entry{"error", err})
 		return nil
 	}
 
@@ -680,7 +722,7 @@ func (l *Logger) openFile() *os.File {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		Log.Print("Failed to create log directory: {error}\n", Entry{"error", err})
+		Print("Failed to create log directory: {error}\n", Entry{"error", err})
 		return nil
 	}
 	return file

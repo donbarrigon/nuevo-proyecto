@@ -39,7 +39,7 @@ func (t *AccessToken) BeforeUpdate() app.Error {
 func NewAccessToken(userID bson.ObjectID, permissions []string) (*AccessToken, app.Error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		app.Log.Warning("Fail to create access token: " + err.Error())
+		app.PrintWarning("Fail to create access token: " + err.Error())
 	}
 	tk := hex.EncodeToString(bytes)
 	token := &AccessToken{
