@@ -71,7 +71,7 @@ func (ctx *HttpContext) GetBody(request any) Error {
 			Status:    http.StatusBadRequest,
 			Message:   "The request body is invalid",
 			Err:       "Could not decode the request body: {error}",
-			phMessage: List{{"error", err.Error()}},
+			phMessage: Object{{"error", err.Error()}},
 		}
 	}
 	defer ctx.Request.Body.Close()

@@ -11,7 +11,7 @@ type Entry struct {
 	Value any
 }
 
-type List []Entry
+type Object []Entry
 
 // InterpolatePlaceholders reemplaza placeholders en el mensaje con valores del contexto
 // Soporta formatos: {placeholder} y :placeholder
@@ -34,11 +34,11 @@ func InterpolatePlaceholders(msg string, ctx ...Entry) string {
 	return msg
 }
 
-func (l *List) Set(key string, value any) {
+func (l *Object) Set(key string, value any) {
 	*l = append(*l, Entry{Key: key, Value: value})
 }
 
-func (l *List) Get(key string) any {
+func (l *Object) Get(key string) any {
 	for _, Entry := range *l {
 		if Entry.Key == key {
 			return Entry.Value
@@ -47,7 +47,7 @@ func (l *List) Get(key string) any {
 	return nil
 }
 
-func (l *List) Has(key string) bool {
+func (l *Object) Has(key string) bool {
 	for _, Entry := range *l {
 		if Entry.Key == key {
 			return true
@@ -56,7 +56,7 @@ func (l *List) Has(key string) bool {
 	return false
 }
 
-func (l *List) Remove(key string) {
+func (l *Object) Remove(key string) {
 	for i, Entry := range *l {
 		if Entry.Key == key {
 			*l = append((*l)[:i], (*l)[i+1:]...)
@@ -65,15 +65,15 @@ func (l *List) Remove(key string) {
 	}
 }
 
-func (l *List) Clear() {
+func (l *Object) Clear() {
 	*l = (*l)[:0]
 }
 
-func (l *List) Len() int {
+func (l *Object) Len() int {
 	return len(*l)
 }
 
-func (l *List) Keys() []string {
+func (l *Object) Keys() []string {
 	keys := make([]string, 0, len(*l))
 	for _, Entry := range *l {
 		keys = append(keys, Entry.Key)
@@ -81,7 +81,7 @@ func (l *List) Keys() []string {
 	return keys
 }
 
-func (l *List) Values() []any {
+func (l *Object) Values() []any {
 	values := make([]any, 0, len(*l))
 	for _, Entry := range *l {
 		values = append(values, Entry.Value)
@@ -89,7 +89,7 @@ func (l *List) Values() []any {
 	return values
 }
 
-func (l List) MarshalJSON() ([]byte, error) {
+func (l Object) MarshalJSON() ([]byte, error) {
 	m := make(map[string]any, len(l))
 	for _, field := range l {
 		m[field.Key] = field.Value

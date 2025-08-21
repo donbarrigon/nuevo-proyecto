@@ -12,26 +12,27 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/domain/db/seed"
 )
 
-func Seed(ctx app.HttpContext) {
+func SeedRun(ctx app.HttpContext) {
 
 	if !app.Env.SERVER_MIGRATION_ENABLE {
 		ctx.ResponseError(app.Errors.Forbiddenf("Migration disabled"))
-		return
+		app.PrintError("Migration disabled")
+		panic("Migration disabled")
 	}
 
 	seed.Run()
 
-	if err := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("fail to create log directory " + err.Error()))
-		return
+	if er := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); er != nil {
+		app.PrintError("Fail to create log directory :path: :error", app.E("path", app.Env.LOG_PATH), app.E("error", er.Error()))
+		panic(er.Error())
 	}
 
 	filePath := filepath.Join(app.Env.LOG_PATH, "seed_tracker.txt")
 
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("fail to open seed_tracker.txt file " + err.Error()))
-		return
+	file, er := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	if er != nil {
+		app.PrintError("Fail to open file: :file :error", app.E("file", filePath), app.E("error", er.Error()))
+		panic(er.Error())
 	}
 	defer file.Close()
 
@@ -56,11 +57,11 @@ func Seed(ctx app.HttpContext) {
 		records[key] = value
 	}
 
-	if err := scanner.Err(); err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("Error leyendo el archivo: " + err.Error()))
-		return
+	if er := scanner.Err(); er != nil {
+		app.PrintError("Fail to read file: :file :error", app.E("file", filePath), app.E("error", er.Error()))
+		panic(er.Error())
 	}
-	seeds := app.List{}
+	seeds := app.Object{}
 	for _, s := range seed.Seeds {
 		if records[s.Key] == "" {
 			seeds = append(seeds, s)
@@ -74,33 +75,34 @@ func Seed(ctx app.HttpContext) {
 		results[s.Key] = executedAt
 		line := fmt.Sprintf("executed_at:%s\tname:%s\n", executedAt, s.Key)
 
-		if _, err := file.WriteString(line); err != nil {
-			ctx.ResponseError(app.Errors.InternalServerErrorf("fail to write seed_tracker.txt " + err.Error()))
-			return
+		if _, er := file.WriteString(line); er != nil {
+			app.PrintError("Fail to write :file :error", app.E("file", filePath), app.E("error", er.Error()))
+			panic(er.Error())
 		}
 	}
 
-	ctx.ResponseOk(results)
+	ctx.ResponseNoContent()
 
 }
 
-func List(ctx app.HttpContext) {
+func SeedList(ctx app.HttpContext) {
 	if !app.Env.SERVER_MIGRATION_ENABLE {
 		ctx.ResponseError(app.Errors.Forbiddenf("Migration disabled"))
-		return
+		app.PrintError("Migration disabled")
+		panic("Migration disabled")
 	}
 
-	if err := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("fail to create log directory " + err.Error()))
-		return
+	if er := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); er != nil {
+		app.PrintError("Fail to create log directory :path: :error", app.E("path", app.Env.LOG_PATH), app.E("error", er.Error()))
+		panic(er.Error())
 	}
 
 	filePath := filepath.Join(app.Env.LOG_PATH, "seed_tracker.txt")
 
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("fail to open seed_tracker.txt file " + err.Error()))
-		return
+	file, er := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	if er != nil {
+		app.PrintError("Fail to open :file: :error", app.E("file", filePath), app.E("error", er.Error()))
+		panic(er.Error())
 	}
 	defer file.Close()
 
@@ -125,31 +127,35 @@ func List(ctx app.HttpContext) {
 		records[key] = value
 	}
 
-	if err := scanner.Err(); err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("Error leyendo el archivo: " + err.Error()))
-		return
+	if er := scanner.Err(); er != nil {
+		app.PrintError("Fail to read file: :file :error", app.E("file", filePath), app.E("error", er.Error()))
+		panic(er.Error())
 	}
 
-	ctx.ResponseOk(records)
+	app.PrintInfo("Seed tracker :records", app.E("records", records))
+
+	ctx.ResponseNoContent()
 }
 
-func Run(ctx app.HttpContext) {
+func SeedForce(ctx app.HttpContext) {
 	if !app.Env.SERVER_MIGRATION_ENABLE {
 		ctx.ResponseError(app.Errors.Forbiddenf("Migration disabled"))
-		return
+		panic("Migration disabled")
 	}
 
-	if err := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("fail to create log directory " + err.Error()))
-		return
+	seed.Run()
+
+	if er := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); er != nil {
+		app.PrintError("Fail to create log directory :path: :error", app.E("path", app.Env.LOG_PATH), app.E("error", er.Error()))
+		panic(er.Error())
 	}
 
 	filePath := filepath.Join(app.Env.LOG_PATH, "seed_tracker.txt")
 
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("fail to open seed_tracker.txt file " + err.Error()))
-		return
+	file, er := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if er != nil {
+		app.PrintError("Fail to open :file: :error", app.E("file", filePath), app.E("error", er.Error()))
+		panic(er.Error())
 	}
 	defer file.Close()
 
@@ -158,9 +164,9 @@ func Run(ctx app.HttpContext) {
 	executedAt := time.Now().UTC().Format(time.RFC3339)
 	line := fmt.Sprintf("executed_at:%s\tname:%s\n", executedAt, ctx.Params["name"])
 
-	if _, err := file.WriteString(line); err != nil {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("fail to write seed_tracker.txt " + err.Error()))
-		return
+	if _, er := file.WriteString(line); er != nil {
+		app.PrintError("Fail to write :file :error", app.E("file", filePath), app.E("error", er.Error()))
+		panic(er.Error())
 	}
-	ctx.ResponseOk("ok")
+	ctx.ResponseNoContent()
 }
