@@ -5,22 +5,36 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/shared/model"
 )
 
-func RoleViewAny(ctx *app.HttpContext, profile *model.Profile) app.Error {
+func RoleViewAny(ctx *app.HttpContext) app.Error {
 	return ctx.Auth.Can("view role")
 }
 
-func RoleView(ctx *app.HttpContext, role *model.Role) app.Error {
+func RoleView(ctx *app.HttpContext) app.Error {
 	return ctx.Auth.Can("view role")
 }
 
-func RoleCreate(ctx *app.HttpContext, role *model.Role) app.Error {
+func RoleCreate(ctx *app.HttpContext) app.Error {
 	return ctx.Auth.Can("create role")
 }
 
-func RoleUpdate(ctx *app.HttpContext, role *model.Role) app.Error {
+func RoleUpdate(ctx *app.HttpContext) app.Error {
 	return ctx.Auth.Can("update role")
 }
 
-func RoleDelete(ctx *app.HttpContext, role *model.Role) app.Error {
+func RoleDelete(ctx *app.HttpContext) app.Error {
 	return ctx.Auth.Can("delete role")
+}
+
+func RoleGrant(ctx *app.HttpContext, role *model.Role) app.Error {
+	if err := ctx.Auth.Can("grant role"); err != nil {
+		return err
+	}
+	return ctx.Auth.HasRole(role.Name)
+}
+
+func RoleRevoke(ctx *app.HttpContext, role *model.Role) app.Error {
+	if err := ctx.Auth.Can("revoke role"); err != nil {
+		return err
+	}
+	return ctx.Auth.HasRole(role.Name)
 }

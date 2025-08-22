@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
@@ -72,6 +73,21 @@ func (u *User) WhithPermissions() bson.D {
 // hasMany
 func (u *User) WithTokens() bson.D {
 	return HasMany("access_tokens", "user_id")
+}
+
+func (u *User) HasRole(roleName ...string) app.Error {
+	role := NewRole()
+	err := role.FindOne(Document(
+		Where("_id", Element("$in", u.RoleIDs)),
+		Where("name", Element("$in", roleName)),
+	))
+	if err != nil {
+		if err.GetStatus() == http.StatusNotFound {
+			return app.Errors.Forbidden(err)
+		}
+		return err
+	}
+	return nil
 }
 
 func (u *User) Can(permissionName string) app.Error {

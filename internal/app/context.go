@@ -17,6 +17,7 @@ import (
 type UserInterface interface {
 	GetID() bson.ObjectID
 	Can(permissionName string) Error
+	HasRole(roleName ...string) Error
 }
 
 type TokenInterface interface {
@@ -52,8 +53,12 @@ func NewHttpContext(w http.ResponseWriter, r *http.Request) *HttpContext {
 	}
 }
 
-func (a *Auth) Can(permissionName string) Error {
-	return a.Token.Can(permissionName)
+func (a *Auth) Can(permissionName ...string) Error {
+	return a.Token.Can(permissionName...)
+}
+
+func (a *Auth) HasRole(roleName ...string) Error {
+	return a.User.HasRole(roleName...)
 }
 
 func (a *Auth) UserID() string {

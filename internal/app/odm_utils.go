@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -189,82 +190,202 @@ func FillDirty(model any, request any) (map[string]any, Error) {
 	return dirty, nil
 }
 
-// // Versión alternativa que también incluye una función helper para extraer el tag bson
-// func FillWithHelper(model any, request any) (map[string]any, Error) {
-// 	dirty := make(map[string]any)
+func FillByMap(model any, request map[string]any) Error {
+	// Verificar que model sea un puntero a struct
+	modelValue := reflect.ValueOf(model)
+	if modelValue.Kind() != reflect.Ptr || modelValue.IsNil() {
+		return Errors.InternalServerErrorf("model debe ser un puntero no nulo")
+	}
 
-// 	modelValue := reflect.ValueOf(model)
-// 	requestValue := reflect.ValueOf(request)
+	modelElem := modelValue.Elem()
+	if modelElem.Kind() != reflect.Struct {
+		return Errors.InternalServerErrorf("model debe ser un puntero a struct")
+	}
 
-// 	if modelValue.Kind() != reflect.Ptr || requestValue.Kind() != reflect.Ptr {
-// 		return nil, Errors.Unknownf("The parameters model and request must be pointers")
-// 	}
+	modelType := modelElem.Type()
 
-// 	modelValue = modelValue.Elem()
-// 	requestValue = requestValue.Elem()
+	// Iterar sobre los campos del struct
+	for i := 0; i < modelElem.NumField(); i++ {
+		field := modelElem.Field(i)
+		fieldType := modelType.Field(i)
 
-// 	if modelValue.Kind() != reflect.Struct || requestValue.Kind() != reflect.Struct {
-// 		return nil, Errors.Unknownf("The parameters model and request must be structs")
-// 	}
+		// Verificar si el campo es exportado (público)
+		if !field.CanSet() {
+			continue
+		}
 
-// 	modelType := modelValue.Type()
-// 	requestType := requestValue.Type()
+		// Obtener el tag bson
+		bsonTag := fieldType.Tag.Get("bson")
+		if bsonTag == "" || bsonTag == "_id" {
+			continue // Saltar campos sin tag bson o con _id
+		}
 
-// 	for i := 0; i < requestType.NumField(); i++ {
-// 		requestField := requestType.Field(i)
-// 		fieldName := requestField.Name
-// 		requestFieldValue := requestValue.Field(i)
+		// Buscar el valor en el map
+		mapValue, exists := request[bsonTag]
+		if !exists {
+			continue
+		}
 
-// 		if !requestField.IsExported() {
-// 			continue
-// 		}
+		// Asignar el valor al campo
+		if err := setFieldValue(field, mapValue); err != nil {
+			return err
+		}
+	}
 
-// 		modelField := modelValue.FieldByName(fieldName)
+	return nil
+}
 
-// 		if !modelField.IsValid() || !modelField.CanSet() {
-// 			continue
-// 		}
+func setFieldValue(field reflect.Value, value any) Error {
+	if value == nil {
+		return nil
+	}
 
-// 		if requestFieldValue.IsZero() {
-// 			continue
-// 		}
+	valueReflect := reflect.ValueOf(value)
+	fieldType := field.Type()
+	valueType := valueReflect.Type()
 
-// 		var newValue reflect.Value
-// 		if requestFieldValue.Type().AssignableTo(modelField.Type()) {
-// 			newValue = requestFieldValue
-// 		} else if requestFieldValue.Type().ConvertibleTo(modelField.Type()) {
-// 			newValue = requestFieldValue.Convert(modelField.Type())
-// 		} else {
-// 			continue
-// 		}
+	// Si los tipos son iguales, asignar directamente
+	if valueType.AssignableTo(fieldType) {
+		field.Set(valueReflect)
+		return nil
+	}
 
-// 		// Comparamos valores
-// 		if !reflect.DeepEqual(modelField.Interface(), newValue.Interface()) {
-// 			modelFieldStruct, found := modelType.FieldByName(fieldName)
-// 			if !found {
-// 				continue
-// 			}
+	// Intentar conversiones de tipos comunes
+	switch fieldType.Kind() {
+	case reflect.String:
+		switch v := value.(type) {
+		case string:
+			field.SetString(v)
+		case []byte:
+			field.SetString(string(v))
+		default:
+			field.SetString(fmt.Sprintf("%v", value))
+		}
 
-// 			bsonTag := getBsonFieldName(modelFieldStruct, fieldName)
-// 			dirty[bsonTag] = newValue.Interface()
-// 			modelField.Set(newValue)
-// 		}
-// 	}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		switch v := value.(type) {
+		case int:
+			field.SetInt(int64(v))
+		case int32:
+			field.SetInt(int64(v))
+		case int64:
+			field.SetInt(v)
+		case float32:
+			field.SetInt(int64(v))
+		case float64:
+			field.SetInt(int64(v))
+		case string:
+			if intVal, err := strconv.ParseInt(v, 10, 64); err == nil {
+				field.SetInt(intVal)
+			} else {
+				return Errors.InternalServerErrorf("no se puede convertir string ':value' a int", Entry{"value", v})
+			}
+		default:
+			return Errors.InternalServerErrorf("no se puede convertir :value a :type", Entry{"value", value}, Entry{"type", fieldType.Kind()})
+		}
 
-// 	return dirty, nil
-// }
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		switch v := value.(type) {
+		case int:
+			if v >= 0 {
+				field.SetUint(uint64(v))
+			} else {
+				return Errors.InternalServerErrorf("valor negativo no puede ser asignado a campo unsigned")
+			}
+		case uint:
+			field.SetUint(uint64(v))
+		case uint32:
+			field.SetUint(uint64(v))
+		case uint64:
+			field.SetUint(v)
+		case float32:
+			if v >= 0 {
+				field.SetUint(uint64(v))
+			} else {
+				return Errors.InternalServerErrorf("valor negativo no puede ser asignado a campo unsigned")
+			}
+		case float64:
+			if v >= 0 {
+				field.SetUint(uint64(v))
+			} else {
+				return Errors.InternalServerErrorf("valor negativo no puede ser asignado a campo unsigned")
+			}
+		case string:
+			if uintVal, err := strconv.ParseUint(v, 10, 64); err == nil {
+				field.SetUint(uintVal)
+			} else {
+				return Errors.InternalServerErrorf("no se puede convertir string ':value' a uint", Entry{"value", v})
+			}
+		default:
+			return Errors.InternalServerErrorf("no se puede convertir :value a :type", Entry{"value", value}, Entry{"type", fieldType.Kind()})
+		}
 
-// // Helper function para extraer el nombre del campo bson
-// func getBsonFieldName(field reflect.StructField, defaultName string) string {
-// 	bsonTag := field.Tag.Get("bson")
-// 	if bsonTag == "" {
-// 		return strings.ToLower(defaultName)
-// 	}
+	case reflect.Float32, reflect.Float64:
+		switch v := value.(type) {
+		case float32:
+			field.SetFloat(float64(v))
+		case float64:
+			field.SetFloat(v)
+		case int:
+			field.SetFloat(float64(v))
+		case int32:
+			field.SetFloat(float64(v))
+		case int64:
+			field.SetFloat(float64(v))
+		case string:
+			if floatVal, err := strconv.ParseFloat(v, 64); err == nil {
+				field.SetFloat(floatVal)
+			} else {
+				return Errors.InternalServerErrorf("no se puede convertir string ':value' a float", Entry{"value", v})
+			}
+		default:
+			return Errors.InternalServerErrorf("no se puede convertir :value a :type", Entry{"value", value}, Entry{"type", fieldType.Kind()})
+		}
 
-// 	// Extraemos solo el nombre, ignorando opciones como ",omEntrypty"
-// 	if commaIndex := strings.Index(bsonTag, ","); commaIndex != -1 {
-// 		return bsonTag[:commaIndex]
-// 	}
+	case reflect.Bool:
+		switch v := value.(type) {
+		case bool:
+			field.SetBool(v)
+		case string:
+			if boolVal, err := strconv.ParseBool(v); err == nil {
+				field.SetBool(boolVal)
+			} else {
+				return Errors.InternalServerErrorf("no se puede convertir string ':value' a bool", Entry{"value", v})
+			}
+		case int:
+			field.SetBool(v != 0)
+		default:
+			return Errors.InternalServerErrorf("no se puede convertir :value a bool", Entry{"value", value})
+		}
 
-// 	return bsonTag
-// }
+	case reflect.Ptr:
+		if field.IsNil() {
+			field.Set(reflect.New(fieldType.Elem()))
+		}
+		return setFieldValue(field.Elem(), value)
+
+	case reflect.Slice:
+		if valueReflect.Kind() == reflect.Slice {
+			newSlice := reflect.MakeSlice(fieldType, valueReflect.Len(), valueReflect.Cap())
+			for i := 0; i < valueReflect.Len(); i++ {
+				elem := newSlice.Index(i)
+				if err := setFieldValue(elem, valueReflect.Index(i).Interface()); err != nil {
+					return err
+				}
+			}
+			field.Set(newSlice)
+		} else {
+			return Errors.InternalServerErrorf("no se puede convertir :value a slice", Entry{"value", value})
+		}
+
+	default:
+		// Para tipos que se pueden convertir directamente
+		if valueReflect.Type().ConvertibleTo(fieldType) {
+			field.Set(valueReflect.Convert(fieldType))
+		} else {
+			return Errors.InternalServerErrorf("no se puede convertir :value a :type", Entry{"value", value}, Entry{"type", fieldType})
+		}
+	}
+
+	return nil
+}

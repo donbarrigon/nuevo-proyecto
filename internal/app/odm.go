@@ -47,20 +47,6 @@ func (o *Odm) FindByID(id bson.ObjectID) Error {
 	return nil
 }
 
-// trae un slice con todos los documentos encontrados
-func (o *Odm) FindBy(result any, field string, value any) Error {
-	filter := bson.D{bson.E{Key: field, Value: value}}
-	ctx := context.TODO()
-	cursor, err := DB.Collection(o.Model.CollectionName()).Find(ctx, filter)
-	if err != nil {
-		return Errors.Mongo(err)
-	}
-	if err = cursor.All(ctx, result); err != nil {
-		return Errors.Mongo(err)
-	}
-	return nil
-}
-
 // trae el primer documento encontrado
 func (o *Odm) First(field string, value any) Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
@@ -70,8 +56,16 @@ func (o *Odm) First(field string, value any) Error {
 	return nil
 }
 
+// trae 1 documento segun el filtro
+func (o *Odm) FindOne(filter bson.D, opts ...options.Lister[options.FindOneOptions]) Error {
+	if err := DB.Collection(o.Model.CollectionName()).FindOne(context.TODO(), filter, opts...).Decode(o.Model); err != nil {
+		return Errors.Mongo(err)
+	}
+	return nil
+}
+
 // ejecuta busquedas por el filtro
-func (o *Odm) Find(result any, filter bson.D) Error {
+func (o *Odm) Find(result any, filter bson.D, opts ...options.Lister[options.FindOptions]) Error {
 	ctx := context.TODO()
 	cursor, err := DB.Collection(o.Model.CollectionName()).Find(ctx, filter)
 	if err != nil {
@@ -83,10 +77,15 @@ func (o *Odm) Find(result any, filter bson.D) Error {
 	return nil
 }
 
-// trae 1 documento segun el filtro
-func (o *Odm) FindOne(filter bson.D, opts ...options.Lister[options.FindOneOptions]) Error {
-	if err := DB.Collection(o.Model.CollectionName()).FindOne(context.TODO(), filter, opts...).Decode(o.Model); err != nil {
-		PrintWarning("Failed to FindOne :error", Entry{"collection", o.Model.CollectionName()}, Entry{"filter", filter}, Entry{"opts", opts}, Entry{"error", err.Error()})
+// trae un slice con todos los documentos encontrados
+func (o *Odm) FindBy(result any, field string, value any) Error {
+	filter := bson.D{bson.E{Key: field, Value: value}}
+	ctx := context.TODO()
+	cursor, err := DB.Collection(o.Model.CollectionName()).Find(ctx, filter)
+	if err != nil {
+		return Errors.Mongo(err)
+	}
+	if err = cursor.All(ctx, result); err != nil {
 		return Errors.Mongo(err)
 	}
 	return nil

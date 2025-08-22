@@ -7,3 +7,9 @@ type StoreRole struct {
 }
 
 func (v *StoreRole) PrepareForValidation(ctx *app.HttpContext) app.Error { return nil }
+
+type GrantRole struct {
+	UserID string `json:"user_id" rules:"required|exists:users,_id"`
+}
+
+func (v *GrantRole) PrepareForValidation(ctx *app.HttpContext) app.Error { return nil }

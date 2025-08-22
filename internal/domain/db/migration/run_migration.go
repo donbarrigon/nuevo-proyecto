@@ -14,7 +14,7 @@ var Migrations = []app.Object{}
 func Run() {
 
 	// agregue las funciones de migracion up y down
-	add("users", UpUsers, DownUsers)
+	add("users", UsersUp, UsersDown)
 }
 
 func add(name string, up func(), down func()) {

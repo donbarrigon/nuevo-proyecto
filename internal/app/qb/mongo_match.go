@@ -22,22 +22,22 @@ func Document(value ...bson.E) bson.D {
 	return bson.D(value)
 }
 
-func Field(key string, value any) bson.E {
+func Element(key string, value any) bson.E {
 	return bson.E{Key: key, Value: value}
 }
 
 func Array(value ...any) bson.A {
-	return bson.A(value)
+	return value
 }
 
 // operadores logicos ----------------------------------------------------------------
 
 func And(value ...any) bson.E {
-	return bson.E{Key: "$and", Value: bson.A(value)}
+	return bson.E{Key: "$and", Value: value}
 }
 
 func Or(value ...any) bson.E {
-	return bson.E{Key: "$or", Value: bson.A(value)}
+	return bson.E{Key: "$or", Value: value}
 }
 
 func Not(key string, value any) bson.E {
@@ -50,7 +50,7 @@ func Not(key string, value any) bson.E {
 }
 
 func Nor(values ...any) bson.E {
-	return bson.E{Key: "$nor", Value: bson.A(values)}
+	return bson.E{Key: "$nor", Value: values}
 }
 
 // operadores de comparacion ----------------------------------------------------------------
@@ -80,12 +80,11 @@ func Lte(value any) bson.E {
 }
 
 func In(value ...any) bson.E {
-	// return bson.E{Key: "$in", Value: bson.A(value)}
 	return bson.E{Key: "$in", Value: value}
 }
 
 func Nin(value ...any) bson.E {
-	return bson.E{Key: "$nin", Value: bson.A(value)}
+	return bson.E{Key: "$nin", Value: value}
 }
 
 // operadores de elemento ----------------------------------------------------------------

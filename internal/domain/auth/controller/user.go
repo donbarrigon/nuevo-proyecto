@@ -115,7 +115,7 @@ func UserStore(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(user.ID.Hex(), user, "create", user)
+	go service.ActivityRecord(user.ID.Hex(), user, "create", user)
 	go service.SendVerificationEmail(user)
 
 	runLogin(ctx, req.Email, req.Password)
@@ -191,7 +191,7 @@ func runLogin(ctx *app.HttpContext, email string, password string) {
 		ctx.ResponseError(err)
 		return
 	}
-	go model.ActivityRecord(user.ID.Hex(), accessToken, "login")
+	go service.ActivityRecord(user.ID.Hex(), accessToken, "login")
 
 	ctx.ResponseOk(resource.NewUserLogin(user, accessToken))
 
@@ -239,7 +239,7 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"email": user.Email})
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"email": user.Email})
 	go service.SendVerificationEmail(user)
 	go service.SendEmailChangeNotification(user, oldEmail)
 
@@ -282,7 +282,7 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(ctx.Auth.UserID(), user, "update", dirty)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "update", dirty)
 
 	ctx.ResponseOk(user)
 }
@@ -337,7 +337,7 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"password": user.Password})
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"password": user.Password})
 
 	ctx.ResponseOk(user)
 }
@@ -368,7 +368,7 @@ func UserConfirmEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email_verified_at": user.EmailVerifiedAt})
+	go service.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email_verified_at": user.EmailVerifiedAt})
 
 	ctx.ResponseNoContent()
 }
@@ -408,7 +408,7 @@ func UserRevertEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
+	go service.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
 
 	ctx.ResponseNoContent()
 }
@@ -437,7 +437,7 @@ func UserDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(ctx.Auth.UserID(), user, "soft-delete", nil)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "soft-delete", nil)
 
 	ctx.ResponseNoContent()
 }
@@ -465,7 +465,7 @@ func UserRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(ctx.Auth.UserID(), user, "restore", nil)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "restore", nil)
 
 	ctx.ResponseNoContent()
 }
@@ -483,7 +483,7 @@ func Logout(ctx *app.HttpContext) {
 		return
 	}
 
-	go model.ActivityRecord(ctx.Auth.UserID(), accessToken, "logout", accessToken)
+	go service.ActivityRecord(ctx.Auth.UserID(), accessToken, "logout", accessToken)
 
 	ctx.ResponseNoContent()
 }
