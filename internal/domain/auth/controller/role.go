@@ -236,7 +236,7 @@ func RoleGrant(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), role, "grant", user)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "grant", role)
 
 	ctx.ResponseNoContent()
 }
@@ -288,7 +288,7 @@ func RoleRevoke(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), role, "revoke", user)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "revoke", role)
 
 	ctx.ResponseNoContent()
 }

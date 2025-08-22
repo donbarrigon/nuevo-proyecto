@@ -238,7 +238,7 @@ func PermissionGrant(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), permission, "grant", user)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "grant", permission)
 
 	ctx.ResponseNoContent()
 }
