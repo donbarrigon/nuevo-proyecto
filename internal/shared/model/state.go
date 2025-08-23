@@ -13,14 +13,13 @@ type State struct {
 	CountryID   bson.ObjectID `bson:"country_id,omitempty"   json:"country_id,omitempty"`
 	CountryCode string        `bson:"country_code,omitempty" json:"country_code,omitempty"`
 	CountryName string        `bson:"country_name,omitempty" json:"country_name,omitempty"`
-	ISO2        string        `bson:"iso2,omitempty"         json:"iso2,omitempty"`
-	ISO3166_2   string        `bson:"iso3166_2,omitempty"    json:"iso3166_2,omitempty"`
-	FIPSCode    string        `bson:"fips_code,omitempty"    json:"fips_code,omitempty"`
+	Iso2        string        `bson:"iso2,omitempty"         json:"iso2,omitempty"`
+	Iso3166_2   string        `bson:"iso3166_2,omitempty"    json:"iso3166_2,omitempty"`
+	FipsCode    string        `bson:"fips_code,omitempty"    json:"fips_code,omitempty"`
 	Type        string        `bson:"type,omitempty"         json:"type,omitempty"`
-	Level       *string       `bson:"level,omitempty"        json:"level,omitempty"`
-	ParentID    *string       `bson:"parent_id,omitempty"    json:"parent_id,omitempty"`
-	Latitude    string        `bson:"latitude,omitempty"     json:"latitude,omitempty"`
-	Longitude   string        `bson:"longitude,omitempty"    json:"longitude,omitempty"`
+	Level       int           `bson:"level,omitempty"        json:"level,omitempty"`
+	ParentID    bson.ObjectID `bson:"parent_id,omitempty"    json:"parent_id,omitempty"`
+	Location    app.GeoPoint  `bson:"location"               json:"location"`
 	Timezone    string        `bson:"timezone,omitempty"     json:"timezone,omitempty"`
 	CreatedAt   time.Time     `bson:"created_at"             json:"created_at"`
 	UpdatedAt   time.Time     `bson:"updated_at"             json:"updated_at"`

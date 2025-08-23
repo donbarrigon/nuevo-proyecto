@@ -10,8 +10,8 @@ import (
 type Country struct {
 	ID             bson.ObjectID     `bson:"id,omitempty"              json:"id,omitempty"`
 	Name           string            `bson:"name,omitempty"            json:"name,omitempty"`
-	ISO3           string            `bson:"iso3,omitempty"            json:"iso3,omitempty"`
-	ISO2           string            `bson:"iso2,omitempty"            json:"iso2,omitempty"`
+	Iso3           string            `bson:"iso3,omitempty"            json:"iso3,omitempty"`
+	Iso2           string            `bson:"iso2,omitempty"            json:"iso2,omitempty"`
 	NumericCode    string            `bson:"numeric_code,omitempty"    json:"numeric_code,omitempty"`
 	PhoneCode      string            `bson:"phonecode,omitempty"       json:"phonecode,omitempty"`
 	Capital        string            `bson:"capital,omitempty"         json:"capital,omitempty"`
@@ -21,12 +21,11 @@ type Country struct {
 	TLD            string            `bson:"tld,omitempty"             json:"tld,omitempty"`
 	Native         string            `bson:"native,omitempty"          json:"native,omitempty"`
 	Region         CountryRegion     `bson:"region,omitempty"          json:"region,omitempty"`
-	Subregion      CountrySubregion  `bson:"subregion,omitempty"       json:"subregion,omitempty"`
+	Subregion      CountrySubRegion  `bson:"subregion,omitempty"       json:"subregion,omitempty"`
 	Nationality    string            `bson:"nationality,omitempty"     json:"nationality,omitempty"`
 	Timezones      []CountryTimezone `bson:"timezones,omitempty"       json:"timezones,omitempty"`
 	Translations   map[string]string `bson:"translations,omitempty"    json:"translations,omitempty"`
-	Latitude       string            `bson:"latitude,omitempty"        json:"latitude,omitempty"`
-	Longitude      string            `bson:"longitude,omitempty"       json:"longitude,omitempty"`
+	Location       app.GeoPoint      `bson:"location"                  json:"location"`
 	Emoji          string            `bson:"emoji,omitempty"           json:"emoji,omitempty"`
 	EmojiU         string            `bson:"emojiU,omitempty"          json:"emojiU,omitempty"`
 	CreatedAt      time.Time         `bson:"created_at"                json:"created_at"`
@@ -49,7 +48,7 @@ type CountryRegion struct {
 	WikiDataId   string            `bson:"wikiDataId,omitempty"   json:"wikiDataId,omitempty"`
 }
 
-type CountrySubregion struct {
+type CountrySubRegion struct {
 	ID           int               `bson:"id,omitempty"           json:"id,omitempty"`
 	RegionID     int               `bson:"region_id,omitempty"    json:"region_id,omitempty"`
 	Name         string            `bson:"name,omitempty"         json:"name,omitempty"`

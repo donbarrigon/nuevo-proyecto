@@ -64,7 +64,7 @@ func PermissionShow(ctx *app.HttpContext) {
 	ctx.ResponseOk(permission)
 }
 
-func PermissionCreate(ctx *app.HttpContext) {
+func PermissionStore(ctx *app.HttpContext) {
 	if err := policy.PermissionCreate(ctx); err != nil {
 		ctx.ResponseError(err)
 		return

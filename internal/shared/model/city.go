@@ -18,8 +18,8 @@ type City struct {
 	CountryName string        `bson:"country_name,omitempty" json:"country_name,omitempty"`
 	Latitude    string        `bson:"latitude,omitempty" json:"latitude,omitempty"`
 	Longitude   string        `bson:"longitude,omitempty" json:"longitude,omitempty"`
-	Timezone    *string       `bson:"timezone,omitempty" json:"timezone,omitempty"`
-	WikiDataID  *string       `bson:"wikiDataId,omitempty" json:"wikiDataId,omitempty"`
+	Timezone    string        `bson:"timezone,omitempty" json:"timezone,omitempty"`
+	WikiDataID  string        `bson:"wikiDataId,omitempty" json:"wikiDataId,omitempty"`
 	CreatedAt   time.Time     `bson:"created_at" json:"created_at"`
 	UpdatedAt   time.Time     `bson:"updated_at" json:"updated_at"`
 	app.Odm

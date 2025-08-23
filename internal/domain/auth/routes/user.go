@@ -27,7 +27,6 @@ func User(r *app.Routes) {
 		Name("users.logout")
 
 	r.Prefix("dashboard", func() {
-
 		r.Get("users", controller.UserIndex).
 			Name("users.index")
 
@@ -46,8 +45,63 @@ func User(r *app.Routes) {
 		r.Delete("users/:id", controller.UserDestroy).
 			Name("users.destroy")
 
-		r.Patch("users/:id/restore", controller.UserDestroy).
+		r.Put("users/:id/restore", controller.UserDestroy).
 			Name("users.restore")
 
+			//roles
+		r.Get("roles", controller.RoleIndex).
+			Name("roles.index")
+
+		r.Get("roles/trashed", controller.RoleTrashed).
+			Name("roles.trashed")
+
+		r.Get("roles/:id", controller.RoleShow).
+			Name("roles.show")
+
+		r.Post("roles", controller.RoleStore).
+			Name("roles.store")
+
+		r.Patch("roles/:id", controller.RoleUpdate).
+			Name("roles.update")
+
+		r.Delete("roles/:id", controller.RoleDestroy).
+			Name("roles.destroy")
+
+		r.Put("roles/:id/restore", controller.RoleRestore).
+			Name("roles.restore")
+
+		r.Patch("roles/:id/grant", controller.RoleGrant).
+			Name("roles.grant")
+
+		r.Patch("roles/:id/revoke", controller.RoleRevoke).
+			Name("roles.revoke")
+
+		//permissions
+		r.Get("permissions", controller.PermissionIndex).
+			Name("permissions.index")
+
+		r.Get("permissions/trashed", controller.PermissionTrashed).
+			Name("permissions.trashed")
+
+		r.Get("permissions/:id", controller.PermissionShow).
+			Name("permissions.show")
+
+		r.Post("permissions", controller.PermissionStore).
+			Name("permissions.store")
+
+		r.Patch("permissions/:id", controller.PermissionUpdate).
+			Name("permissions.update")
+
+		r.Delete("permissions/:id", controller.PermissionDestroy).
+			Name("permissions.destroy")
+
+		r.Put("permissions/:id/restore", controller.PermissionRestore).
+			Name("permissions.restore")
+
+		r.Patch("permissions/:id/grant", controller.PermissionGrant).
+			Name("permissions.grant")
+
+		r.Patch("permissions/:id/revoke", controller.PermissionRevoke).
+			Name("permissions.revoke")
 	}, middleware.Auth)
 }

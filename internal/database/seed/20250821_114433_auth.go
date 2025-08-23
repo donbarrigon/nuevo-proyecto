@@ -1,6 +1,7 @@
 package seed
 
 import (
+	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/shared/model"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -52,6 +53,13 @@ func Permissions() {
 			"pin",       // fijar contenido importante
 			"lock",      // bloquear tu propio contenido (ej: cerrar comentarios)
 		},
+
+		"admin": {
+			"grant permission",  // otorgar permisos a otros usuarios
+			"revoke permission", // revocar permisos a otros usuarios
+			"grant role",        // otorgar roles a otros usuarios
+			"revoke role",       // revocar roles a otros usuarios
+		},
 	}
 	// slice con los nombres de los modelos
 	models := []string{"user", "role", "permission", "city", "state", "country"}
@@ -66,31 +74,59 @@ func Permissions() {
 	for _, action := range actions["user"] {
 		permission := model.NewPermission()
 		permission.Name = action
+		if err := permission.Create(); err != nil {
+			app.PrintError("Fail to create permission: :permission :error", app.E("permission", permission.Name), app.E("error", err.Error()))
+			panic(err)
+		}
 		userPermissions = append(userPermissions, permission.ID)
 	}
 	roleUser := model.NewRole()
 	roleUser.Name = "user"
 	roleUser.PermissionIDs = userPermissions
-	roleUser.Create()
+	if err := roleUser.Create(); err != nil {
+		app.PrintError("Fail to create role: :role :error", app.E("role", roleUser.Name), app.E("error", err.Error()))
+		panic(err)
+	}
 
 	// rol de moderador
 	for _, action := range actions["moderator"] {
 		permission := model.NewPermission()
 		permission.Name = action
+		if err := permission.Create(); err != nil {
+			app.PrintError("Fail to create permission: :permission :error", app.E("permission", permission.Name), app.E("error", err.Error()))
+			panic(err)
+		}
 		moderatorPermissions = append(moderatorPermissions, permission.ID)
 	}
 	roleModerator := model.NewRole()
 	roleModerator.Name = "moderator"
 	roleModerator.PermissionIDs = moderatorPermissions
-	roleModerator.Create()
+	if err := roleModerator.Create(); err != nil {
+		app.PrintError("Fail to create role: :role :error", app.E("role", roleModerator.Name), app.E("error", err.Error()))
+		panic(err)
+	}
 
 	// rol de admin
 	for _, m := range models {
 		for _, action := range actions["crud"] {
 			permission := model.NewPermission()
 			permission.Name = action + " " + m
+			if err := permission.Create(); err != nil {
+				app.PrintError("Fail to create permission: :permission :error", app.E("permission", permission.Name), app.E("error", err.Error()))
+				panic(err)
+			}
 			crudPermissions = append(crudPermissions, permission.ID)
 		}
+	}
+
+	for _, action := range actions["admin"] {
+		permission := model.NewPermission()
+		permission.Name = action
+		if err := permission.Create(); err != nil {
+			app.PrintError("Fail to create permission: :permission :error", app.E("permission", permission.Name), app.E("error", err.Error()))
+			panic(err)
+		}
+		adminPermissions = append(adminPermissions, permission.ID)
 	}
 
 	adminPermissions = append(adminPermissions, crudPermissions...)
@@ -100,6 +136,9 @@ func Permissions() {
 	roleAdmin := model.NewRole()
 	roleAdmin.Name = "admin"
 	roleAdmin.PermissionIDs = adminPermissions
-	roleAdmin.Create()
+	if err := roleAdmin.Create(); err != nil {
+		app.PrintError("Fail to create role: :role :error", app.E("role", roleAdmin.Name), app.E("error", err.Error()))
+		panic(err)
+	}
 
 }
