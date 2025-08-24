@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/domain/db/seed"
+	"github.com/donbarrigon/nuevo-proyecto/internal/database/seed"
 )
 
-func SeedRun(ctx app.HttpContext) {
+func SeedRun(ctx *app.HttpContext) {
 
 	if !app.Env.SERVER_MIGRATION_ENABLE {
 		ctx.ResponseError(app.Errors.Forbiddenf("Migration disabled"))
@@ -20,6 +20,7 @@ func SeedRun(ctx app.HttpContext) {
 		panic("Migration disabled")
 	}
 
+	seed.Seeds = app.List{}
 	seed.Run()
 
 	if er := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); er != nil {
@@ -61,7 +62,7 @@ func SeedRun(ctx app.HttpContext) {
 		app.PrintError("Fail to read file: :file :error", app.E("file", filePath), app.E("error", er.Error()))
 		panic(er.Error())
 	}
-	seeds := app.Object{}
+	seeds := app.List{}
 	for _, s := range seed.Seeds {
 		if records[s.Key] == "" {
 			seeds = append(seeds, s)
@@ -85,7 +86,7 @@ func SeedRun(ctx app.HttpContext) {
 
 }
 
-func SeedList(ctx app.HttpContext) {
+func SeedList(ctx *app.HttpContext) {
 	if !app.Env.SERVER_MIGRATION_ENABLE {
 		ctx.ResponseError(app.Errors.Forbiddenf("Migration disabled"))
 		app.PrintError("Migration disabled")
@@ -137,12 +138,13 @@ func SeedList(ctx app.HttpContext) {
 	ctx.ResponseNoContent()
 }
 
-func SeedForce(ctx app.HttpContext) {
+func SeedForce(ctx *app.HttpContext) {
 	if !app.Env.SERVER_MIGRATION_ENABLE {
 		ctx.ResponseError(app.Errors.Forbiddenf("Migration disabled"))
 		panic("Migration disabled")
 	}
 
+	seed.Seeds = app.List{}
 	seed.Run()
 
 	if er := os.MkdirAll(app.Env.LOG_PATH, os.ModePerm); er != nil {

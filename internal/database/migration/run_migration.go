@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-var Migrations = []app.Object{}
+var Migrations = []app.List{}
 
 func Run() {
 
@@ -18,7 +18,7 @@ func Run() {
 }
 
 func add(name string, up func(), down func()) {
-	migration := app.Object{}
+	migration := app.List{}
 	migration.Set("name", name)
 	migration.Set("up", up)
 	migration.Set("down", down)

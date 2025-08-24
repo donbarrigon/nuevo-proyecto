@@ -18,7 +18,7 @@ type AccessToken struct {
 	Permissions []string      `bson:"permissions"   json:"permissions"`
 	CreatedAt   time.Time     `bson:"created_at"    json:"created_at"`
 	ExpiresAt   time.Time     `bson:"expires_at"    json:"expires_at"`
-	app.Odm
+	app.Odm     `bson:"-" json:"-"`
 }
 
 func (t *AccessToken) CollectionName() string { return "access_tokens" }

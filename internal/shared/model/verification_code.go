@@ -19,7 +19,7 @@ type VerificationCode struct {
 	CreatedAt time.Time         `bson:"created_at"         json:"created_at"`
 	ExpiresAt time.Time         `bson:"expires_at"         json:"updatexpires_ated_at"`
 
-	app.Odm
+	app.Odm `bson:"-" json:"-"`
 }
 
 func NewVerificationCode() *VerificationCode {

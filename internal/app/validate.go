@@ -93,7 +93,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 				err.Append(&FieldError{
 					FieldName:    key,
 					Message:      "Este campo es requerido",
-					Placeholders: Object{{"attribute", key}},
+					Placeholders: List{{"attribute", key}},
 				})
 				continue
 			}
@@ -203,7 +203,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					err.Append(&FieldError{
 						FieldName: key,
 						Message:   "The {attribute} has invalid parameters for digits_between.",
-						Placeholders: Object{
+						Placeholders: List{
 							{"attribute", key},
 						},
 					})
@@ -396,7 +396,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					err.Append(&FieldError{
 						FieldName: key,
 						Message:   "The {attribute} has an invalid date format: {error}.",
-						Placeholders: Object{
+						Placeholders: List{
 							{"attribute", key},
 							{"error", e.Error()},
 						},
@@ -410,7 +410,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 					err.Append(&FieldError{
 						FieldName: key,
 						Message:   "The {attribute} has an invalid date format: {error}.",
-						Placeholders: Object{
+						Placeholders: List{
 							{"attribute", key},
 							{"error", e.Error()},
 						},
@@ -435,7 +435,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 						err.Append(&FieldError{
 							FieldName: "start",
 							Message:   "The {attribute} has an invalid date format: {error}.",
-							Placeholders: Object{
+							Placeholders: List{
 								{"attribute", "start"},
 								{"error", errStart.Error()},
 							},
@@ -445,7 +445,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 						err.Append(&FieldError{
 							FieldName: "end",
 							Message:   "The {attribute} has an invalid date format: {error}.",
-							Placeholders: Object{
+							Placeholders: List{
 								{"attribute", "end"},
 								{"error", errEnd.Error()},
 							},
@@ -489,7 +489,7 @@ func ValidateMinNumber[T constraints.Integer | constraints.Float](attribute stri
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be at least {limit}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -503,7 +503,7 @@ func ValidateMaxNumber[T constraints.Integer | constraints.Float](attribute stri
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} may not be greater than {limit}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -517,7 +517,7 @@ func ValidateMinString(attribute string, value string, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be at least {limit} characters.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -531,7 +531,7 @@ func ValidateMaxString(attribute string, value string, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} may not be greater than {limit} characters.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -545,7 +545,7 @@ func ValidateMinSlice(attribute string, value []any, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must have at least {limit} Entrys.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -559,7 +559,7 @@ func ValidateMaxSlice(attribute string, value []any, limit int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} may not have more than {limit} Entrys.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"limit", limit},
 			},
@@ -601,7 +601,7 @@ func ValidateRequired(attribute string, value any) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -620,7 +620,7 @@ func ValidateRequiredIf[T comparable](attribute string, value any, other T, para
 				return &FieldError{
 					FieldName: attribute,
 					Message:   "Invalid condition for required_if rule.",
-					Placeholders: Object{
+					Placeholders: List{
 						{"attribute", attribute},
 					},
 				}
@@ -666,7 +666,7 @@ func ValidateRequiredIf[T comparable](attribute string, value any, other T, para
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid parameters for required_if rule.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -684,7 +684,7 @@ func requiredIfError(attribute string, otherField string, otherValue string) *Fi
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} field is required when {other} is {value}.",
-		Placeholders: Object{
+		Placeholders: List{
 			{"attribute", attribute},
 			{"other", otherField},
 			{"value", otherValue},
@@ -703,7 +703,7 @@ func ValidateRequiredUnless[T comparable](attribute string, value any, other T, 
 				return &FieldError{
 					FieldName: attribute,
 					Message:   "Invalid parameters for required_unless rule.",
-					Placeholders: Object{
+					Placeholders: List{
 						{"attribute", attribute},
 					},
 				}
@@ -749,7 +749,7 @@ func ValidateRequiredUnless[T comparable](attribute string, value any, other T, 
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid parameters for required_unless rule.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -767,7 +767,7 @@ func requiredUnlessError(attribute, other, expected string) *FieldError {
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} field is required unless {other} is in {expected}.",
-		Placeholders: Object{
+		Placeholders: List{
 			{"attribute", attribute},
 			{"other", other},
 			{"expected", expected},
@@ -789,7 +789,7 @@ func ValidateWithoutAll(attribute string, value any, otherFieldNames []string, o
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when none of {others} are present.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -811,7 +811,7 @@ func ValidateWithout(attribute string, value any, otherFieldNames []string, othe
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when {others} is empty.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -833,7 +833,7 @@ func ValidateWithAll(attribute string, value any, otherFieldNames []string, othe
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when all {others} are present.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -855,7 +855,7 @@ func ValidateWith(attribute string, value any, otherFieldNames []string, otherVa
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field is required when {others} is present.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"others", strings.Join(otherFieldNames, ", ")},
 			},
@@ -869,7 +869,7 @@ func ValidateSame[T comparable](attribute string, value T, otherattribute string
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} and {other} must match.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"other", otherattribute},
 			},
@@ -883,7 +883,7 @@ func ValidateDifferent[T comparable](attribute string, value T, otherattribute s
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} and {other} must be different.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"other", otherattribute},
 			},
@@ -897,7 +897,7 @@ func ValidateConfirmed[T comparable](attribute string, value T, confirmation T) 
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} confirmation does not match.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -916,7 +916,7 @@ func ValidateAccepted(attribute string, value any) *FieldError {
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} must be accepted.",
-		Placeholders: Object{
+		Placeholders: List{
 			{"attribute", attribute},
 		},
 	}
@@ -933,7 +933,7 @@ func ValidateDeclined(attribute string, value any) *FieldError {
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} must be declined.",
-		Placeholders: Object{
+		Placeholders: List{
 			{Key: "attribute", Value: attribute},
 		},
 	}
@@ -945,7 +945,7 @@ func ValidateDigits(attribute string, value any, length int) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be :digits digits.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"digits", length},
 			},
@@ -961,7 +961,7 @@ func ValidateDigitsBetween(attribute string, value any, min, max int) *FieldErro
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be between :min and :max digits.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 				{"min", min},
 				{"max", max},
@@ -977,7 +977,7 @@ func ValidateEmail(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid email address.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -991,7 +991,7 @@ func ValidateURL(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid URL.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -1005,7 +1005,7 @@ func ValidateUUID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid UUID.",
-			Placeholders: Object{
+			Placeholders: List{
 				{"attribute", attribute},
 			},
 		}
@@ -1019,7 +1019,7 @@ func ValidateULID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid ULID.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1032,7 +1032,7 @@ func ValidateULID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} has an invalid ULID timestamp.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1049,7 +1049,7 @@ func ValidateULID(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} has a ULID timestamp in the future.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1063,7 +1063,7 @@ func ValidateIP(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid IP address.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1077,7 +1077,7 @@ func ValidateIPv4(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid IPv4 address.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1091,7 +1091,7 @@ func ValidateIPv6(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid IPv6 address.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1104,7 +1104,7 @@ func ValidateMACAddress(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must be a valid MAC address.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1117,7 +1117,7 @@ func ValidateASCII(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must only contain ASCII characters.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1130,7 +1130,7 @@ func ValidateLowercase(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be lowercase.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1143,7 +1143,7 @@ func ValidateUppercase(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be uppercase.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1156,7 +1156,7 @@ func ValidateHex(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a hexadecimal string.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1169,7 +1169,7 @@ func ValidateHexColor(attribute, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a valid hexadecimal color code.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1183,7 +1183,7 @@ func ValidateJSON(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a valid JSON string.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1197,7 +1197,7 @@ func ValidateSlug(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a valid slug (lowercase letters, numbers, hyphens and underscores only).",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1213,7 +1213,7 @@ func ValidateRegex(attribute string, value string, pattern string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid regular expression pattern.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1223,7 +1223,7 @@ func ValidateRegex(attribute string, value string, pattern string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field format is invalid.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1237,7 +1237,7 @@ func ValidateNotRegex(attribute string, value string, pattern string) *FieldErro
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "Invalid regular expression pattern.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1246,7 +1246,7 @@ func ValidateNotRegex(attribute string, value string, pattern string) *FieldErro
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field contains an invalid value.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1260,7 +1260,7 @@ func ValidateAlpha(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1274,7 +1274,7 @@ func ValidateAlphaDash(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, dashes and underscores.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1288,7 +1288,7 @@ func ValidateAlphaSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters and spaces.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1302,7 +1302,7 @@ func ValidateAlphaDashSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, spaces, dashes and underscores.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1316,7 +1316,7 @@ func ValidateAlphaNum(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters and numbers.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1330,7 +1330,7 @@ func ValidateAlphaNumDash(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers and dashes.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1344,7 +1344,7 @@ func ValidateAlphaNumSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, and spaces.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1358,7 +1358,7 @@ func ValidateAlphaNumDashSpaces(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, numbers, spaces, dashes, and underscores.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1372,7 +1372,7 @@ func ValidateAlphaAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, including accented characters and ñ.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1386,7 +1386,7 @@ func ValidateAlphaDashAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), dashes, and underscores.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1400,7 +1400,7 @@ func ValidateAlphaSpacesAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters, accented characters, ñ, and spaces.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1414,7 +1414,7 @@ func ValidateAlphaDashSpacesAccents(attribute string, value string) *FieldError 
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, spaces, dashes, and underscores.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1428,7 +1428,7 @@ func ValidateAlphaNumAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ) and numbers.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1442,7 +1442,7 @@ func ValidateAlphaNumDashAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, dashes, and underscores.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1456,7 +1456,7 @@ func ValidateAlphaNumSpacesAccents(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, and spaces.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1470,7 +1470,7 @@ func ValidateAlphaNumDashSpacesAccents(attribute string, value string) *FieldErr
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field may only contain letters (including accented characters and ñ), numbers, spaces, dashes, and underscores.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1488,7 +1488,7 @@ func ValidateUsername(attribute string, value string) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must start and end with a letter or number.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1499,7 +1499,7 @@ func ValidateUsername(attribute string, value string) *FieldError {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The {attribute} cannot contain consecutive dots or underscores.",
-				Placeholders: Object{
+				Placeholders: List{
 					{Key: "attribute", Value: attribute},
 				},
 			}
@@ -1511,7 +1511,7 @@ func ValidateUsername(attribute string, value string) *FieldError {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The {attribute} may only contain letters, numbers, dots, and underscores.",
-				Placeholders: Object{
+				Placeholders: List{
 					{Key: "attribute", Value: attribute},
 				},
 			}
@@ -1526,7 +1526,7 @@ func ValidateStartsWith(attribute string, value string, prefix string) *FieldErr
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must start with {prefix}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "prefix", Value: prefix},
 			},
@@ -1540,7 +1540,7 @@ func ValidateEndsWith(attribute string, value string, suffix string) *FieldError
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} must end with {suffix}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "suffix", Value: suffix},
 			},
@@ -1554,7 +1554,7 @@ func ValidateContains(attribute string, value string, substr string) *FieldError
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must contain {substring}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "substring", Value: substr},
 			},
@@ -1568,7 +1568,7 @@ func ValidateNotContains(attribute string, value string, substr string) *FieldEr
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must not contain {substring}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "substring", Value: substr},
 			},
@@ -1586,7 +1586,7 @@ func ValidateIn[T comparable](attribute string, value T, allowed ...T) *FieldErr
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The selected {attribute} is invalid.",
-		Placeholders: Object{
+		Placeholders: List{
 			{Key: "attribute", Value: attribute},
 			{Key: "options", Value: allowed},
 		},
@@ -1599,7 +1599,7 @@ func ValidateNin[T comparable](attribute string, value T, denied ...T) *FieldErr
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The selected {attribute} is not allowed.",
-				Placeholders: Object{
+				Placeholders: List{
 					{Key: "attribute", Value: attribute},
 					{Key: "restricted", Value: denied},
 				},
@@ -1621,7 +1621,7 @@ func ValidateExists(attribute string, collection string, field string, value any
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} does not exist.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1637,7 +1637,7 @@ func ValidateExists(attribute string, collection string, field string, value any
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} failed to check existence in database.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1669,7 +1669,7 @@ func ValidateUnique(attribute string, collection string, field string, value any
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} failed to find document in database.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1677,7 +1677,7 @@ func ValidateUnique(attribute string, collection string, field string, value any
 	return &FieldError{
 		FieldName: attribute,
 		Message:   "The {attribute} has already been taken.",
-		Placeholders: Object{
+		Placeholders: List{
 			{Key: "attribute", Value: attribute},
 		},
 	}
@@ -1690,7 +1690,7 @@ func ValidateDistinct[T comparable](attribute string, list []T) *FieldError {
 			return &FieldError{
 				FieldName: attribute,
 				Message:   "The {attribute} field has a duplicate value.",
-				Placeholders: Object{
+				Placeholders: List{
 					{"attribute", attribute},
 					{"value", Entry},
 				},
@@ -1706,7 +1706,7 @@ func ValidatePositive[T constraints.Integer | constraints.Float](attribute strin
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be greater than 0.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1719,7 +1719,7 @@ func ValidateNegative[T constraints.Integer | constraints.Float](attribute strin
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be less than 0.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1732,7 +1732,7 @@ func ValidateBetween[T constraints.Integer | constraints.Float](attribute string
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be between {min} and {max}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "min", Value: min},
 				{Key: "max", Value: max},
@@ -1747,7 +1747,7 @@ func ValidateBefore(attribute string, value time.Time, target time.Time) *FieldE
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date before {date}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "date", Value: target.Format(time.RFC3339)},
 			},
@@ -1761,7 +1761,7 @@ func ValidateAfter(attribute string, value time.Time, target time.Time) *FieldEr
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date after {date}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "date", Value: target.Format(time.RFC3339)},
 			},
@@ -1775,7 +1775,7 @@ func ValidateBeforeNow(attribute string, value time.Time) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date in the past.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1788,7 +1788,7 @@ func ValidateAfterNow(attribute string, value time.Time) *FieldError {
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date in the future.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 			},
 		}
@@ -1801,7 +1801,7 @@ func ValidateDateBetween(attribute string, value time.Time, start time.Time, end
 		return &FieldError{
 			FieldName: attribute,
 			Message:   "The {attribute} field must be a date between {start} and {end}.",
-			Placeholders: Object{
+			Placeholders: List{
 				{Key: "attribute", Value: attribute},
 				{Key: "start", Value: start.Format(time.RFC3339)},
 				{Key: "end", Value: end.Format(time.RFC3339)},

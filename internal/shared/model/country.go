@@ -30,7 +30,7 @@ type Country struct {
 	EmojiU         string            `bson:"emojiU,omitempty"          json:"emojiU,omitempty"`
 	CreatedAt      time.Time         `bson:"created_at"                json:"created_at"`
 	UpdatedAt      time.Time         `bson:"updated_at"                json:"updated_at"`
-	app.Odm
+	app.Odm        `bson:"-" json:"-"`
 }
 
 type CountryTimezone struct {

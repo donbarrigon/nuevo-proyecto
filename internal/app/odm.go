@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -17,8 +18,10 @@ type Model interface {
 	BeforeUpdate() Error
 }
 
+type Collection []Model
+
 type Odm struct {
-	Model Model `json:"-" bson:"-"`
+	Model Model `bson:"-" json:"-"`
 }
 
 var DBClient *mongo.Client
@@ -144,12 +147,15 @@ func (o *Odm) CreateBy(validator any) Error {
 
 // crea varios documentos los datos deben ser un slice del modelo
 func (o *Odm) CreateMany(data any) Error {
-	models, ok := data.([]Model)
-	if !ok {
-		return Errors.InternalServerErrorf("type assertion failed in CreateMany")
+
+	v := reflect.ValueOf(data)
+
+	if v.Kind() != reflect.Slice {
+		return Errors.InternalServerErrorf("Create many required a slice")
 	}
-	for _, m := range models {
-		if err := m.BeforeCreate(); err != nil {
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i).Interface()
+		if err := elem.(Model).BeforeCreate(); err != nil {
 			return err
 		}
 	}
@@ -158,8 +164,9 @@ func (o *Odm) CreateMany(data any) Error {
 	if err != nil {
 		return Errors.Mongo(err)
 	}
-	for i, m := range models {
-		m.SetID(result.InsertedIDs[i].(bson.ObjectID))
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i).Interface()
+		elem.(Model).SetID(result.InsertedIDs[i].(bson.ObjectID))
 	}
 	return nil
 }

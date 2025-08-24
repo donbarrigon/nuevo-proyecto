@@ -31,7 +31,7 @@ type Logger struct {
 	Function string   `json:"function,omEntrypty" yaml:"function,omEntrypty" xml:"function,omEntrypty"`
 	Line     string   `json:"line,omEntrypty" yaml:"line,omEntrypty" xml:"line,omEntrypty"`
 	File     string   `json:"file,omEntrypty" yaml:"file,omEntrypty" xml:"file,omEntrypty"`
-	Context  Object   `json:"context,omEntrypty" yaml:"context,omEntrypty" xml:"context,omEntrypty"`
+	Context  List     `json:"context,omEntrypty" yaml:"context,omEntrypty" xml:"context,omEntrypty"`
 }
 
 const (

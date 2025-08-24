@@ -14,7 +14,7 @@ type SystemLog struct {
 	Line     string            `bson:"line,omitempty"     json:"line,omitempty"`
 	File     string            `bson:"file,omitempty"     json:"file,omitempty"`
 	Context  map[string]string `bson:"context,omitempty"  json:"context,omitempty"`
-	app.Odm
+	app.Odm  `bson:"-" json:"-"`
 }
 
 func NewSystemLog() *SystemLog {

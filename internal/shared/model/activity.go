@@ -15,7 +15,7 @@ type Activity struct {
 	Action       string        `bson:"action"        json:"action"`
 	Changes      any           `bson:"changes"       json:"changes"`
 	CreatedAt    time.Time     `bson:"created_at"    json:"created_at"`
-	app.Odm
+	app.Odm      `bson:"-" json:"-"`
 }
 
 func NewActivity() *Activity {

@@ -13,7 +13,7 @@ import (
 func World() {
 	app.PrintInfo("Seeding countries...")
 	countriesIDs := map[int]bson.ObjectID{}
-	statesIDd := map[int]bson.ObjectID{}
+	statesIDs := map[int]bson.ObjectID{}
 	regions := loadRegions()
 	subregions := loadSubRegions()
 	seedCountries := loadCountries()
@@ -69,9 +69,8 @@ func World() {
 		countriesIDs[seedCountry.ID] = country.GetID()
 		totalCountries++
 	}
-	app.PrintInfo("Seeded countries :total", app.E("total", totalCountries))
+	app.PrintInfo("Seeded countries :total wait seeding states", app.E("total", totalCountries))
 
-	app.PrintInfo("Seeding states...")
 	seedStates := loadStates()
 	var totalStates int
 	for _, seedState := range seedStates {
@@ -112,13 +111,13 @@ func World() {
 			app.PrintError("Fail to create state :error", app.E("error", err.Error()))
 			panic(err.Error())
 		}
-		statesIDd[seedState.ID] = state.GetID()
+		statesIDs[seedState.ID] = state.GetID()
 		totalStates++
 	}
 	for _, seedState := range seedStates {
 		if seedState.ParentID != "" {
 			state := model.NewState()
-			state.FindByID(statesIDd[seedState.ID])
+			state.FindByID(statesIDs[seedState.ID])
 			var parentID int
 			var er error
 			parentID, er = strconv.Atoi(seedState.ParentID)
@@ -126,15 +125,48 @@ func World() {
 				app.PrintError("Fail to add parent state :error", app.E("error", er.Error()))
 				panic(er.Error())
 			}
-			state.ParentID = statesIDd[parentID]
+			state.ParentID = statesIDs[parentID]
 			if err := state.Update(); err != nil {
 				app.PrintError("Fail to add parent state :error", app.E("error", err.Error()))
 				panic(err.Error())
 			}
 		}
 	}
+	app.PrintInfo("Seeded states :total wait seeding cities", app.E("total", totalStates))
 
-	app.PrintInfo("Seeded states :total", app.E("total", totalStates))
+	seedCities := loadCities()
+	allcityes := []*model.City{}
+	for _, seedCity := range seedCities {
+		city := model.NewCity()
+		city.Name = seedCity.Name
+		city.StateID = statesIDs[seedCity.StateID]
+		city.StateCode = seedCity.StateCode
+		city.StateName = seedCity.StateName
+		city.CountryID = countriesIDs[seedCity.CountryID]
+		city.CountryCode = seedCity.CountryCode
+		city.CountryName = seedCity.CountryName
+		city.Timezone = seedCity.Timezone
+
+		var latitude, longitud float64
+		var er error
+		latitude, er = strconv.ParseFloat(seedCity.Latitude, 64)
+		if er != nil {
+			latitude = 0
+		}
+		longitud, er = strconv.ParseFloat(seedCity.Longitude, 64)
+		if er != nil {
+			longitud = 0
+		}
+		city.Location = *app.NewGeoPoint(latitude, longitud)
+		allcityes = append(allcityes, city)
+	}
+	app.PrintInfo("file cities ready :total", app.E("total", len(allcityes)))
+	city := model.NewCity()
+	if err := city.CreateMany(allcityes); err != nil {
+		app.PrintError("Fail to create cities :error", app.E("error", err.Error()))
+		panic(err.Error())
+	}
+	app.PrintInfo("Finish seed cities :total", app.E("total", len(allcityes)))
 
 }
 
@@ -190,7 +222,7 @@ func loadCountries() []CountrySeed {
 	return countries
 }
 
-func loadStates() []RegionSeed {
+func loadStates() []StateSeed {
 	filePath := "internal/database/json/states.json"
 	data, er := os.ReadFile(filePath)
 	if er != nil {
@@ -198,7 +230,7 @@ func loadStates() []RegionSeed {
 		panic(er.Error())
 	}
 
-	var states []RegionSeed
+	var states []StateSeed
 	if er := json.Unmarshal(data, &states); er != nil {
 		app.PrintError("Fail to unmarshal :file: :error", app.E("file", filePath), app.E("error", er.Error()))
 		panic(er.Error())
@@ -208,7 +240,7 @@ func loadStates() []RegionSeed {
 
 }
 
-func loadCities() []model.City {
+func loadCities() []CitySeed {
 	filePath := "internal/database/json/cities.json"
 	data, er := os.ReadFile(filePath)
 	if er != nil {
@@ -216,7 +248,7 @@ func loadCities() []model.City {
 		panic(er.Error())
 	}
 
-	var cities []model.City
+	var cities []CitySeed
 	if er := json.Unmarshal(data, &cities); er != nil {
 		app.PrintError("Fail to unmarshal :file: :error", app.E("file", filePath), app.E("error", er.Error()))
 		panic(er.Error())
@@ -228,44 +260,59 @@ func loadCities() []model.City {
 // types
 
 type CountrySeed struct {
-	ID             int                     `json:"id"`
-	Name           string                  `json:"name"`
-	Iso3           string                  `json:"iso3"`
-	Iso2           string                  `json:"iso2"`
-	NumericCode    string                  `json:"numeric_code"`
-	Phonecode      string                  `json:"phonecode"`
-	Capital        string                  `json:"capital"`
-	Currency       string                  `json:"currency"`
-	CurrencyName   string                  `json:"currency_name"`
-	CurrencySymbol string                  `json:"currency_symbol"`
-	TLD            string                  `json:"tld"`
-	Native         string                  `json:"native"`
-	Region         string                  `json:"region"`
-	RegionID       int                     `json:"region_id"`
-	Subregion      string                  `json:"subregion"`
-	SubregionID    int                     `json:"subregion_id"`
-	Nationality    string                  `json:"nationality"`
-	Timezones      []model.CountryTimezone `json:"timezones"`
-	Translations   map[string]string       `json:"translations"`
-	Latitude       string                  `json:"latitude"`
-	Longitude      string                  `json:"longitude"`
-	Emoji          string                  `json:"emoji"`
-	EmojiU         string                  `json:"emojiU"`
+	ID             int                     `json:"id,omitempty"`
+	Name           string                  `json:"name,omitempty"`
+	Iso3           string                  `json:"iso3,omitempty"`
+	Iso2           string                  `json:"iso2,omitempty"`
+	NumericCode    string                  `json:"numeric_code,omitempty"`
+	Phonecode      string                  `json:"phonecode,omitempty"`
+	Capital        string                  `json:"capital,omitempty"`
+	Currency       string                  `json:"currency,omitempty"`
+	CurrencyName   string                  `json:"currency_name,omitempty"`
+	CurrencySymbol string                  `json:"currency_symbol,omitempty"`
+	TLD            string                  `json:"tld,omitempty"`
+	Native         string                  `json:"native,omitempty"`
+	Region         string                  `json:"region,omitempty"`
+	RegionID       int                     `json:"region_id,omitempty"`
+	Subregion      string                  `json:"subregion,omitempty"`
+	SubregionID    int                     `json:"subregion_id,omitempty"`
+	Nationality    string                  `json:"nationality,omitempty"`
+	Timezones      []model.CountryTimezone `json:"timezones,omitempty"`
+	Translations   map[string]string       `json:"translations,omitempty"`
+	Latitude       string                  `json:"latitude,omitempty"`
+	Longitude      string                  `json:"longitude,omitempty"`
+	Emoji          string                  `json:"emoji,omitempty"`
+	EmojiU         string                  `json:"emojiU,omitempty"`
 }
 
-type RegionSeed struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	CountryID   int    `json:"country_id"`
-	CountryCode string `json:"country_code"`
-	CountryName string `json:"country_name"`
-	Iso2        string `json:"iso2"`
-	Iso3166_2   string `json:"iso3166_2"`
-	FipsCode    string `json:"fips_code"`
-	Type        string `json:"type"`
-	Level       string `json:"level"`     // puede ser null
-	ParentID    string `json:"parent_id"` // puede ser null
-	Latitude    string `json:"latitude"`  // viene como string en JSON
-	Longitude   string `json:"longitude"` // viene como string en JSON
-	Timezone    string `json:"timezone"`
+type StateSeed struct {
+	ID          int    `json:"id,omitempty"`
+	Name        string `json:"name,omitempty"`
+	CountryID   int    `json:"country_id,omitempty"`
+	CountryCode string `json:"country_code,omitempty"`
+	CountryName string `json:"country_name,omitempty"`
+	Iso2        string `json:"iso2,omitempty"`
+	Iso3166_2   string `json:"iso3166_2,omitempty"`
+	FipsCode    string `json:"fips_code,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Level       string `json:"level,omitempty"`     // puede ser null
+	ParentID    string `json:"parent_id,omitempty"` // puede ser null
+	Latitude    string `json:"latitude,omitempty"`  // viene como string en JSON
+	Longitude   string `json:"longitude,omitempty"` // viene como string en JSON
+	Timezone    string `json:"timezone,omitempty"`
+}
+
+type CitySeed struct {
+	ID          int    `json:"id,omitempty"`
+	Name        string `json:"name,omitempty"`
+	StateID     int    `json:"state_id,omitempty"`
+	StateCode   string `json:"state_code,omitempty"`
+	StateName   string `json:"state_name,omitempty"`
+	CountryID   int    `json:"country_id,omitempty"`
+	CountryCode string `json:"country_code,omitempty"`
+	CountryName string `json:"country_name,omitempty"`
+	Latitude    string `json:"latitude,omitempty"`
+	Longitude   string `json:"longitude,omitempty"`
+	Timezone    string `json:"timezone,omitempty"`
+	WikiDataID  string `json:"wikiDataId,omitempty"`
 }

@@ -6,7 +6,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func Permissions() {
+func RolesAndPermissions() {
+	app.PrintInfo("seeding auth...")
 	// acciones o verbos de autorización
 	var actions = map[string][]string{
 		"crud": {
@@ -140,5 +141,7 @@ func Permissions() {
 		app.PrintError("Fail to create role: :role :error", app.E("role", roleAdmin.Name), app.E("error", err.Error()))
 		panic(err)
 	}
+
+	app.PrintInfo("Finish seed auth")
 
 }

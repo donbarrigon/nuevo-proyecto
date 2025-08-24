@@ -23,7 +23,7 @@ type State struct {
 	Timezone    string        `bson:"timezone,omitempty"     json:"timezone,omitempty"`
 	CreatedAt   time.Time     `bson:"created_at"             json:"created_at"`
 	UpdatedAt   time.Time     `bson:"updated_at"             json:"updated_at"`
-	app.Odm
+	app.Odm     `bson:"-" json:"-"`
 }
 
 func NewState() *State {
