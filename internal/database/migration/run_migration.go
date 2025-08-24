@@ -14,7 +14,10 @@ var Migrations = []app.List{}
 func Run() {
 
 	// agregue las funciones de migracion up y down
-	add("users", UsersUp, UsersDown)
+	add("create permissions", PermissionsUp, PermissionsDown)
+	add("create roles", RolesUp, RolesDown)
+	add("create users", UsersUp, UsersDown)
+
 }
 
 func add(name string, up func(), down func()) {

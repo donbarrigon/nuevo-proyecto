@@ -15,15 +15,15 @@ type Environment struct {
 	APP_URL    string
 	APP_LOCALE string
 
-	SERVER_PORT             string
-	SERVER_HTTPS_ENABLED    bool
-	SERVER_HTTPS_CERT_PATH  string
-	SERVER_HTTPS_KEY_PATH   string
-	SERVER_TIMEOUT          int
-	SERVER_MIGRATION_ENABLE bool
+	SERVER_PORT            string
+	SERVER_HTTPS_ENABLED   bool
+	SERVER_HTTPS_CERT_PATH string
+	SERVER_HTTPS_KEY_PATH  string
+	SERVER_TIMEOUT         int
 
 	DB_DATABASE          string
 	DB_CONNECTION_STRING string
+	DB_MIGRATION_ENABLE  bool
 
 	LOG_LEVEL       LogLevel
 	LOG_FLAGS       int
@@ -52,12 +52,12 @@ var Env = Environment{
 	APP_URL:    "http://localhost",
 	APP_LOCALE: "es",
 
-	SERVER_PORT:             "8080",
-	SERVER_HTTPS_ENABLED:    false,
-	SERVER_HTTPS_CERT_PATH:  "certs/server.crt",
-	SERVER_HTTPS_KEY_PATH:   "certs/server.key",
-	SERVER_TIMEOUT:          60,
-	SERVER_MIGRATION_ENABLE: false,
+	SERVER_PORT:            "8080",
+	SERVER_HTTPS_ENABLED:   false,
+	SERVER_HTTPS_CERT_PATH: "certs/server.crt",
+	SERVER_HTTPS_KEY_PATH:  "certs/server.key",
+	SERVER_TIMEOUT:         60,
+	DB_MIGRATION_ENABLE:    false,
 
 	DB_DATABASE:          "sample_mflix",
 	DB_CONNECTION_STRING: "mongodb://localhost:27017",
@@ -157,10 +157,10 @@ func LoadEnv(filepath ...string) {
 			if e != nil {
 				Env.SERVER_TIMEOUT = timeout
 			}
-		case "SERVER_MIGRATION_ENABLE":
-			Env.SERVER_MIGRATION_ENABLE = false
+		case "DB_MIGRATION_ENABLE":
+			Env.DB_MIGRATION_ENABLE = false
 			if strings.ToLower(value) == "true" {
-				Env.SERVER_MIGRATION_ENABLE = true
+				Env.DB_MIGRATION_ENABLE = true
 			}
 
 		case "DB_DATABASE":

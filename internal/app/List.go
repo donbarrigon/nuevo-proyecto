@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -89,13 +88,13 @@ func (l *List) Values() []any {
 	return values
 }
 
-func (l List) MarshalJSON() ([]byte, error) {
-	m := make(map[string]any, len(l))
-	for _, field := range l {
-		m[field.Key] = field.Value
-	}
-	return json.Marshal(m)
-}
+// func (l List) MarshalJSON() ([]byte, error) {
+// 	m := make(map[string]any, len(l))
+// 	for _, field := range l {
+// 		m[field.Key] = field.Value
+// 	}
+// 	return json.Marshal(m)
+// }
 
 func E(key string, value any) Entry {
 	return Entry{Key: key, Value: value}

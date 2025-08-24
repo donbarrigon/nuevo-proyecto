@@ -14,9 +14,12 @@ func GetApi() *app.Routes {
 
 	})
 	// rutas para las migraciones y seed
-	r.Get("seed/run", dbController.SeedRun)
-	r.Get("seed/list", dbController.SeedList)
-	r.Get("seed/run/:seed", dbController.SeedForce)
+	r.Prefix("db", func() {
+		r.Get("seed", dbController.SeedRun)
+		r.Get("seed/tracker", dbController.SeedTracker)
 
+		r.Get("migrate", dbController.Migrare)
+		r.Get("migrate/rollback", dbController.Rollback)
+	})
 	return r
 }
