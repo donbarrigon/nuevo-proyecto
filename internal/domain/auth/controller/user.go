@@ -115,7 +115,7 @@ func UserStore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID.Hex(), user, "create", user)
+	go service.ActivityRecord(user.ID, user, "create", user)
 	go service.SendVerificationEmail(user)
 
 	runLogin(ctx, req.Email, req.Password)
@@ -191,7 +191,7 @@ func runLogin(ctx *app.HttpContext, email string, password string) {
 		ctx.ResponseError(err)
 		return
 	}
-	go service.ActivityRecord(user.ID.Hex(), accessToken, "login")
+	go service.ActivityRecord(user.ID, accessToken, "login")
 
 	ctx.ResponseOk(resource.NewUserLogin(user, accessToken))
 
@@ -368,7 +368,7 @@ func UserConfirmEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email_verified_at": user.EmailVerifiedAt})
+	go service.ActivityRecord(user.ID, user, "update", map[string]any{"email_verified_at": user.EmailVerifiedAt})
 
 	ctx.ResponseNoContent()
 }
@@ -408,7 +408,7 @@ func UserRevertEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID.Hex(), user, "update", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
+	go service.ActivityRecord(user.ID, user, "update", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
 
 	ctx.ResponseNoContent()
 }

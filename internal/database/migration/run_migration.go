@@ -13,13 +13,24 @@ var Migrations = []app.List{}
 
 func Run() {
 
-	// agregue las funciones de migracion up y down
+	// registrar las funciones de migracion up y down
 	add("create permissions", PermissionsUp, PermissionsDown)
 	add("create roles", RolesUp, RolesDown)
 	add("create users", UsersUp, UsersDown)
+	add("create access_tokens", AccessTokensUp, AccessTokensDown)
+	add("create verification_codes", VerificationCodesUp, VerificationCodesDown)
+	add("create acticities", ActivitiesUp, ActivitiesDown)
+	add("create system_logs", SystemLogsUp, SystemLogsDown)
+	add("create countries", CountriesUp, CountriesDown)
+	add("create states", StatesUp, StatesDown)
+	add("create cities", CitiesUp, CitiesDown)
+
+	// registre aca abajo sus funciones de migracion
 
 }
 
+// funciones para facilitar la creacion de los indices
+// evite modificarlas a menos de que sepa lo que hace
 func add(name string, up func(), down func()) {
 	migration := app.List{}
 	migration.Set("name", name)
@@ -59,6 +70,21 @@ func CreateUniqueIndex(collection string, sort int, fields ...string) {
 	app.PrintInfo("Created unique index :collection :name", app.E("collection", collection), app.E("name", name))
 }
 
+func CreateTextIndex(collection string, fields ...string) {
+	keys := bson.D{}
+	for _, field := range fields {
+		keys = append(keys, bson.E{Key: field, Value: "text"})
+	}
+	name, er := app.DB.Collection(collection).Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: keys,
+	})
+	if er != nil {
+		app.PrintError("Failed to create text index :collection :error ", app.E("collection", collection), app.E("error", er.Error()))
+		panic(er.Error())
+	}
+	app.PrintInfo("Created text index :collection :name", app.E("collection", collection), app.E("name", name))
+}
+
 func CreateIndexWithOptions(collection string, keys bson.D, options *options.IndexOptionsBuilder) {
 	name, er := app.DB.Collection(collection).Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys:    keys,
@@ -71,13 +97,14 @@ func CreateIndexWithOptions(collection string, keys bson.D, options *options.Ind
 	app.PrintInfo("Created index :collection :name", app.E("collection", collection), app.E("name", name))
 }
 
-func CreateCollection(collection string, opts ...options.Lister[options.CreateCollectionOptions]) {
+func CreateCollection(collection string, fun func(string), opts ...options.Lister[options.CreateCollectionOptions]) {
 	er := app.DB.CreateCollection(context.TODO(), collection, opts...)
 	if er != nil {
 		app.PrintError("Failed to create collection :collection :error ", app.E("collection", collection), app.E("error", er.Error()))
 		panic(er.Error())
 	}
 	app.PrintInfo("Created collection :collection", app.E("collection", collection))
+	fun(collection)
 }
 
 func DropIndex(collection string, indexName string) {

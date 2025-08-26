@@ -8,14 +8,14 @@ import (
 )
 
 type Activity struct {
-	ID           bson.ObjectID `bson:"_id,omitempty" json:"id"`
-	UserID       string        `bson:"user_id"       json:"user_id"`
-	CollectionID bson.ObjectID `bson:"collection_id" json:"collection_id"`
-	Collection   string        `bson:"collection"    json:"collection"`
-	Action       string        `bson:"action"        json:"action"`
-	Changes      any           `bson:"changes"       json:"changes"`
-	CreatedAt    time.Time     `bson:"created_at"    json:"created_at"`
-	app.Odm      `bson:"-" json:"-"`
+	ID         bson.ObjectID `bson:"_id,omitempty" json:"id"`
+	UserID     bson.ObjectID `bson:"user_id"       json:"user_id"`
+	DocumentID bson.ObjectID `bson:"document_id" json:"document_id"`
+	Collection string        `bson:"collection"    json:"collection"`
+	Action     string        `bson:"action"        json:"action"`
+	Changes    any           `bson:"changes"       json:"changes"`
+	CreatedAt  time.Time     `bson:"created_at"    json:"created_at"`
+	app.Odm    `bson:"-" json:"-"`
 }
 
 func NewActivity() *Activity {

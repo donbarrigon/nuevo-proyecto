@@ -60,8 +60,8 @@ func (a *Auth) HasRole(roleName ...string) Error {
 	return a.User.HasRole(roleName...)
 }
 
-func (a *Auth) UserID() string {
-	return a.User.GetID().Hex()
+func (a *Auth) UserID() bson.ObjectID {
+	return a.User.GetID()
 }
 
 func (ctx *HttpContext) Lang() string {

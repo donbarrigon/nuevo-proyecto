@@ -1,13 +1,15 @@
 package model
 
 import (
+	"time"
+
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type SystemLog struct {
 	ID       bson.ObjectID     `bson:"id,omitempty"       json:"id"`
-	Time     string            `bson:"time,omitempty"     json:"time"`
+	Time     time.Time         `bson:"time,omitempty"     json:"time"`
 	Level    string            `bson:"level,omitempty"    json:"level"`
 	Message  string            `bson:"message"            json:"message"`
 	Function string            `bson:"function,omitempty" json:"function,omitempty"`

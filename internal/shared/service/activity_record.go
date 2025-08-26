@@ -6,16 +6,16 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func ActivityRecord(userID string, collection app.Model, action string, changes ...any) {
+func ActivityRecord(userID bson.ObjectID, collection app.Model, action string, changes ...any) {
 	if len(changes) == 0 {
 		changes = append(changes, map[string]any{})
 	}
 	activity := &model.Activity{
-		UserID:       userID,
-		CollectionID: collection.GetID(),
-		Collection:   collection.CollectionName(),
-		Action:       action,
-		Changes:      changes,
+		UserID:     userID,
+		DocumentID: collection.GetID(),
+		Collection: collection.CollectionName(),
+		Action:     action,
+		Changes:    changes,
 	}
 	activity.Odm.Model = activity
 	if err := activity.Create(); err != nil {
@@ -23,7 +23,7 @@ func ActivityRecord(userID string, collection app.Model, action string, changes 
 	}
 }
 
-func ActivityManyRecords(collection app.Model, action string, changes ...any) {
+func ActivityManyRecords(userID bson.ObjectID, collection app.Model, action string, changes ...any) {
 	activity := &model.Activity{}
 	activity.Odm.Model = activity
 	data := make([]*model.Activity, len(changes))
@@ -32,10 +32,11 @@ func ActivityManyRecords(collection app.Model, action string, changes ...any) {
 			change = bson.M{}
 		}
 		data = append(data, &model.Activity{
-			CollectionID: collection.GetID(),
-			Collection:   collection.CollectionName(),
-			Action:       action,
-			Changes:      change,
+			UserID:     userID,
+			DocumentID: collection.GetID(),
+			Collection: collection.CollectionName(),
+			Action:     action,
+			Changes:    change,
 		})
 	}
 	if err := activity.CreateMany(data); err != nil {

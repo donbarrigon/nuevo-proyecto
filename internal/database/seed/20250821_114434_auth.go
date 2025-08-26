@@ -4,9 +4,10 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/shared/model"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"golang.org/x/crypto/bcrypt"
 )
 
-func RolesAndPermissions() {
+func Auth() {
 	app.PrintInfo("seeding auth...")
 	// acciones o verbos de autorización
 	var actions = map[string][]string{
@@ -139,6 +140,33 @@ func RolesAndPermissions() {
 	roleAdmin.PermissionIDs = adminPermissions
 	if err := roleAdmin.Create(); err != nil {
 		app.PrintError("Fail to create role: :role :error", app.E("role", roleAdmin.Name), app.E("error", err.Error()))
+		panic(err)
+	}
+
+	// usuario admin
+	userAdmin := model.NewUser()
+	city := model.NewCity()
+	if err := city.First("name", "Medellín"); err != nil {
+		app.PrintError("Fail to find city: :city :error", app.E("city", city.Name), app.E("error", err.Error()))
+		panic(err)
+	}
+	hashedPassword, er := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
+	if er != nil {
+		app.PrintError("Fail to generate password: :error", app.E("error", er.Error()))
+		panic(er)
+	}
+	userAdmin.Email = "admin@gmail.com"
+	userAdmin.Password = string(hashedPassword)
+	userAdmin.Profile = &model.Profile{
+		Nickname:        "admin",
+		FullName:        "admin",
+		PhoneNumber:     "+573203110099",
+		DiscordUsername: "admin",
+		CityID:          city.ID,
+	}
+	userAdmin.RoleIDs = []bson.ObjectID{roleAdmin.ID}
+	if err := userAdmin.Create(); err != nil {
+		app.PrintError("Fail to create user: :user :error", app.E("user", userAdmin.Email), app.E("error", err.Error()))
 		panic(err)
 	}
 

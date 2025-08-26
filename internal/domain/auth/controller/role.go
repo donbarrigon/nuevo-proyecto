@@ -178,7 +178,7 @@ func RoleRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	role.ID = activity.CollectionID
+	role.ID = activity.DocumentID
 	if err := app.FillByMap(role, changes); err != nil {
 		ctx.ResponseError(err)
 		return

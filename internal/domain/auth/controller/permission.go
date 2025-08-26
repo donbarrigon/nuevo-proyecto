@@ -180,7 +180,7 @@ func PermissionRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	permission.ID = activity.CollectionID
+	permission.ID = activity.DocumentID
 	if err := app.FillByMap(permission, changes); err != nil {
 		ctx.ResponseError(err)
 		return

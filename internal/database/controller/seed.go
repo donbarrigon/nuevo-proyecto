@@ -12,7 +12,7 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/seed"
 )
 
-func SeedRun(ctx *app.HttpContext) {
+func Seed(ctx *app.HttpContext) {
 
 	if !app.Env.DB_MIGRATION_ENABLE {
 		ctx.ResponseError(app.Errors.Forbiddenf("Migration disabled"))
@@ -80,6 +80,7 @@ func SeedRun(ctx *app.HttpContext) {
 		}
 	}
 
+	app.PrintInfo("Seed executed")
 	ctx.ResponseNoContent()
 
 }
