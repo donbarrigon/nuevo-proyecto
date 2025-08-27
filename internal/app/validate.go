@@ -341,7 +341,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 							err.Appendf(key, "the value is not a valid id: :error", Entry{"error", er})
 						}
 					} else {
-						v = value
+						v = value.Interface()
 					}
 					err.Append(ValidateExists(key, params[0], params[1], v))
 				}
@@ -350,7 +350,7 @@ func ValidateRules(ctx *HttpContext, req any, rules map[string][]string) Error {
 				if len(params) != 2 {
 					err.Appendf(key, "the unique rule must have two parameters")
 				} else {
-					err.Append(ValidateUnique(key, params[0], params[1], value, ctx.Params["id"]))
+					err.Append(ValidateUnique(key, params[0], params[1], value.Interface(), ctx.Params["id"]))
 				}
 			case "unique_in":
 				switch value.Kind() {

@@ -59,7 +59,7 @@ func CreateUniqueIndex(collection string, sort int, fields ...string) {
 	for _, field := range fields {
 		keys = append(keys, bson.E{Key: field, Value: sort})
 	}
-	name, er := app.DB.Collection("users").Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+	name, er := app.DB.Collection(collection).Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys:    keys,
 		Options: options.Index().SetUnique(true),
 	})

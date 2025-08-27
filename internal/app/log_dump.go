@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func (l *Logger) formatDump(val any) string {
+func formatDump(val any) string {
 	v := reflect.ValueOf(val)
 	t := reflect.TypeOf(val)
 
@@ -79,7 +79,7 @@ func (l *Logger) formatDump(val any) string {
 
 		for i := 0; i < length; i++ {
 			val := v.Index(i)
-			valStr := l.formatDump(val.Interface())
+			valStr := formatDump(val.Interface())
 			b.WriteString(fmt.Sprintf("  [%d] => %s,\n", i, valStr))
 		}
 
@@ -102,7 +102,7 @@ func (l *Logger) formatDump(val any) string {
 
 		for i := 0; i < length; i++ {
 			val := v.Index(i)
-			valStr := l.formatDump(val.Interface())
+			valStr := formatDump(val.Interface())
 			b.WriteString(fmt.Sprintf("  [%d] => %s,\n", i, valStr))
 		}
 
@@ -124,8 +124,8 @@ func (l *Logger) formatDump(val any) string {
 		}
 
 		for _, k := range keys {
-			keyStr := l.formatDump(k.Interface())
-			valStr := l.formatDump(v.MapIndex(k).Interface())
+			keyStr := formatDump(k.Interface())
+			valStr := formatDump(v.MapIndex(k).Interface())
 			b.WriteString(fmt.Sprintf("  [%s] => %s,\n", keyStr, valStr))
 		}
 
@@ -155,7 +155,7 @@ func (l *Logger) formatDump(val any) string {
 			}
 
 			fieldName := field.Name
-			val := l.formatDump(v.Field(i).Interface())
+			val := formatDump(v.Field(i).Interface())
 
 			rawTag := string(field.Tag)
 			if rawTag != "" {
@@ -194,7 +194,7 @@ func (l *Logger) formatDump(val any) string {
 
 		inner := v.Elem()
 		innerType := inner.Type().String()
-		valStr := l.formatDump(inner.Interface())
+		valStr := formatDump(inner.Interface())
 
 		return fmt.Sprintf("any(%s) => %s", innerType, valStr)
 
@@ -251,7 +251,7 @@ func (l *Logger) formatDump(val any) string {
 			}
 
 			// Canal abierto, valor recibido
-			dumped := l.formatDump(recv.Interface())
+			dumped := formatDump(recv.Interface())
 			if t.ChanDir() == reflect.RecvDir {
 				return fmt.Sprintf("<-chan(%s)[open: %s]", elemType, dumped)
 			}

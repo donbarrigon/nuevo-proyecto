@@ -53,7 +53,6 @@ func Auth() {
 			"bookmark",  // guardar como favorito
 			"highlight", // resaltar un texto o recurso
 			"pin",       // fijar contenido importante
-			"lock",      // bloquear tu propio contenido (ej: cerrar comentarios)
 		},
 
 		"admin": {

@@ -22,6 +22,10 @@ func Document(value ...bson.E) bson.D {
 	return bson.D(value)
 }
 
+func Filter(value ...bson.E) bson.D {
+	return bson.D(value)
+}
+
 func Element(key string, value any) bson.E {
 	return bson.E{Key: key, Value: value}
 }
@@ -158,6 +162,16 @@ func Slice(value int) bson.E {
 	return bson.E{Key: "$slice", Value: value}
 }
 
+// operadores de agregacion ----------------------------------------------------------------
+
+func Unset(keys ...string) bson.D {
+	elements := bson.D{}
+	for _, key := range keys {
+		elements = append(elements, bson.E{Key: key, Value: nil})
+	}
+	return bson.D{bson.E{Key: "$unset", Value: elements}}
+}
+
 // operadores miselanios ----------------------------------------------------------------
 
 func Rand() bson.E {
@@ -244,8 +258,6 @@ func GetFruits6() bson.D {
 // $skip → salta documentos
 
 // $unwind → desestructura arrays en documentos separados
-
-// $lookup → join con otra colección
 
 // $addFields → agrega nuevos campos calculados
 

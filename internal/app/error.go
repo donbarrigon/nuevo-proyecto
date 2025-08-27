@@ -28,7 +28,7 @@ type Error interface {
 type Err struct {
 	Status    int                 `json:"-"`
 	Message   string              `json:"message"`
-	Err       any                 `json:"errors,omEntrypty"`
+	Err       any                 `json:"errors,omitempty"`
 	ErrMap    map[string][]string `json:"-"`
 	phMessage List                `json:"-"`
 	phMap     map[string][]List   `json:"-"`
@@ -257,7 +257,7 @@ func (e *Err) Write(err error) Error {
 func (e *Err) Update(err error) Error {
 	return &Err{
 		Status:  http.StatusInternalServerError,
-		Message: "Database update error",
+		Message: "No records updated",
 		Err:     err.Error(),
 	}
 }
@@ -407,7 +407,7 @@ func (e *Err) Writef(format string, ph ...Entry) Error {
 func (e *Err) Updatef(format string, ph ...Entry) Error {
 	return &Err{
 		Status:    http.StatusInternalServerError,
-		Message:   "Database update error",
+		Message:   "No records updated",
 		Err:       format,
 		phMessage: ph,
 	}

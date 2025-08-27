@@ -8,14 +8,14 @@ import (
 
 func User(r *app.Routes) {
 
-	r.Get("users/:id", controller.UserShow, middleware.Auth).
-		Name("users.show")
-
-	r.Get("confirm/:code", controller.UserConfirmEmail).
+	r.Get("users/confirm/:id/:code", controller.UserConfirmEmail).
 		Name("users.confirm-email")
 
-	r.Get("revert-email-change/:code", controller.UserRevertEmail).
+	r.Get("users/revert-email-change/:id/:code", controller.UserRevertEmail).
 		Name("users.revert-email-change")
+
+	r.Get("users/:id", controller.UserShow, middleware.Auth).
+		Name("users.show")
 
 	r.Post("users", controller.UserStore).
 		Name("users.store")

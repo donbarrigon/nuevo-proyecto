@@ -117,11 +117,15 @@ func (r *Routes) SetRoute(method string, path string, ctrl ControllerFun, middle
 		}
 	}
 
+	// copio los middlewares por que sino pasa la referencia que se modifica en otros lados y se rompe
+	mwCopy := make([]MiddlewareFun, len(r.middlewares))
+	copy(mwCopy, r.middlewares)
+
 	newRoute := &Route{
 		Path:       pathParts,
 		IsVar:      isVars,
 		Controller: ctrl,
-		Middleware: append(r.middlewares, middlewares...),
+		Middleware: append(mwCopy, middlewares...),
 	}
 
 	r.routes = append(r.routes, newRoute)

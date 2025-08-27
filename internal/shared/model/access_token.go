@@ -36,25 +36,26 @@ func (t *AccessToken) BeforeUpdate() app.Error {
 	return nil
 }
 
-func NewAccessToken(userID bson.ObjectID, permissions []string) (*AccessToken, app.Error) {
+func NewAccessToken() *AccessToken {
+	token := &AccessToken{}
+	token.Odm.Model = token
+	return token
+}
+
+func (t *AccessToken) Generate(userID bson.ObjectID, permissions []string) app.Error {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
 		app.PrintWarning("Fail to create access token: " + err.Error())
 	}
 	tk := hex.EncodeToString(bytes)
-	token := &AccessToken{
-		//ID:        bson.NewObjectID(),
-		UserID:      userID,
-		Token:       tk,
-		Permissions: permissions,
-		CreatedAt:   time.Now(),
-	}
-	token.Refresh()
-	token.Odm.Model = token
 
-	err := token.Create()
+	t.UserID = userID
+	t.Token = tk
+	t.Permissions = permissions
+	t.CreatedAt = time.Now()
+	t.Refresh()
 
-	return token, err
+	return t.Create()
 }
 
 func (t *AccessToken) Refresh() {

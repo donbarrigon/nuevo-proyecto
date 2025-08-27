@@ -45,6 +45,13 @@ type HttpContext struct {
 	Auth    *Auth
 }
 
+func NewAuth(user UserInterface, token TokenInterface) *Auth {
+	return &Auth{
+		User:  user,
+		Token: token,
+	}
+}
+
 func NewHttpContext(w http.ResponseWriter, r *http.Request) *HttpContext {
 	return &HttpContext{
 		Writer:  w,

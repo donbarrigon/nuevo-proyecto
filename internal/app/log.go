@@ -24,14 +24,14 @@ type LogLevel int
 type LogFileFormat int
 
 type Logger struct {
-	ID       string   `json:"id,omEntrypty" yaml:"id,omEntrypty" id:"time,omEntrypty"`
-	Time     string   `json:"time,omEntrypty" yaml:"time,omEntrypty" xml:"time,omEntrypty"`
-	Level    LogLevel `json:"level,omEntrypty" yaml:"level,omEntrypty" xml:"level,omEntrypty"`
+	ID       string   `json:"id,omitempty" yaml:"id,omitempty" id:"time,omitempty"`
+	Time     string   `json:"time,omitempty" yaml:"time,omitempty" xml:"time,omitempty"`
+	Level    LogLevel `json:"level,omitempty" yaml:"level,omitempty" xml:"level,omitempty"`
 	Message  string   `json:"message" yaml:"message" xml:"message"`
-	Function string   `json:"function,omEntrypty" yaml:"function,omEntrypty" xml:"function,omEntrypty"`
-	Line     string   `json:"line,omEntrypty" yaml:"line,omEntrypty" xml:"line,omEntrypty"`
-	File     string   `json:"file,omEntrypty" yaml:"file,omEntrypty" xml:"file,omEntrypty"`
-	Context  List     `json:"context,omEntrypty" yaml:"context,omEntrypty" xml:"context,omEntrypty"`
+	Function string   `json:"function,omitempty" yaml:"function,omitempty" xml:"function,omitempty"`
+	Line     string   `json:"line,omitempty" yaml:"line,omitempty" xml:"line,omitempty"`
+	File     string   `json:"file,omitempty" yaml:"file,omitempty" xml:"file,omitempty"`
+	Context  List     `json:"context,omitempty" yaml:"context,omitempty" xml:"context,omitempty"`
 }
 
 const (
@@ -283,8 +283,8 @@ func Print(msg string, ctx ...Entry) {
 	go l.output()
 }
 
-func (l *Logger) Dump(a any) {
-	fmt.Println(l.formatDump(a))
+func PrintDump(a any) {
+	fmt.Println(formatDump(a))
 }
 
 func (l *Logger) DumpMany(vars ...any) {
@@ -294,7 +294,7 @@ func (l *Logger) DumpMany(vars ...any) {
 		if i > 0 {
 			fmt.Println(sep)
 		}
-		fmt.Println(l.formatDump(v))
+		fmt.Println(formatDump(v))
 	}
 }
 
@@ -551,7 +551,7 @@ func (l *Logger) outputNDJSON() string {
 	var output string
 	if err != nil {
 		msg := Translate(Env.APP_LOCALE, "Log serialization error: {error}", Entry{"error", err.Error()})
-		escapedDump := strings.ReplaceAll(l.formatDump(l), `"`, `\"`)
+		escapedDump := strings.ReplaceAll(formatDump(l), `"`, `\"`)
 		escapedDump = strings.ReplaceAll(escapedDump, "\n", " ")
 		escapedDump = strings.ReplaceAll(escapedDump, "\r", " ")
 		output = InterpolatePlaceholders(`{"level":"ERROR","message":"{msg}","context":"{context}"}`,
@@ -597,7 +597,7 @@ func (l *Logger) outputCSV() string {
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && len(l.Context) > 0 {
-		dump := l.formatDump(l.Context)
+		dump := formatDump(l.Context)
 		dump = strings.ReplaceAll(dump, "\n", " ")
 		dump = strings.ReplaceAll(dump, "\r", " ")
 		record = append(record, dump)
@@ -627,7 +627,7 @@ func (l *Logger) outputXML() string {
 		return InterpolatePlaceholders(
 			`<log><level>ERROR</level><message>Log serialization error: {error}</message><context>{context}</context></log>`,
 			Entry{"error", xmlEscape(err.Error())},
-			Entry{"context", xmlEscape(l.formatDump(l))},
+			Entry{"context", xmlEscape(formatDump(l))},
 		)
 	} else {
 		return string(xmlData)
@@ -637,7 +637,7 @@ func (l *Logger) outputXML() string {
 func (l *Logger) outputYAML() string {
 	yamlData, err := yaml.Marshal(l)
 	if err != nil {
-		escapedDump := strings.ReplaceAll(l.formatDump(l), `"`, `\"`)
+		escapedDump := strings.ReplaceAll(formatDump(l), `"`, `\"`)
 		escapedDump = strings.ReplaceAll(escapedDump, "\n", " ")
 		escapedDump = strings.ReplaceAll(escapedDump, "\r", " ")
 
@@ -685,7 +685,7 @@ func (l *Logger) outputLTSV() string {
 	}
 
 	if Env.LOG_FLAGS&LOG_FLAG_CONTEXT != 0 && len(l.Context) > 0 {
-		b.WriteString("context:" + escape(l.formatDump(l.Context)) + "\t")
+		b.WriteString("context:" + escape(formatDump(l.Context)) + "\t")
 	}
 
 	// Eliminar el tab final si existe

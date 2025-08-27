@@ -91,7 +91,6 @@ func UserStore(ctx *app.HttpContext) {
 	user := model.NewUser()
 	user.Email = req.Email
 	app.Fill(user.Profile, req)
-
 	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if er != nil {
 		ctx.ResponseError(&app.Err{
@@ -103,8 +102,13 @@ func UserStore(ctx *app.HttpContext) {
 	}
 	user.Password = string(hashedPassword)
 
+	if user.Profile.CityID, er = bson.ObjectIDFromHex(req.CityID); er != nil {
+		ctx.ResponseError(app.Errors.HexID(er))
+		return
+	}
+
 	role := model.NewRole()
-	if err := role.FindOne(Document(Where("name", Eq("user")))); err != nil {
+	if err := role.FindOne(Filter(Where("name", Eq("user")))); err != nil {
 		app.PrintWarning("User role does not exist. Run the seed command to populate initial data.", app.E("error", err))
 	} else {
 		user.RoleIDs = []bson.ObjectID{role.ID}
@@ -185,12 +189,12 @@ func runLogin(ctx *app.HttpContext, email string, password string) {
 			permissions = append(permissions, permission.Name)
 		}
 	}
-
-	accessToken, err := model.NewAccessToken(user.ID, permissions)
-	if err != nil {
+	accessToken := model.NewAccessToken()
+	if err := accessToken.Generate(user.ID, permissions); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
+
 	go service.ActivityRecord(user.ID, accessToken, "login")
 
 	ctx.ResponseOk(resource.NewUserLogin(user, accessToken))
@@ -212,7 +216,7 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Document(Where("_id", Eq(id)))); err != nil {
+	if err := user.FindOne(Filter(Where("_id", Eq(id)))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -233,11 +237,22 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 
 	oldEmail := user.Email
 	user.Email = req.Email
-	user.EmailVerifiedAt = nil
 	if err := user.Update(); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
+
+	if err := user.UpdateOne(
+		Filter(Where("_id", Eq(user.ID))),
+		Unset("email_verified_at"),
+	); err != nil {
+		if err.GetMessage() != "No records updated" {
+			ctx.ResponseError(err)
+			return
+		}
+	}
+	// filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
+	// update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
 	go service.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"email": user.Email})
 	go service.SendVerificationEmail(user)
@@ -261,7 +276,7 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Document(Where("_id", Eq(id)))); err != nil {
+	if err := user.FindOne(Filter(Where("_id", Eq(id)))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -275,6 +290,14 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 	if err != nil {
 		ctx.ResponseError(err)
 		return
+	}
+
+	if user.Profile.CityID.Hex() != req.CityID {
+		dirty["city_id"] = req.CityID
+		if user.Profile.CityID, er = bson.ObjectIDFromHex(req.CityID); er != nil {
+			ctx.ResponseError(app.Errors.HexID(er))
+			return
+		}
 	}
 
 	if err := user.Update(); err != nil {
@@ -302,7 +325,7 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Document(Where("_id", Eq(id)))); err != nil {
+	if err := user.FindOne(Filter(Where("_id", Eq(id)))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -344,14 +367,24 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 
 func UserConfirmEmail(ctx *app.HttpContext) {
 
+	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
+	if er != nil {
+		ctx.ResponseError(app.Errors.HexID(er))
+		return
+	}
+
 	verificationCode := model.NewVerificationCode()
-	if err := verificationCode.FindOne(Document(Where("code", Eq(ctx.Params["code"])))); err != nil {
+	if err := verificationCode.FindOne(Filter(
+		Where("user_id", Eq(id)),
+		Where("type", Eq("email_verification")),
+		Where("code", Eq(ctx.Params["code"])),
+	)); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Document(Where("_id", Eq(verificationCode.UserID)))); err != nil {
+	if err := user.FindOne(Filter(Where("_id", Eq(verificationCode.UserID)))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -370,34 +403,45 @@ func UserConfirmEmail(ctx *app.HttpContext) {
 
 	go service.ActivityRecord(user.ID, user, "update", map[string]any{"email_verified_at": user.EmailVerifiedAt})
 
-	ctx.ResponseNoContent()
+	ctx.ResponseOk(map[string]string{"message": "Email verified.", "email_verified_at": user.EmailVerifiedAt.Format(time.RFC3339)})
 }
 
 func UserRevertEmail(ctx *app.HttpContext) {
+
+	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
+	if er != nil {
+		ctx.ResponseError(app.Errors.HexID(er))
+		return
+	}
+
 	verificationCode := model.NewVerificationCode()
-	if err := verificationCode.FindOne(Document(Where("code", Eq(ctx.Params["code"])))); err != nil {
+	if err := verificationCode.FindOne(Filter(
+		Where("user_id", Eq(id)),
+		Where("type", Eq("email_change_revert")),
+		Where("code", Eq(ctx.Params["code"])),
+	)); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Document(Where("_id", Eq(verificationCode.UserID)))); err != nil {
+	if err := user.FindOne(Filter(Where("_id", Eq(verificationCode.UserID)))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	if verificationCode.Metadata["email"] == "" {
+	if verificationCode.Metadata["old_email"] == "" {
 		ctx.ResponseError(&app.Err{
 			Status:  http.StatusBadRequest,
-			Message: "Invalid verification code: metadata email.",
-			Err:     "Invalid verification code: metadata email.",
+			Message: "Invalid verification code: metadata old_email.",
+			Err:     "Invalid verification code: metadata old_email.",
 		})
 		return
 	}
 
 	now := time.Now()
 	user.EmailVerifiedAt = &now
-	user.Email = verificationCode.Metadata["email"]
+	user.Email = verificationCode.Metadata["old_email"]
 	if err := user.Update(); err != nil {
 		ctx.ResponseError(err)
 		return
@@ -410,7 +454,7 @@ func UserRevertEmail(ctx *app.HttpContext) {
 
 	go service.ActivityRecord(user.ID, user, "update", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
 
-	ctx.ResponseNoContent()
+	ctx.ResponseOk(map[string]string{"message": "Email reverted.", "email": user.Email, "email_verified_at": user.EmailVerifiedAt.Format(time.RFC3339)})
 }
 
 func UserDestroy(ctx *app.HttpContext) {
@@ -422,7 +466,7 @@ func UserDestroy(ctx *app.HttpContext) {
 	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Document(Where("_id", Eq(id)))); err != nil {
+	if err := user.FindOne(Filter(Where("_id", Eq(id)))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -450,7 +494,7 @@ func UserRestore(ctx *app.HttpContext) {
 	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Document(Where("_id", Eq(id)))); err != nil {
+	if err := user.FindOne(Filter(Where("_id", Eq(id)))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}

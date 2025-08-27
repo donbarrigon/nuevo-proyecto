@@ -201,6 +201,23 @@ func (o *Odm) UpdateBy(validator any) (map[string]any, Error) {
 	return dirty, o.Update()
 }
 
+func (o *Odm) UpdateOne(filter bson.D, update bson.D) Error {
+	if err := o.Model.BeforeUpdate(); err != nil {
+		return err
+	}
+	result, err := DB.Collection(o.Model.CollectionName()).UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return Errors.Mongo(err)
+	}
+	if result.MatchedCount == 0 {
+		return Errors.NoDocumentsf("mongo.UpdateResult.MatchedCount == 0")
+	}
+	if result.ModifiedCount == 0 {
+		return Errors.Updatef("mongo.UpdateResult.ModifiedCount == 0")
+	}
+	return nil
+}
+
 // hace un soft delete al documento
 func (o *Odm) SoftDelete() Error {
 	collection := DB.Collection(o.Model.CollectionName())
@@ -222,11 +239,10 @@ func (o *Odm) SoftDelete() Error {
 
 // restaura el documento eliminado por SoftDelete
 func (o *Odm) Restore() Error {
-	collection := DB.Collection(o.Model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
-	result, err := collection.UpdateOne(context.TODO(), filter, update)
+	result, err := DB.Collection(o.Model.CollectionName()).UpdateOne(context.TODO(), filter, update)
 	if err != nil {
 		return Errors.Mongo(err)
 	}

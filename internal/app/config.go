@@ -36,13 +36,12 @@ type Environment struct {
 	LOG_DAYS        int
 	LOG_DATE_FORMAT string
 
-	MAIL_MAILER     string
-	MAIL_HOST       string
-	MAIL_PORT       string
-	MAIL_USERNAME   string
-	MAIL_PASSWORD   string
-	MAIL_ENCRYPTION string
-	MAIL_FROM_NAME  string
+	MAIL_HOST      string
+	MAIL_PORT      string
+	MAIL_USERNAME  string
+	MAIL_PASSWORD  string
+	MAIL_FROM_NAME string
+	MAIL_IDENTITY  string
 }
 
 // si se proporciona una ruta, se usa la primera; de lo contrario, se carga el archivo .env por defecto
@@ -72,13 +71,12 @@ var Env = Environment{
 	LOG_DAYS:        14,
 	LOG_DATE_FORMAT: "2006-01-02 15:04:05.000000",
 
-	MAIL_MAILER:     "smtp",
-	MAIL_HOST:       "smtp.gmail.com",
-	MAIL_PORT:       "587",
-	MAIL_USERNAME:   "tuemail@gmail.com",
-	MAIL_PASSWORD:   "tu_contraseña_o_app_password",
-	MAIL_ENCRYPTION: "tls",
-	MAIL_FROM_NAME:  "MiAppGo",
+	MAIL_HOST:      "smtp.gmail.com",
+	MAIL_PORT:      "587",
+	MAIL_USERNAME:  "tuemail@gmail.com",
+	MAIL_PASSWORD:  "tu_contraseña_o_app_password",
+	MAIL_FROM_NAME: "MiAppGo",
+	MAIL_IDENTITY:  "tuemail@gmail.com",
 }
 
 func LoadEnv(filepath ...string) {
@@ -256,8 +254,6 @@ func LoadEnv(filepath ...string) {
 			Env.LOG_DAYS = days
 		case "LOG_DATE_FORMAT":
 			Env.LOG_DATE_FORMAT = value
-		case "MAIL_MAILER":
-			Env.MAIL_MAILER = value
 		case "MAIL_HOST":
 			Env.MAIL_HOST = value
 		case "MAIL_PORT":
@@ -266,10 +262,10 @@ func LoadEnv(filepath ...string) {
 			Env.MAIL_USERNAME = value
 		case "MAIL_PASSWORD":
 			Env.MAIL_PASSWORD = value
-		case "MAIL_ENCRYPTION":
-			Env.MAIL_ENCRYPTION = value
 		case "MAIL_FROM_NAME":
 			Env.MAIL_FROM_NAME = value
+		case "MAIL_IDENTITY":
+			Env.MAIL_IDENTITY = value
 		default:
 			PrintWarning("{envKey} is not a valid environment variable name",
 				Entry{"envKey", key},
