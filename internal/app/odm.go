@@ -257,10 +257,31 @@ func (o *Odm) Restore() Error {
 
 // elimina permanentemente el documento
 func (o *Odm) Delete() Error {
-	collection := DB.Collection(o.Model.CollectionName())
 	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 
-	result, err := collection.DeleteOne(context.TODO(), filter)
+	result, err := DB.Collection(o.Model.CollectionName()).DeleteOne(context.TODO(), filter)
+	if err != nil {
+		return Errors.Mongo(err)
+	}
+	if result.DeletedCount == 0 {
+		return Errors.ForceDeletef("mongo.DeleteResult.DeletedCount == 0")
+	}
+	return nil
+}
+
+func (o *Odm) DeleteOne(filter bson.D) Error {
+	result, err := DB.Collection(o.Model.CollectionName()).DeleteOne(context.TODO(), filter)
+	if err != nil {
+		return Errors.Mongo(err)
+	}
+	if result.DeletedCount == 0 {
+		return Errors.ForceDeletef("mongo.DeleteResult.DeletedCount == 0")
+	}
+	return nil
+}
+
+func (o *Odm) DeleteMany(filter bson.D) Error {
+	result, err := DB.Collection(o.Model.CollectionName()).DeleteMany(context.TODO(), filter)
 	if err != nil {
 		return Errors.Mongo(err)
 	}

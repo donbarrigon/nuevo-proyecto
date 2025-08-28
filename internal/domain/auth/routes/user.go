@@ -8,12 +8,6 @@ import (
 
 func User(r *app.Routes) {
 
-	r.Get("users/confirm/:id/:code", controller.UserConfirmEmail).
-		Name("users.confirm-email")
-
-	r.Get("users/revert-email-change/:id/:code", controller.UserRevertEmail).
-		Name("users.revert-email-change")
-
 	r.Get("users/:id", controller.UserShow, middleware.Auth).
 		Name("users.show")
 
@@ -25,6 +19,18 @@ func User(r *app.Routes) {
 
 	r.Post("users/logout", controller.Logout, middleware.Auth).
 		Name("users.logout")
+
+	r.Post("users/forgot-password", controller.UserForgotPassword).
+		Name("users.forgot-password")
+
+	r.Patch("users/confirm/:id/:code", controller.UserConfirmEmail).
+		Name("users.confirm-email")
+
+	r.Patch("users/revert-email-change/:id/:code", controller.UserRevertEmail).
+		Name("users.revert-email-change")
+
+	r.Patch("users/reset-password/:id/:code", controller.UserResetPassword).
+		Name("users.reset-password")
 
 	r.Prefix("dashboard", func() {
 		r.Get("users", controller.UserIndex).

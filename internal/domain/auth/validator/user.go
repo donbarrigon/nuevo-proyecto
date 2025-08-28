@@ -50,3 +50,9 @@ type UserLogin struct {
 }
 
 func (v *UserLogin) PrepareForValidation(ctx *app.HttpContext) app.Error { return nil }
+
+type ForgotPassword struct {
+	Email string `json:"email" rules:"required|max:255|email"`
+}
+
+func (v *ForgotPassword) PrepareForValidation(ctx *app.HttpContext) app.Error { return nil }

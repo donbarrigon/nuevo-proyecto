@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"crypto/rand"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -120,7 +122,7 @@ func UserStore(ctx *app.HttpContext) {
 	}
 
 	go service.ActivityRecord(user.ID, user, "create", user)
-	go service.SendVerificationEmail(user)
+	go service.SendEmailConfirm(user)
 
 	runLogin(ctx, req.Email, req.Password)
 }
@@ -254,9 +256,9 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 	// filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 	// update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"email": user.Email})
-	go service.SendVerificationEmail(user)
-	go service.SendEmailChangeNotification(user, oldEmail)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "update-email", map[string]string{"email": user.Email})
+	go service.SendEmailConfirm(user)
+	go service.SendEmailChanged(user, oldEmail)
 
 	ctx.ResponseOk(user)
 }
@@ -305,7 +307,7 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "update", dirty)
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "update-profile", dirty)
 
 	ctx.ResponseOk(user)
 }
@@ -344,7 +346,7 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 		return
 	}
 
-	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if er != nil {
 		ctx.ResponseError(&app.Err{
 			Status:  http.StatusInternalServerError,
@@ -360,7 +362,14 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "update", map[string]string{"password": user.Password})
+	accesToken := model.NewAccessToken()
+	if err := accesToken.DeleteMany(Filter(Where("user_id", Eq(user.ID)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go service.ActivityRecord(ctx.Auth.UserID(), user, "update-password", map[string]string{"password": user.Password})
+	go service.SendEmailPasswordChanged(user)
 
 	ctx.ResponseOk(user)
 }
@@ -376,7 +385,7 @@ func UserConfirmEmail(ctx *app.HttpContext) {
 	verificationCode := model.NewVerificationCode()
 	if err := verificationCode.FindOne(Filter(
 		Where("user_id", Eq(id)),
-		Where("type", Eq("email_verification")),
+		Where("type", Eq("email-verification")),
 		Where("code", Eq(ctx.Params["code"])),
 	)); err != nil {
 		ctx.ResponseError(err)
@@ -401,7 +410,7 @@ func UserConfirmEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, user, "update", map[string]any{"email_verified_at": user.EmailVerifiedAt})
+	go service.ActivityRecord(user.ID, user, "confirm-email", map[string]any{"email_verified_at": user.EmailVerifiedAt})
 
 	ctx.ResponseOk(map[string]string{"message": "Email verified.", "email_verified_at": user.EmailVerifiedAt.Format(time.RFC3339)})
 }
@@ -417,7 +426,7 @@ func UserRevertEmail(ctx *app.HttpContext) {
 	verificationCode := model.NewVerificationCode()
 	if err := verificationCode.FindOne(Filter(
 		Where("user_id", Eq(id)),
-		Where("type", Eq("email_change_revert")),
+		Where("type", Eq("email-change-revert")),
 		Where("code", Eq(ctx.Params["code"])),
 	)); err != nil {
 		ctx.ResponseError(err)
@@ -452,9 +461,87 @@ func UserRevertEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, user, "update", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
+	go service.ActivityRecord(user.ID, user, "revert-email", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
 
 	ctx.ResponseOk(map[string]string{"message": "Email reverted.", "email": user.Email, "email_verified_at": user.EmailVerifiedAt.Format(time.RFC3339)})
+}
+
+func UserForgotPassword(ctx *app.HttpContext) {
+	req := &validator.ForgotPassword{}
+	if err := ctx.ValidateBody(req); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	user := model.NewUser()
+	if err := user.FindOne(Filter(Where("email", Eq(req.Email)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go service.SendEmailForgotPassword(user)
+
+	ctx.ResponseOk(map[string]string{"message": "Email sent."})
+}
+
+func UserResetPassword(ctx *app.HttpContext) {
+	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
+	if er != nil {
+		ctx.ResponseError(app.Errors.HexID(er))
+		return
+	}
+
+	verificationCode := model.NewVerificationCode()
+	if err := verificationCode.FindOne(Filter(
+		Where("user_id", Eq(id)),
+		Where("type", Eq("reset-password")),
+		Where("code", Eq(ctx.Params["code"])),
+	)); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	user := model.NewUser()
+	if err := user.FindOne(Filter(Where("_id", Eq(verificationCode.UserID)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, 12)
+	for i := range result {
+		num, er := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if er != nil {
+			ctx.ResponseError(app.Errors.InternalServerErrorf("Error generating password: :error", app.E("error", er.Error())))
+		}
+		result[i] = letters[num.Int64()]
+	}
+	newPassword := string(result)
+
+	hashedPassword, er := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if er != nil {
+		ctx.ResponseError(&app.Err{
+			Status:  http.StatusInternalServerError,
+			Message: "Password encryption failed",
+			Err:     er.Error(),
+		})
+		return
+	}
+	user.Password = string(hashedPassword)
+	if err := user.Update(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	if err := verificationCode.Delete(); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go service.ActivityRecord(user.ID, user, "reset-password", map[string]any{"password": newPassword})
+	go service.SendMailNewPassword(user, newPassword)
+
+	ctx.ResponseOk(map[string]string{"message": "Password reset."})
 }
 
 func UserDestroy(ctx *app.HttpContext) {
