@@ -11,7 +11,7 @@ func UserViewAny(ctx *app.HttpContext) app.Error {
 }
 
 func UserView(ctx *app.HttpContext, user *model.User) app.Error {
-	if ctx.Auth.User.GetID() == user.ID {
+	if ctx.Auth.GetUserID() == user.ID {
 		return nil
 	}
 	return ctx.Auth.Can("view user")
@@ -22,7 +22,7 @@ func UserCreate(ctx *app.HttpContext) app.Error {
 }
 
 func UserUpdate(ctx *app.HttpContext, user *model.User) app.Error {
-	if ctx.Auth.User.GetID() == user.ID {
+	if ctx.Auth.GetUserID() == user.ID {
 		return nil
 	}
 	return ctx.Auth.Can("update user")

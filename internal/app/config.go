@@ -21,6 +21,8 @@ type Environment struct {
 	SERVER_HTTPS_KEY_PATH  string
 	SERVER_TIMEOUT         int
 
+	SESSION_DURATION int
+
 	DB_DATABASE          string
 	DB_CONNECTION_STRING string
 	DB_MIGRATION_ENABLE  bool
@@ -56,10 +58,12 @@ var Env = Environment{
 	SERVER_HTTPS_CERT_PATH: "certs/server.crt",
 	SERVER_HTTPS_KEY_PATH:  "certs/server.key",
 	SERVER_TIMEOUT:         60,
-	DB_MIGRATION_ENABLE:    false,
+
+	SESSION_DURATION: 60,
 
 	DB_DATABASE:          "sample_mflix",
 	DB_CONNECTION_STRING: "mongodb://localhost:27017",
+	DB_MIGRATION_ENABLE:  false,
 
 	LOG_LEVEL:       LOG_DEBUG,
 	LOG_FLAGS:       LOG_FLAG_ALL,
@@ -76,7 +80,7 @@ var Env = Environment{
 	MAIL_USERNAME:  "tuemail@gmail.com",
 	MAIL_PASSWORD:  "tu_contraseña_o_app_password",
 	MAIL_FROM_NAME: "MiAppGo",
-	MAIL_IDENTITY:  "tuemail@gmail.com",
+	MAIL_IDENTITY:  "",
 }
 
 func LoadEnv(filepath ...string) {
@@ -154,6 +158,11 @@ func LoadEnv(filepath ...string) {
 			timeout, e := strconv.Atoi(value)
 			if e != nil {
 				Env.SERVER_TIMEOUT = timeout
+			}
+		case "SESSION_DURATION":
+			duration, e := strconv.Atoi(value)
+			if e != nil {
+				Env.SESSION_DURATION = duration
 			}
 		case "DB_MIGRATION_ENABLE":
 			Env.DB_MIGRATION_ENABLE = false

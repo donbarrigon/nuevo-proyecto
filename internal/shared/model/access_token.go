@@ -1,19 +1,18 @@
 package model
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type AccessToken struct {
 	ID          bson.ObjectID `bson:"_id,omitempty" json:"id"`
 	UserID      bson.ObjectID `bson:"user_id"       json:"user_id"`
+	User        *User         `bson:"user,omitempty" json:"user,omitempty"`
 	Token       string        `bson:"token"         json:"token"`
 	Permissions []string      `bson:"permissions"   json:"permissions"`
 	CreatedAt   time.Time     `bson:"created_at"    json:"created_at"`
@@ -27,12 +26,12 @@ func (t *AccessToken) SetID(id bson.ObjectID) { t.ID = id }
 
 func (t *AccessToken) BeforeCreate() app.Error {
 	t.CreatedAt = time.Now()
-	t.ExpiresAt = time.Now().Add(100 * time.Hour)
+	t.ExpiresAt = t.generateExpiresAt()
 	return nil
 }
 
 func (t *AccessToken) BeforeUpdate() app.Error {
-	t.ExpiresAt = time.Now().Add(100 * time.Hour)
+	t.ExpiresAt = t.generateExpiresAt()
 	return nil
 }
 
@@ -43,42 +42,67 @@ func NewAccessToken() *AccessToken {
 }
 
 func (t *AccessToken) Generate(userID bson.ObjectID, permissions []string) app.Error {
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		app.PrintWarning("Fail to create access token: " + err.Error())
-	}
-	tk := hex.EncodeToString(bytes)
 
 	t.UserID = userID
-	t.Token = tk
+	t.Token = t.generateToken()
 	t.Permissions = permissions
-	t.CreatedAt = time.Now()
-	t.Refresh()
+	// t.CreatedAt = time.Now()
+	// t.ExpiresAt = t.generateExpiresAt()
 
 	return t.Create()
 }
 
-func (t *AccessToken) Refresh() {
-	t.ExpiresAt = time.Now().Add(1 * time.Hour)
+func (t *AccessToken) Refresh() app.Error {
+	// t.Token = t.generateToken()
+	// t.ExpiresAt = t.generateExpiresAt()
+	return t.Update()
+}
+
+func (t *AccessToken) generateToken() string {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		app.PrintWarning("Fail to create access token: " + err.Error())
+	}
+	return hex.EncodeToString(bytes)
+}
+
+func (t *AccessToken) generateExpiresAt() time.Time {
+	return time.Now().Add(time.Duration(app.Env.SESSION_DURATION) * time.Minute)
 }
 
 func (t *AccessToken) Can(permissionNames ...string) app.Error {
-	var result struct {
-		ExpiresAt time.Time `bson:"expires_at"`
+	// var result struct {
+	// 	ExpiresAt time.Time `bson:"expires_at"`
+	// }
+	// err := app.DB.Collection(t.CollectionName()).FindOne(context.TODO(), bson.D{
+	// 	{Key: "_id", Value: t.ID},
+	// 	{Key: "permissions", Value: bson.D{{Key: "$in", Value: permissionNames}}},
+	// },
+	// 	options.FindOne().SetProjection(bson.M{"expires_at": 1}),
+	// ).Decode(&result)
+	// if err != nil {
+	// 	return app.Errors.Forbidden(err)
+	// }
+	// if result.ExpiresAt.Before(time.Now()) {
+	// 	return app.Errors.Forbiddenf("access denied: token expired at :expires_at", app.Entry{Key: "expires_at", Value: result.ExpiresAt})
+	// }
+	// return nil
+	for _, permission := range t.Permissions {
+		for _, permissionName := range permissionNames {
+			if permission == permissionName {
+				return nil
+			}
+		}
 	}
-	err := app.DB.Collection(t.CollectionName()).FindOne(context.TODO(), bson.D{
-		{Key: "_id", Value: t.ID},
-		{Key: "permissions", Value: bson.D{{Key: "$in", Value: permissionNames}}},
-	},
-		options.FindOne().SetProjection(bson.M{"expires_at": 1}),
-	).Decode(&result)
-	if err != nil {
-		return app.Errors.Forbidden(err)
-	}
-	if result.ExpiresAt.Before(time.Now()) {
-		return app.Errors.Forbiddenf("access denied: token expired at :expires_at", app.Entry{Key: "expires_at", Value: result.ExpiresAt})
-	}
-	return nil
+	return app.Errors.Forbiddenf("access denied: missing permission: :permission", app.Entry{Key: "permission", Value: permissionNames})
+}
+
+func (t *AccessToken) GetUserID() bson.ObjectID {
+	return t.UserID
+}
+
+func (t *AccessToken) HasRole(roleName ...string) app.Error {
+	return t.User.HasRole(roleName...)
 }
 
 func (t *AccessToken) Anonymous() *AccessToken {

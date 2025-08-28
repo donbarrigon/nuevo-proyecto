@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	. "github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
 	"github.com/donbarrigon/nuevo-proyecto/internal/shared/model"
 )
 
@@ -24,31 +25,34 @@ func Auth(next func(ctx *app.HttpContext)) func(ctx *app.HttpContext) {
 			ctx.ResponseError(app.Errors.Unauthorizedf("The 'Authorization' header is invalid."))
 			return
 		}
-
 		authToken := parts[1]
+
 		accessToken := model.NewAccessToken()
-		if err := accessToken.First("token", authToken); err != nil {
-			ctx.ResponseError(app.Errors.Unauthorizedf("Token Expired."))
+		if err := accessToken.AggregateOne(Pipeline(
+			Match(Where("token", Eq(authToken))),
+			With("users", "user_id", "_id", "user"),
+			Unwind("$user"),
+		)); err != nil {
+			ctx.ResponseError(app.Errors.Unauthorizedf("Token not found. :error", app.Entry{Key: "error", Value: err.Error()}))
 			return
 		}
 
 		if accessToken.ExpiresAt.Before(time.Now()) {
-			ctx.ResponseError(app.Errors.Unauthorizedf("Token Expired. Please login again."))
+			ctx.ResponseError(app.Errors.Unauthorizedf("Token Expired."))
 			return
 		}
 
-		user := model.NewUser()
-		if err := user.FindByID(accessToken.UserID); err != nil {
-			ctx.ResponseError(app.Errors.Unauthorizedf("Token user not found."))
+		if accessToken.User.DeletedAt != nil {
+			ctx.ResponseError(app.Errors.Unauthorizedf("User Inactive or Deleted."))
 			return
 		}
 
-		accessToken.Refresh()
-		if err := accessToken.Update(); err != nil {
-			app.PrintError("Failed to update access token", app.Entry{Key: "error", Value: err})
+		if err := accessToken.Refresh(); err != nil {
+			app.PrintError("Failed to update access token", app.Entry{Key: "error", Value: err.Error()})
 		}
 
-		ctx.Auth = app.NewAuth(user, accessToken)
+		// ctx.Writer.Header().Set("Authorization", "Bearer "+accessToken.Token)
+		ctx.Auth = accessToken
 
 		next(ctx)
 	}

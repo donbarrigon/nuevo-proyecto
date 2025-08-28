@@ -81,7 +81,7 @@ func RoleStore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), role, "create", role)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "create", role)
 
 	ctx.ResponseCreated(role)
 }
@@ -116,7 +116,7 @@ func RoleUpdate(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), role, "update", dirty)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "update", dirty)
 
 	ctx.ResponseOk(role)
 }
@@ -144,7 +144,7 @@ func RoleDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), role, "delete", role)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "delete", role)
 
 	ctx.ResponseNoContent()
 }
@@ -189,7 +189,7 @@ func RoleRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), role, "restore", role)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "restore", role)
 
 	ctx.ResponseNoContent()
 }
@@ -236,7 +236,7 @@ func RoleGrant(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "grant", role)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "grant", role)
 
 	ctx.ResponseNoContent()
 }
@@ -288,7 +288,7 @@ func RoleRevoke(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "revoke", role)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "revoke", role)
 
 	ctx.ResponseNoContent()
 }

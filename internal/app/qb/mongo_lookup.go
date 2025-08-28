@@ -9,15 +9,19 @@ func Lookup(value bson.D) bson.D {
 	return bson.D{{Key: "$lookup", Value: value}}
 }
 
-func With(collection string, localField string, foreignField string, as string) bson.D {
+func With(from string, localField string, foreignField string, as string) bson.D {
 	return bson.D{
 		{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: collection},           // colección relacionada
+			{Key: "from", Value: from},                 // colección relacionada
 			{Key: "localField", Value: localField},     // campo en colecion local
 			{Key: "foreignField", Value: foreignField}, // campo en coleccion relacionada
 			{Key: "as", Value: as},                     // campo para el resultado
 		}},
 	}
+}
+
+func Unwind(value any) bson.D {
+	return bson.D{{Key: "$unwind", Value: value}}
 }
 
 // HasMany crea un bson.D para realizar una busqueda con relacion hasMany

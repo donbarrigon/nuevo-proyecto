@@ -34,6 +34,10 @@ func Array(value ...any) bson.A {
 	return value
 }
 
+func Pipeline(value ...bson.D) mongo.Pipeline {
+	return value
+}
+
 // operadores logicos ----------------------------------------------------------------
 
 func And(value ...any) bson.E {

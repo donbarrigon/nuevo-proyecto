@@ -82,7 +82,7 @@ func PermissionStore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), permission, "create", permission)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "create", permission)
 
 	ctx.ResponseCreated(permission)
 }
@@ -117,7 +117,7 @@ func PermissionUpdate(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), permission, "update", dirty)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "update", dirty)
 
 	ctx.ResponseOk(permission)
 }
@@ -145,7 +145,7 @@ func PermissionDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), permission, "delete", permission)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "delete", permission)
 
 	ctx.ResponseNoContent()
 }
@@ -191,7 +191,7 @@ func PermissionRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), permission, "restore", permission)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "restore", permission)
 
 	ctx.ResponseOk(permission)
 }
@@ -238,7 +238,7 @@ func PermissionGrant(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "grant", permission)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "grant", permission)
 
 	ctx.ResponseNoContent()
 }
@@ -290,7 +290,7 @@ func PermissionRevoke(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "revoke", permission)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "revoke", permission)
 
 	ctx.ResponseNoContent()
 }

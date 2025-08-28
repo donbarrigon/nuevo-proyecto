@@ -119,6 +119,8 @@ func (o *Odm) AggregateOne(pipeline mongo.Pipeline) Error {
 		if err := cursor.Decode(o.Model); err != nil {
 			return Errors.Mongo(err)
 		}
+	} else {
+		return Errors.NoDocumentsf("mongo.Cursor.Next() == false")
 	}
 	return nil
 }

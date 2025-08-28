@@ -256,7 +256,7 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 	// filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 	// update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "update-email", map[string]string{"email": user.Email})
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "update-email", map[string]string{"email": user.Email})
 	go service.SendEmailConfirm(user)
 	go service.SendEmailChanged(user, oldEmail)
 
@@ -307,7 +307,7 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "update-profile", dirty)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "update-profile", dirty)
 
 	ctx.ResponseOk(user)
 }
@@ -368,7 +368,7 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "update-password", map[string]string{"password": user.Password})
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "update-password", map[string]string{"password": user.Password})
 	go service.SendEmailPasswordChanged(user)
 
 	ctx.ResponseOk(user)
@@ -479,6 +479,7 @@ func UserForgotPassword(ctx *app.HttpContext) {
 		return
 	}
 
+	go service.ActivityRecord(user.ID, user, "forgot-password")
 	go service.SendEmailForgotPassword(user)
 
 	ctx.ResponseOk(map[string]string{"message": "Email sent."})
@@ -541,6 +542,12 @@ func UserResetPassword(ctx *app.HttpContext) {
 	go service.ActivityRecord(user.ID, user, "reset-password", map[string]any{"password": newPassword})
 	go service.SendMailNewPassword(user, newPassword)
 
+	accesToken := model.NewAccessToken()
+	if err := accesToken.DeleteMany(Filter(Where("user_id", Eq(user.ID)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
 	ctx.ResponseOk(map[string]string{"message": "Password reset."})
 }
 
@@ -568,7 +575,13 @@ func UserDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "soft-delete", nil)
+	accessToken := model.NewAccessToken()
+	if err := accessToken.DeleteMany(Filter(Where("user_id", Eq(user.ID)))); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "soft-delete", nil)
 
 	ctx.ResponseNoContent()
 }
@@ -596,16 +609,16 @@ func UserRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), user, "restore", nil)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "restore", nil)
 
 	ctx.ResponseNoContent()
 }
 
 func Logout(ctx *app.HttpContext) {
 
-	accessToken, ok := ctx.Auth.Token.(*model.AccessToken)
+	accessToken, ok := ctx.Auth.(*model.AccessToken)
 	if !ok {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("Invalid token type:"))
+		ctx.ResponseError(app.Errors.InternalServerErrorf("Invalid auth token type."))
 		return
 	}
 
@@ -614,7 +627,7 @@ func Logout(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.UserID(), accessToken, "logout", accessToken)
+	go service.ActivityRecord(ctx.Auth.GetUserID(), accessToken, "logout", accessToken)
 
 	ctx.ResponseNoContent()
 }

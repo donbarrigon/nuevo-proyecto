@@ -13,15 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type UserInterface interface {
+type AuthInterface interface {
 	GetID() bson.ObjectID
-	Can(permissionName string) Error
-	HasRole(roleName ...string) Error
-}
-
-type TokenInterface interface {
-	GetID() bson.ObjectID
+	GetUserID() bson.ObjectID
 	Can(permissionName ...string) Error
+	HasRole(roleName ...string) Error
 }
 
 type Validator interface {
@@ -33,23 +29,11 @@ type MessageResource struct {
 	Data    any    `json:"data"`
 }
 
-type Auth struct {
-	User  UserInterface
-	Token TokenInterface
-}
-
 type HttpContext struct {
 	Writer  http.ResponseWriter
 	Request *http.Request
 	Params  map[string]string
-	Auth    *Auth
-}
-
-func NewAuth(user UserInterface, token TokenInterface) *Auth {
-	return &Auth{
-		User:  user,
-		Token: token,
-	}
+	Auth    AuthInterface
 }
 
 func NewHttpContext(w http.ResponseWriter, r *http.Request) *HttpContext {
@@ -57,18 +41,6 @@ func NewHttpContext(w http.ResponseWriter, r *http.Request) *HttpContext {
 		Writer:  w,
 		Request: r,
 	}
-}
-
-func (a *Auth) Can(permissionName ...string) Error {
-	return a.Token.Can(permissionName...)
-}
-
-func (a *Auth) HasRole(roleName ...string) Error {
-	return a.User.HasRole(roleName...)
-}
-
-func (a *Auth) UserID() bson.ObjectID {
-	return a.User.GetID()
 }
 
 func (ctx *HttpContext) Lang() string {
