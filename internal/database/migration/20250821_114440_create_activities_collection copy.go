@@ -5,6 +5,7 @@ func ActivitiesUp() {
 		CreateIndex(collection, 1, "user_id")
 		CreateIndex(collection, 1, "document_id")
 		CreateIndex(collection, 1, "collection")
+		CreateIndex(collection, -1, "created_at")
 	})
 }
 

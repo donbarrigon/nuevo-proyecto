@@ -17,10 +17,29 @@ func RoleIndex(ctx *app.HttpContext) {
 	}
 
 	role := model.NewRole()
-	result := []model.Role{}
-	role.Find(result, Document())
+	roles := []model.Role{}
+	role.Aggregate(&roles, Pipeline(
+		Match(),
+		role.WithPermissions(),
+	))
 
-	ctx.ResponseOk(result)
+	ctx.ResponseOk(roles)
+}
+
+func RoleExport(ctx *app.HttpContext) {
+	if err := policy.RoleViewAny(ctx); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	role := model.NewRole()
+	roles := []model.Role{}
+	role.Aggregate(&roles, Pipeline(
+		Match(),
+		role.WithPermissions(),
+	))
+
+	ctx.ResponseCSV("roles", roles)
 }
 
 func RoleTrashed(ctx *app.HttpContext) {
@@ -55,7 +74,10 @@ func RoleShow(ctx *app.HttpContext) {
 	}
 
 	role := model.NewRole()
-	if err := role.First("_id", id); err != nil {
+	if err := role.AggregateOne(Pipeline(
+		Match(Where("_id", Eq(id))),
+		role.WithPermissions(),
+	)); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -98,14 +120,8 @@ func RoleUpdate(ctx *app.HttpContext) {
 		return
 	}
 
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	role := model.NewRole()
-	if err := role.First("_id", id); err != nil {
+	if err := role.FindByHexID(ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -127,14 +143,8 @@ func RoleDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	role := model.NewRole()
-	if err := role.First("_id", id); err != nil {
+	if err := role.FindByHexID(ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -155,36 +165,15 @@ func RoleRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	role := model.NewRole()
 	activity := model.NewActivity()
 
-	if err := activity.FindOne(Document(
-		Where("collection_id", Eq(id)),
-		Where("collection", Eq(role.CollectionName())),
-		Where("action", Eq("delete")),
-	)); err != nil {
-		ctx.ResponseError(err)
-		return
-	}
-	changes, ok := activity.Changes.(map[string]any)
-	if !ok {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("invalid activity changes"))
-		return
-	}
-
-	role.ID = activity.DocumentID
-	if err := app.FillByMap(role, changes); err != nil {
+	if err := activity.RecoverDocument(role, ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	if err := role.Restore(); err != nil {
+	if err := role.Create(); err != nil {
 		ctx.ResponseError(err)
 		return
 	}

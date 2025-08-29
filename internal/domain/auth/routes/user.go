@@ -8,9 +8,6 @@ import (
 
 func User(r *app.Routes) {
 
-	r.Get("users/:id", controller.UserShow, middleware.Auth).
-		Name("users.show")
-
 	r.Post("users", controller.UserStore).
 		Name("users.store")
 
@@ -36,8 +33,14 @@ func User(r *app.Routes) {
 		r.Get("users", controller.UserIndex).
 			Name("users.index")
 
+		r.Get("users/export", controller.UserExport).
+			Name("users.export")
+
 		r.Get("users/trashed", controller.UserTrashed).
 			Name("users.trashed")
+
+		r.Get("users/:id", controller.UserShow).
+			Name("users.show")
 
 		r.Patch("users/:id/profile", controller.UserUpdateProfile).
 			Name("users.update-profile")
@@ -51,7 +54,7 @@ func User(r *app.Routes) {
 		r.Delete("users/:id", controller.UserDestroy).
 			Name("users.destroy")
 
-		r.Put("users/:id/restore", controller.UserDestroy).
+		r.Patch("users/:id/restore", controller.UserRestore).
 			Name("users.restore")
 
 			//roles

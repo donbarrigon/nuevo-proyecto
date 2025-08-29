@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	"github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -26,3 +27,7 @@ func (r *Role) SetID(id bson.ObjectID) { r.ID = id }
 func (r *Role) BeforeCreate() app.Error { return nil }
 
 func (r *Role) BeforeUpdate() app.Error { return nil }
+
+func (r *Role) WithPermissions() bson.D {
+	return qb.ManyToMany("permissions", "permission_ids")
+}

@@ -175,6 +175,9 @@ func (ctx *HttpContext) ResponseCSV(fileName string, data any, comma ...rune) {
 
 	first := val.Index(0)
 	elemType := first.Type()
+	if elemType.Kind() == reflect.Ptr {
+		elemType = elemType.Elem()
+	}
 
 	var headers []string
 	var fields []int
@@ -194,6 +197,9 @@ func (ctx *HttpContext) ResponseCSV(fileName string, data any, comma ...rune) {
 	for i := 0; i < val.Len(); i++ {
 		var record []string
 		elem := val.Index(i)
+		if elem.Kind() == reflect.Ptr {
+			elem = elem.Elem()
+		}
 
 		for _, j := range fields {
 			fieldVal := elem.Field(j)

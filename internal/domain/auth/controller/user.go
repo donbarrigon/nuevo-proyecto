@@ -26,12 +26,28 @@ func UserIndex(ctx *app.HttpContext) {
 
 	user := model.NewUser()
 	users := []*model.User{}
-	if err := user.Find(users, Document(WithOutTrashed())); err != nil {
+	if err := user.Find(&users, Document(WithOutTrashed())); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
 	ctx.ResponseOk(users)
+}
+
+func UserExport(ctx *app.HttpContext) {
+	if err := policy.UserViewAny(ctx); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	user := model.NewUser()
+	users := []*model.User{}
+	if err := user.Find(&users, Document(WithOutTrashed())); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	ctx.ResponseCSV("users", users)
 }
 
 func UserTrashed(ctx *app.HttpContext) {
@@ -42,7 +58,7 @@ func UserTrashed(ctx *app.HttpContext) {
 
 	user := model.NewUser()
 	users := []*model.User{}
-	if err := user.Find(users, Document(OnlyTrashed())); err != nil {
+	if err := user.Find(&users, Document(OnlyTrashed())); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -553,14 +569,8 @@ func UserResetPassword(ctx *app.HttpContext) {
 
 func UserDestroy(ctx *app.HttpContext) {
 
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	user := model.NewUser()
-	if err := user.FindOne(Filter(Where("_id", Eq(id)))); err != nil {
+	if err := user.FindByHexID(ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -577,8 +587,7 @@ func UserDestroy(ctx *app.HttpContext) {
 
 	accessToken := model.NewAccessToken()
 	if err := accessToken.DeleteMany(Filter(Where("user_id", Eq(user.ID)))); err != nil {
-		ctx.ResponseError(err)
-		return
+		app.PrintWarning("Fail to delete access token: [:user_id] :token", app.E("user_id", user.ID), app.E("token", err.Error()))
 	}
 
 	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "soft-delete", nil)
@@ -587,14 +596,9 @@ func UserDestroy(ctx *app.HttpContext) {
 }
 
 func UserRestore(ctx *app.HttpContext) {
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
 
 	user := model.NewUser()
-	if err := user.FindOne(Filter(Where("_id", Eq(id)))); err != nil {
+	if err := user.FindByHexID(ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}

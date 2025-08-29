@@ -204,9 +204,9 @@ func (o *Odm) UpdateBy(validator any) (map[string]any, Error) {
 }
 
 func (o *Odm) UpdateOne(filter bson.D, update bson.D) Error {
-	if err := o.Model.BeforeUpdate(); err != nil {
-		return err
-	}
+	// if err := o.Model.BeforeUpdate(); err != nil {
+	// 	return err
+	// }
 	result, err := DB.Collection(o.Model.CollectionName()).UpdateOne(context.TODO(), filter, update)
 	if err != nil {
 		return Errors.Mongo(err)

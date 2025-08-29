@@ -1,9 +1,11 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	. "github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -35,4 +37,35 @@ func (a *Activity) BeforeCreate() app.Error {
 
 func (a *Activity) BeforeUpdate() app.Error {
 	return app.Errors.Unknownf("you tried to modify an activity record")
+}
+
+func (a *Activity) RecoverDocument(m app.Model, id string) app.Error {
+	ctx := context.TODO()
+	oid, er := bson.ObjectIDFromHex(id)
+	if er != nil {
+		return app.Errors.HexID(er)
+	}
+	cursor, er := app.DB.Collection(m.CollectionName()).Aggregate(ctx, Pipeline(
+		Match(
+			Where("document_id", Eq(oid)),
+			Where("collection", Eq(m.CollectionName())),
+			Where("action", Eq("delete")),
+		),
+		bson.D{{"$sort", bson.D{{"created_at", -1}}}},
+		bson.D{{"$limit", 1}},
+		bson.D{{"$replaceRoot", bson.D{{"newRoot", "$changes"}}}},
+	))
+	if er != nil {
+		return app.Errors.Mongo(er)
+	}
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		if er := cursor.Decode(m); er != nil {
+			return app.Errors.Mongo(er)
+		}
+	} else {
+		return app.Errors.NoDocumentsf("No documents matched for restore :collection [:model::id]", app.E("id", id), app.E("model", m.CollectionName()), app.E("collection", "activity"))
+	}
+	return nil
 }

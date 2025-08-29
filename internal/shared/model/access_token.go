@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+	. "github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -55,7 +56,9 @@ func (t *AccessToken) Generate(userID bson.ObjectID, permissions []string) app.E
 func (t *AccessToken) Refresh() app.Error {
 	// t.Token = t.generateToken()
 	// t.ExpiresAt = t.generateExpiresAt()
-	return t.Update()
+	return t.UpdateOne(Filter(Where("_id", Eq(t.ID))),
+		Set(Element("expires_at", t.generateExpiresAt())),
+	)
 }
 
 func (t *AccessToken) generateToken() string {

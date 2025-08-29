@@ -176,74 +176,14 @@ func Unset(keys ...string) bson.D {
 	return bson.D{bson.E{Key: "$unset", Value: elements}}
 }
 
+func Set(value ...bson.E) bson.D {
+	return bson.D{bson.E{Key: "$set", Value: value}}
+}
+
 // operadores miselanios ----------------------------------------------------------------
 
 func Rand() bson.E {
 	return bson.E{Key: "$rand", Value: bson.D{}}
-}
-
-// ejemplos de prueba ----------------------------------------------------------------
-func GetCoffe() mongo.Pipeline {
-	return mongo.Pipeline{Match(Where("coffee", Eq("cafe")))}
-}
-
-func GetFruits1() bson.D {
-	return Match(
-		Or(
-			Where("fruit", Eq("apple")),
-			Where("fruit", Eq("banana")),
-			Where("fruit", Eq("orange")),
-		),
-	)
-}
-
-func GetFruits3() bson.D {
-	return Match(
-		Where("size", Gt(10), Lt(20)),
-	)
-}
-
-func GetFruits4() bson.D {
-	return Match(
-		And(
-			Where("size", Gt(10), Lt(20)),
-			Where("status", Eq("green")),
-			Or(
-				Where("fruit", Eq("apple")),
-				Where("fruit", Eq("banana")),
-				Where("fruit", Eq("orange")),
-			),
-		),
-	)
-}
-
-func GetFruits5() bson.D {
-	return Match(
-		Where("size", Gt(10), Lt(20)),
-		Where("status", Eq("green")),
-		Or(
-			Where("fruit", Eq("apple")),
-			Where("fruit", Eq("banana")),
-			Where("fruit", Eq("orange")),
-		),
-	)
-}
-
-func GetFruits6() bson.D {
-	return Match(
-		Or(
-			Nor(
-				Where("fruit", Eq("apple")),
-				Where("fruit", Eq("orange")),
-				Or(
-					Where("size", Gt(30)),
-					Where("status", Eq("green")),
-				),
-			),
-			Where("fruit", Eq("watermelon")),
-		),
-		Where("country", Eq("mexico")),
-	)
 }
 
 // 1️⃣ Operadores de etapa (Aggregation Pipeline Stages)
@@ -263,11 +203,7 @@ func GetFruits6() bson.D {
 
 // $unwind → desestructura arrays en documentos separados
 
-// $addFields → agrega nuevos campos calculados
-
-// $set → alias de $addFields
-
-// $unset → elimina campos
+// $addFields → agrega nuevos campos calculados en pipeline
 
 // $replaceRoot / $replaceWith → reemplaza el documento raíz
 

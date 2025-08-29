@@ -17,10 +17,29 @@ func PermissionIndex(ctx *app.HttpContext) {
 	}
 
 	permission := model.NewPermission()
-	result := []model.Permission{}
-	permission.Find(result, Document())
+	permissions := []model.Permission{}
+	if err := permission.Find(&permissions, Document()); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
 
-	ctx.ResponseOk(result)
+	ctx.ResponseOk(permissions)
+}
+
+func PermissionExport(ctx *app.HttpContext) {
+	if err := policy.PermissionViewAny(ctx); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	permission := model.NewPermission()
+	permissions := []model.Permission{}
+	if err := permission.Find(&permissions, Document()); err != nil {
+		ctx.ResponseError(err)
+		return
+	}
+
+	ctx.ResponseCSV("permissions", permissions)
 }
 
 func PermissionTrashed(ctx *app.HttpContext) {
@@ -166,7 +185,7 @@ func PermissionRestore(ctx *app.HttpContext) {
 	activity := model.NewActivity()
 
 	if err := activity.FindOne(Document(
-		Where("collection_id", Eq(id)),
+		Where("document_id", Eq(id)),
 		Where("collection", Eq(permission.CollectionName())),
 		Where("action", Eq("delete")),
 	)); err != nil {
