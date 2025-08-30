@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -52,7 +53,6 @@ func CloseMongoDB() error {
 	return nil
 }
 
-// Fill copia los valores de request a model si tienen el mismo nombre y tipo compatible
 func Fill(model any, request any) Error {
 	modelValue := reflect.ValueOf(model)
 	requestValue := reflect.ValueOf(request)
@@ -90,6 +90,18 @@ func Fill(model any, request any) Error {
 		// Verificamos que no sea un valor zero (opcional)
 		if requestFieldValue.IsZero() {
 			continue // Puedes cambiar esto si quieres copiar valores zero
+		}
+
+		// --- 🔥 NUEVO: si el destino es ObjectID y la fuente es string
+		if modelField.Type() == reflect.TypeOf(bson.ObjectID{}) &&
+			requestFieldValue.Kind() == reflect.String {
+
+			oid, err := bson.ObjectIDFromHex(requestFieldValue.String())
+			if err != nil {
+				continue // si no es un ObjectID válido, lo saltamos
+			}
+			modelField.Set(reflect.ValueOf(oid))
+			continue
 		}
 
 		// Verificamos compatibilidad de tipos
@@ -137,7 +149,6 @@ func FillDirty(model any, request any) (map[string]any, Error) {
 
 		// Buscamos el campo en el modelo
 		modelField := modelValue.FieldByName(fieldName)
-
 		if !modelField.IsValid() || !modelField.CanSet() {
 			continue
 		}
@@ -147,9 +158,19 @@ func FillDirty(model any, request any) (map[string]any, Error) {
 			continue
 		}
 
-		// Verificamos compatibilidad de tipos
 		var newValue reflect.Value
-		if requestFieldValue.Type().AssignableTo(modelField.Type()) {
+
+		// --- 🔥 NUEVO: si el destino es ObjectID y la fuente es string
+		if modelField.Type() == reflect.TypeOf(bson.ObjectID{}) &&
+			requestFieldValue.Kind() == reflect.String {
+
+			oid, err := bson.ObjectIDFromHex(requestFieldValue.String())
+			if err != nil {
+				continue // no es un ObjectID válido, ignoramos
+			}
+			newValue = reflect.ValueOf(oid)
+
+		} else if requestFieldValue.Type().AssignableTo(modelField.Type()) {
 			newValue = requestFieldValue
 		} else if requestFieldValue.Type().ConvertibleTo(modelField.Type()) {
 			newValue = requestFieldValue.Convert(modelField.Type())
@@ -173,7 +194,7 @@ func FillDirty(model any, request any) (map[string]any, Error) {
 				// Si no tiene tag bson, usamos el nombre del campo en minúsculas
 				bsonTag = strings.ToLower(fieldName)
 			} else {
-				// Si tiene tag bson, extraemos solo el nombre (sin opciones como ",omEntrypty")
+				// Si tiene tag bson, extraemos solo el nombre (sin opciones como ",omitempty")
 				if commaIndex := strings.Index(bsonTag, ","); commaIndex != -1 {
 					bsonTag = bsonTag[:commaIndex]
 				}

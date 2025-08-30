@@ -70,7 +70,7 @@ func (t *AccessToken) generateToken() string {
 }
 
 func (t *AccessToken) generateExpiresAt() time.Time {
-	return time.Now().Add(time.Duration(app.Env.SESSION_DURATION) * time.Minute)
+	return time.Now().Add(time.Duration(app.Env.SESSION_LIFETIME) * time.Minute)
 }
 
 func (t *AccessToken) Can(permissionNames ...string) app.Error {

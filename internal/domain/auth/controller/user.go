@@ -120,11 +120,6 @@ func UserStore(ctx *app.HttpContext) {
 	}
 	user.Password = string(hashedPassword)
 
-	if user.Profile.CityID, er = bson.ObjectIDFromHex(req.CityID); er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	role := model.NewRole()
 	if err := role.FindOne(Filter(Where("name", Eq("user")))); err != nil {
 		app.PrintWarning("User role does not exist. Run the seed command to populate initial data.", app.E("error", err))
@@ -308,14 +303,6 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 	if err != nil {
 		ctx.ResponseError(err)
 		return
-	}
-
-	if user.Profile.CityID.Hex() != req.CityID {
-		dirty["city_id"] = req.CityID
-		if user.Profile.CityID, er = bson.ObjectIDFromHex(req.CityID); er != nil {
-			ctx.ResponseError(app.Errors.HexID(er))
-			return
-		}
 	}
 
 	if err := user.Update(); err != nil {

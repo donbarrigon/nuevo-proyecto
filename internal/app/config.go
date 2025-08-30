@@ -21,7 +21,7 @@ type Environment struct {
 	SERVER_HTTPS_KEY_PATH  string
 	SERVER_TIMEOUT         int
 
-	SESSION_DURATION int
+	SESSION_LIFETIME int
 
 	DB_DATABASE          string
 	DB_CONNECTION_STRING string
@@ -59,7 +59,7 @@ var Env = Environment{
 	SERVER_HTTPS_KEY_PATH:  "certs/server.key",
 	SERVER_TIMEOUT:         60,
 
-	SESSION_DURATION: 60,
+	SESSION_LIFETIME: 60,
 
 	DB_DATABASE:          "sample_mflix",
 	DB_CONNECTION_STRING: "mongodb://localhost:27017",
@@ -159,10 +159,10 @@ func LoadEnv(filepath ...string) {
 			if e != nil {
 				Env.SERVER_TIMEOUT = timeout
 			}
-		case "SESSION_DURATION":
+		case "SESSION_LIFETIME":
 			duration, e := strconv.Atoi(value)
 			if e != nil {
-				Env.SESSION_DURATION = duration
+				Env.SESSION_LIFETIME = duration
 			}
 		case "DB_MIGRATION_ENABLE":
 			Env.DB_MIGRATION_ENABLE = false
