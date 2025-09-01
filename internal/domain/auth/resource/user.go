@@ -5,8 +5,8 @@ import (
 )
 
 type UserLogin struct {
-	User        *model.User        `json:"user"`
 	AccessToken *model.AccessToken `json:"access_token"`
+	User        *model.User        `json:"user"`
 }
 
 func NewUserLogin(u *model.User, t *model.AccessToken) *UserLogin {

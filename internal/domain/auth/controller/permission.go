@@ -6,7 +6,6 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/domain/auth/policy"
 	"github.com/donbarrigon/nuevo-proyecto/internal/domain/auth/validator"
 	"github.com/donbarrigon/nuevo-proyecto/internal/shared/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/shared/service"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -17,13 +16,13 @@ func PermissionIndex(ctx *app.HttpContext) {
 	}
 
 	permission := model.NewPermission()
-	permissions := []model.Permission{}
-	if err := permission.Find(&permissions, Document()); err != nil {
+	result := []model.Permission{}
+	if err := permission.Find(&result, GetAll(), FindOptions(ctx)); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	ctx.ResponseOk(permissions)
+	ctx.ResponseOk(result)
 }
 
 func PermissionExport(ctx *app.HttpContext) {
@@ -33,13 +32,13 @@ func PermissionExport(ctx *app.HttpContext) {
 	}
 
 	permission := model.NewPermission()
-	permissions := []model.Permission{}
-	if err := permission.Find(&permissions, Document()); err != nil {
+	result := []model.Permission{}
+	if err := permission.Find(&result, GetAll()); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	ctx.ResponseCSV("permissions", permissions)
+	ctx.ResponseCSV("permissions", result)
 }
 
 func PermissionTrashed(ctx *app.HttpContext) {
@@ -48,18 +47,14 @@ func PermissionTrashed(ctx *app.HttpContext) {
 		return
 	}
 
-	activity := model.NewActivity()
-	result := []*model.Activity{}
-	if err := activity.Find(result, Document(
-		Where("collection", Eq("permissions")),
-		Where("action", Eq("delete")),
-	)); err != nil {
+	trash := model.NewTrash()
+	result := []model.Trash{}
+	if err := trash.Find(&result, Filter(Where("collection", Eq("permissions")))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	ctx.ResponseOk(activity)
-
+	ctx.ResponseOk(result)
 }
 
 func PermissionShow(ctx *app.HttpContext) {
@@ -68,14 +63,8 @@ func PermissionShow(ctx *app.HttpContext) {
 		return
 	}
 
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	permission := model.NewPermission()
-	if err := permission.First("_id", id); err != nil {
+	if err := permission.FindByHexID(ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -101,7 +90,7 @@ func PermissionStore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "create", permission)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), permission, model.ACTION_CREATE, nil)
 
 	ctx.ResponseCreated(permission)
 }
@@ -130,13 +119,13 @@ func PermissionUpdate(ctx *app.HttpContext) {
 		return
 	}
 
-	dirty, err := permission.UpdateBy(req)
+	original, _, err := permission.UpdateBy(req)
 	if err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "update", dirty)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), permission, model.ACTION_UPDATE, original)
 
 	ctx.ResponseOk(permission)
 }
@@ -147,24 +136,19 @@ func PermissionDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	permission := model.NewPermission()
-	if err := permission.First("_id", id); err != nil {
+	if err := permission.FindByHexID(ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	if err := permission.Delete(); err != nil {
+	trash := model.NewTrash()
+	if err := trash.MoveToTrash(permission); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "delete", permission)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), permission, model.ACTION_DELETE, nil)
 
 	ctx.ResponseNoContent()
 }
@@ -175,42 +159,15 @@ func PermissionRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	id, er := bson.ObjectIDFromHex(ctx.Params["id"])
-	if er != nil {
-		ctx.ResponseError(app.Errors.HexID(er))
-		return
-	}
-
 	permission := model.NewPermission()
-	activity := model.NewActivity()
+	trash := model.NewTrash()
 
-	if err := activity.FindOne(Document(
-		Where("document_id", Eq(id)),
-		Where("collection", Eq(permission.CollectionName())),
-		Where("action", Eq("delete")),
-	)); err != nil {
+	if err := trash.RestoreByHex(permission, ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	changes, ok := activity.Changes.(map[string]any)
-	if !ok {
-		ctx.ResponseError(app.Errors.InternalServerErrorf("invalid activity changes"))
-		return
-	}
-
-	permission.ID = activity.DocumentID
-	if err := app.FillByMap(permission, changes); err != nil {
-		ctx.ResponseError(err)
-		return
-	}
-
-	if err := permission.Create(); err != nil {
-		ctx.ResponseError(err)
-		return
-	}
-
-	go service.ActivityRecord(ctx.Auth.GetUserID(), permission, "restore", permission)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), permission, model.ACTION_RESTORE, nil)
 
 	ctx.ResponseOk(permission)
 }
@@ -257,7 +214,7 @@ func PermissionGrant(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "grant", permission)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, "grant", permission)
 
 	ctx.ResponseNoContent()
 }
@@ -309,7 +266,7 @@ func PermissionRevoke(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "revoke", permission)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, "revoke", permission)
 
 	ctx.ResponseNoContent()
 }

@@ -96,11 +96,8 @@ func (ctx *HttpContext) GetParam(param string, defaultValue string) string {
 	return defaultValue
 }
 
-func (ctx *HttpContext) GetInput(param string, defaultValue string) string {
-	if value := ctx.Request.URL.Query().Get(param); value != "" {
-		return value
-	}
-	return defaultValue
+func (ctx *HttpContext) GetInput(param string) string {
+	return ctx.Request.URL.Query().Get(param)
 }
 
 func (ctx *HttpContext) ResponseJSON(status int, data any) {

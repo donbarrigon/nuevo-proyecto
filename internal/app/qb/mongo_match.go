@@ -38,6 +38,10 @@ func Pipeline(value ...bson.D) mongo.Pipeline {
 	return value
 }
 
+func GetAll() bson.D {
+	return bson.D{}
+}
+
 // operadores logicos ----------------------------------------------------------------
 
 func And(value ...any) bson.E {

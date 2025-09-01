@@ -20,6 +20,7 @@ func Run() {
 	add("create access_tokens", AccessTokensUp, AccessTokensDown)
 	add("create verification_codes", VerificationCodesUp, VerificationCodesDown)
 	add("create acticities", ActivitiesUp, ActivitiesDown)
+	add("create trash", TrashUp, TrashDown)
 	add("create system_logs", SystemLogsUp, SystemLogsDown)
 	add("create countries", CountriesUp, CountriesDown)
 	add("create states", StatesUp, StatesDown)

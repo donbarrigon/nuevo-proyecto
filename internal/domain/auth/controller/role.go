@@ -6,7 +6,6 @@ import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/domain/auth/policy"
 	"github.com/donbarrigon/nuevo-proyecto/internal/domain/auth/validator"
 	"github.com/donbarrigon/nuevo-proyecto/internal/shared/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/shared/service"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -48,17 +47,14 @@ func RoleTrashed(ctx *app.HttpContext) {
 		return
 	}
 
-	activity := model.NewActivity()
-	result := []*model.Activity{}
-	if err := activity.Find(result, Document(
-		Where("collection", Eq("roles")),
-		Where("action", Eq("delete")),
-	)); err != nil {
+	trash := model.NewTrash()
+	result := []model.Trash{}
+	if err := trash.Find(&result, Filter(Where("collection", Eq("roles")))); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	ctx.ResponseOk(activity)
+	ctx.ResponseOk(result)
 }
 
 func RoleShow(ctx *app.HttpContext) {
@@ -103,7 +99,7 @@ func RoleStore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "create", role)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), role, model.ACTION_CREATE, nil)
 
 	ctx.ResponseCreated(role)
 }
@@ -126,13 +122,13 @@ func RoleUpdate(ctx *app.HttpContext) {
 		return
 	}
 
-	dirty, err := role.UpdateBy(req)
+	original, _, err := role.UpdateBy(req)
 	if err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "update", dirty)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), role, model.ACTION_UPDATE, original)
 
 	ctx.ResponseOk(role)
 }
@@ -149,12 +145,13 @@ func RoleDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	if err := role.Delete(); err != nil {
+	trash := model.NewTrash()
+	if err := trash.MoveToTrash(role); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "delete", role)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), role, model.ACTION_MOVE_TO_TRASH, nil)
 
 	ctx.ResponseNoContent()
 }
@@ -166,21 +163,15 @@ func RoleRestore(ctx *app.HttpContext) {
 	}
 
 	role := model.NewRole()
-	activity := model.NewActivity()
+	trahs := model.NewTrash()
 
-	if err := activity.RecoverDocument(role, ctx.Params["id"]); err != nil {
+	if err := trahs.RestoreByHex(role, ctx.Params["id"]); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
+	go model.HistoryRecord(ctx.Auth.GetUserID(), role, model.ACTION_RESTORE, nil)
 
-	if err := role.Create(); err != nil {
-		ctx.ResponseError(err)
-		return
-	}
-
-	go service.ActivityRecord(ctx.Auth.GetUserID(), role, "restore", role)
-
-	ctx.ResponseNoContent()
+	ctx.ResponseOk(role)
 }
 
 func RoleGrant(ctx *app.HttpContext) {
@@ -225,7 +216,7 @@ func RoleGrant(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "grant", role)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, "grant", role)
 
 	ctx.ResponseNoContent()
 }
@@ -277,7 +268,7 @@ func RoleRevoke(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "revoke", role)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, "revoke", role)
 
 	ctx.ResponseNoContent()
 }

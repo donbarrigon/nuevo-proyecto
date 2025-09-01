@@ -26,7 +26,7 @@ func UserIndex(ctx *app.HttpContext) {
 
 	user := model.NewUser()
 	users := []*model.User{}
-	if err := user.Find(&users, Document(WithOutTrashed())); err != nil {
+	if err := user.Find(&users, Filter(WithOutTrashed())); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -132,7 +132,7 @@ func UserStore(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, user, "create", user)
+	go model.HistoryRecord(user.ID, user, "create", nil)
 	go service.SendEmailConfirm(user)
 
 	runLogin(ctx, req.Email, req.Password)
@@ -208,7 +208,7 @@ func runLogin(ctx *app.HttpContext, email string, password string) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, accessToken, "login")
+	go model.HistoryRecord(user.ID, accessToken, "login", nil)
 
 	ctx.ResponseOk(resource.NewUserLogin(user, accessToken))
 
@@ -267,7 +267,7 @@ func UserUpdateEmail(ctx *app.HttpContext) {
 	// filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 	// update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "update-email", map[string]string{"email": user.Email})
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, "update-email", map[string]string{"email": oldEmail})
 	go service.SendEmailConfirm(user)
 	go service.SendEmailChanged(user, oldEmail)
 
@@ -299,7 +299,7 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 		return
 	}
 
-	dirty, err := app.FillDirty(user.Profile, req)
+	original, _, err := app.Fill(user.Profile, req)
 	if err != nil {
 		ctx.ResponseError(err)
 		return
@@ -310,7 +310,7 @@ func UserUpdateProfile(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "update-profile", dirty)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, "update-profile", original)
 
 	ctx.ResponseOk(user)
 }
@@ -371,7 +371,7 @@ func UserUpdatePassword(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "update-password", map[string]string{"password": user.Password})
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, "update-password", nil)
 	go service.SendEmailPasswordChanged(user)
 
 	ctx.ResponseOk(user)
@@ -413,7 +413,7 @@ func UserConfirmEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, user, "confirm-email", map[string]any{"email_verified_at": user.EmailVerifiedAt})
+	go model.HistoryRecord(user.ID, user, "confirm-email", nil)
 
 	ctx.ResponseOk(map[string]string{"message": "Email verified.", "email_verified_at": user.EmailVerifiedAt.Format(time.RFC3339)})
 }
@@ -451,6 +451,7 @@ func UserRevertEmail(ctx *app.HttpContext) {
 		return
 	}
 
+	emailBeforeRevert := user.Email
 	now := time.Now()
 	user.EmailVerifiedAt = &now
 	user.Email = verificationCode.Metadata["old_email"]
@@ -464,7 +465,7 @@ func UserRevertEmail(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, user, "revert-email", map[string]any{"email": user.Email, "email_verified_at": user.EmailVerifiedAt})
+	go model.HistoryRecord(user.ID, user, "revert-email", map[string]any{"email": emailBeforeRevert})
 
 	ctx.ResponseOk(map[string]string{"message": "Email reverted.", "email": user.Email, "email_verified_at": user.EmailVerifiedAt.Format(time.RFC3339)})
 }
@@ -482,10 +483,10 @@ func UserForgotPassword(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, user, "forgot-password")
+	go model.HistoryRecord(user.ID, user, "forgot-password", nil)
 	go service.SendEmailForgotPassword(user)
 
-	ctx.ResponseOk(map[string]string{"message": "Email sent."})
+	ctx.ResponseOk(map[string]string{"message": "Check your email for a link to reset your password."})
 }
 
 func UserResetPassword(ctx *app.HttpContext) {
@@ -542,12 +543,13 @@ func UserResetPassword(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(user.ID, user, "reset-password", map[string]any{"password": newPassword})
+	go model.HistoryRecord(user.ID, user, "reset-password", nil)
 	go service.SendMailNewPassword(user, newPassword)
 
 	accesToken := model.NewAccessToken()
 	if err := accesToken.DeleteMany(Filter(Where("user_id", Eq(user.ID)))); err != nil {
-		ctx.ResponseError(err)
+		// ctx.ResponseError(err)
+		app.PrintError("Fail to delete access token: [:user_id] :error", app.E("user_id", user.ID), app.E("error", err.Error()))
 		return
 	}
 
@@ -567,7 +569,10 @@ func UserDestroy(ctx *app.HttpContext) {
 		return
 	}
 
-	if err := user.SoftDelete(); err != nil {
+	if err := user.UpdateOne(
+		Filter(Where("_id", Eq(user.ID))),
+		Set(Element("deleted_at", time.Now())),
+	); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
@@ -577,7 +582,7 @@ func UserDestroy(ctx *app.HttpContext) {
 		app.PrintWarning("Fail to delete access token: [:user_id] :token", app.E("user_id", user.ID), app.E("token", err.Error()))
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "soft-delete", nil)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, model.ACTION_DELETE, nil)
 
 	ctx.ResponseNoContent()
 }
@@ -595,12 +600,15 @@ func UserRestore(ctx *app.HttpContext) {
 		return
 	}
 
-	if err := user.Restore(); err != nil {
+	if err := user.UpdateOne(
+		Filter(Where("_id", Eq(user.ID))),
+		Unset("deleted_at"),
+	); err != nil {
 		ctx.ResponseError(err)
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), user, "restore", nil)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), user, model.ACTION_RESTORE, nil)
 
 	ctx.ResponseNoContent()
 }
@@ -618,7 +626,7 @@ func Logout(ctx *app.HttpContext) {
 		return
 	}
 
-	go service.ActivityRecord(ctx.Auth.GetUserID(), accessToken, "logout", accessToken)
+	go model.HistoryRecord(ctx.Auth.GetUserID(), accessToken, "logout", nil)
 
 	ctx.ResponseNoContent()
 }
