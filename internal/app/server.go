@@ -72,7 +72,5 @@ func startMessage() {
  | |___ | |_| |  _ <|  _ < | ||||__ | |\  | |_| | |_| |
   \____(_)___/|_| \_\_| \_\___||___||_| \_|____/ \___/
 
- 🚀 Servidor corriendo en http://localhost:{port} 
- 🌱 Entorno: DESARROLLO
-	`, Entry{"port", Env.SERVER_PORT})
+ 🚀 Servidor corriendo en http://localhost:{port} `, Entry{"port", Env.SERVER_PORT})
 }

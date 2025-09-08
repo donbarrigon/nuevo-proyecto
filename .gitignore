@@ -1,2 +1,6 @@
 .env
-/log/
+log
+node_modules
+build
+public/js
+public/css

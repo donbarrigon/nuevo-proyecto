@@ -30,6 +30,7 @@ func UserIndex(ctx *app.HttpContext) {
 		ctx.ResponseError(err)
 		return
 	}
+	app.PrintInfo("estas mirando todos los usuarios de la base de datos por que tienes permiso de hacerlo")
 
 	ctx.ResponseOk(users)
 }

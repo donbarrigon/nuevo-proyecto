@@ -1,0 +1,19 @@
+{
+  "name": "starter-kit",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.13",
+    "@types/bun": "latest",
+    "@types/node": "^24.3.1",
+    "tailwindcss": "^4.1.13"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "dev": "bun run build.ts --watch",
+    "build": "bun run build.ts"
+  }
+}
