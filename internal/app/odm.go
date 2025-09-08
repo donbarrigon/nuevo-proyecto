@@ -29,7 +29,6 @@ type Odm struct {
 var DBClient *mongo.Client
 var DB *mongo.Database
 
-// trae el documento segun el id en string
 func (o *Odm) FindByHexID(id string) Error {
 
 	objectId, err := bson.ObjectIDFromHex(id)
@@ -43,7 +42,6 @@ func (o *Odm) FindByHexID(id string) Error {
 	return nil
 }
 
-// trae el documento segun el id
 func (o *Odm) FindByID(id bson.ObjectID) Error {
 	filter := bson.D{bson.E{Key: "_id", Value: id}}
 	if err := DB.Collection(o.Model.CollectionName()).FindOne(context.TODO(), filter).Decode(o.Model); err != nil {
@@ -52,7 +50,6 @@ func (o *Odm) FindByID(id bson.ObjectID) Error {
 	return nil
 }
 
-// trae el primer documento encontrado
 func (o *Odm) First(field string, value any) Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	if err := DB.Collection(o.Model.CollectionName()).FindOne(context.TODO(), filter).Decode(o.Model); err != nil {
@@ -61,7 +58,6 @@ func (o *Odm) First(field string, value any) Error {
 	return nil
 }
 
-// trae 1 documento segun el filtro
 func (o *Odm) FindOne(filter bson.D, opts ...options.Lister[options.FindOneOptions]) Error {
 	if err := DB.Collection(o.Model.CollectionName()).FindOne(context.TODO(), filter, opts...).Decode(o.Model); err != nil {
 		return Errors.Mongo(err)
@@ -69,7 +65,6 @@ func (o *Odm) FindOne(filter bson.D, opts ...options.Lister[options.FindOneOptio
 	return nil
 }
 
-// ejecuta busquedas por el filtro
 func (o *Odm) Find(result any, filter bson.D, opts ...options.Lister[options.FindOptions]) Error {
 	ctx := context.TODO()
 	cursor, err := DB.Collection(o.Model.CollectionName()).Find(ctx, filter, opts...)
@@ -82,7 +77,6 @@ func (o *Odm) Find(result any, filter bson.D, opts ...options.Lister[options.Fin
 	return nil
 }
 
-// trae un slice con todos los documentos encontrados
 func (o *Odm) FindBy(result any, field string, value any, opts ...options.Lister[options.FindOptions]) Error {
 	filter := bson.D{bson.E{Key: field, Value: value}}
 	ctx := context.TODO()
@@ -96,7 +90,6 @@ func (o *Odm) FindBy(result any, field string, value any, opts ...options.Lister
 	return nil
 }
 
-// ejecuta busquedas por agregacion
 func (o *Odm) Aggregate(result any, pipeline mongo.Pipeline) Error {
 	ctx := context.TODO()
 	cursor, err := DB.Collection(o.Model.CollectionName()).Aggregate(ctx, pipeline)
@@ -109,7 +102,6 @@ func (o *Odm) Aggregate(result any, pipeline mongo.Pipeline) Error {
 	return nil
 }
 
-// lo mismo que agregate pero solo retorna 1
 func (o *Odm) AggregateOne(pipeline mongo.Pipeline) Error {
 	ctx := context.TODO()
 	cursor, err := DB.Collection(o.Model.CollectionName()).Aggregate(ctx, pipeline)
@@ -127,7 +119,6 @@ func (o *Odm) AggregateOne(pipeline mongo.Pipeline) Error {
 	return nil
 }
 
-// crea el documento
 func (o *Odm) Create() Error {
 	if err := o.Model.BeforeCreate(); err != nil {
 		return err
@@ -141,7 +132,6 @@ func (o *Odm) Create() Error {
 	return nil
 }
 
-// crea el documento con los datos del validador
 func (o *Odm) CreateBy(validator any) Error {
 	if _, _, err := Fill(o.Model, validator); err != nil {
 		return err
@@ -149,7 +139,6 @@ func (o *Odm) CreateBy(validator any) Error {
 	return o.Create()
 }
 
-// crea varios documentos los datos deben ser un slice del modelo
 func (o *Odm) CreateMany(data any) Error {
 
 	v := reflect.ValueOf(data)
@@ -175,7 +164,6 @@ func (o *Odm) CreateMany(data any) Error {
 	return nil
 }
 
-// actualiza el documento
 func (o *Odm) Update() Error {
 	if err := o.Model.BeforeUpdate(); err != nil {
 		return err
@@ -196,7 +184,6 @@ func (o *Odm) Update() Error {
 	return nil
 }
 
-// actualiza el documento con los datos del validador
 func (o *Odm) UpdateBy(validator any) (map[string]any, map[string]any, Error) {
 	original, dirty, err := Fill(o.Model, validator)
 	if err != nil {
@@ -205,6 +192,7 @@ func (o *Odm) UpdateBy(validator any) (map[string]any, map[string]any, Error) {
 	return original, dirty, o.Update()
 }
 
+// OjO no usa el hook BeforeUpdate
 func (o *Odm) UpdateOne(filter bson.D, update bson.D) Error {
 	// if err := o.Model.BeforeUpdate(); err != nil {
 	// 	return err
@@ -222,44 +210,6 @@ func (o *Odm) UpdateOne(filter bson.D, update bson.D) Error {
 	return nil
 }
 
-// hace un soft delete al documento
-// func (o *Odm) SoftDelete() Error {
-// 	collection := DB.Collection(o.Model.CollectionName())
-// 	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
-// 	update := bson.D{bson.E{Key: "$set", Value: bson.D{{Key: "deleted_at", Value: time.Now()}}}}
-
-// 	result, err := collection.UpdateOne(context.TODO(), filter, update)
-// 	if err != nil {
-// 		return Errors.Mongo(err)
-// 	}
-// 	if result.MatchedCount == 0 {
-// 		return Errors.NoDocumentsf("mongo.UpdateResult.MatchedCount == 0")
-// 	}
-// 	if result.ModifiedCount == 0 {
-// 		return Errors.Deletef("mongo.UpdateResult.ModifiedCount == 0")
-// 	}
-// 	return nil
-// }
-
-// restaura el documento eliminado por SoftDelete
-// func (o *Odm) Restore() Error {
-// 	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
-// 	update := bson.D{bson.E{Key: "$unset", Value: bson.D{{Key: "deleted_at", Value: nil}}}}
-
-// 	result, err := DB.Collection(o.Model.CollectionName()).UpdateOne(context.TODO(), filter, update)
-// 	if err != nil {
-// 		return Errors.Mongo(err)
-// 	}
-// 	if result.MatchedCount == 0 {
-// 		return Errors.NoDocumentsf("mongo.UpdateResult.MatchedCount == 0")
-// 	}
-// 	if result.ModifiedCount == 0 {
-// 		return Errors.Restoref("mongo.UpdateResult.ModifiedCount == 0")
-// 	}
-// 	return nil
-// }
-
-// elimina permanentemente el documento
 func (o *Odm) Delete() Error {
 	filter := bson.D{bson.E{Key: "_id", Value: o.Model.GetID()}}
 

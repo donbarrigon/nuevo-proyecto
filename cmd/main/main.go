@@ -1,17 +1,17 @@
 package main
 
-import (
-	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/shared/routes"
-)
+// import (
+// 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
+// 	"github.com/donbarrigon/nuevo-proyecto/internal/routes"
+// )
 
-func main() {
+// func main() {
 
-	app.LoadEnv()
+// 	app.LoadEnv()
 
-	app.InitMongoDB()
+// 	app.InitMongoDB()
 
-	httpServer := app.NewHttpServer(app.Env.SERVER_PORT, routes.GetApi())
+// 	httpServer := app.NewHttpServer(app.Env.SERVER_PORT, routes.GetApi())
 
-	app.HttpServerGracefulShutdown(httpServer)
-}
+// 	app.HttpServerGracefulShutdown(httpServer)
+// }
