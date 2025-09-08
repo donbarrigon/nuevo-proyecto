@@ -3,7 +3,7 @@ package routes
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	"github.com/donbarrigon/nuevo-proyecto/internal/database/controller"
-	"github.com/donbarrigon/nuevo-proyecto/internal/middleware"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/middleware"
 )
 
 func Migration(r *app.Routes) {

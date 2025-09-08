@@ -6,7 +6,7 @@ import (
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	. "github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/model"
 )
 
 func Auth(next func(ctx *app.HttpContext)) func(ctx *app.HttpContext) {

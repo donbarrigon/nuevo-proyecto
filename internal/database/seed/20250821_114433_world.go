@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/model"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 

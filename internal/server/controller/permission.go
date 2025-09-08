@@ -3,9 +3,9 @@ package controller
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
 	. "github.com/donbarrigon/nuevo-proyecto/internal/app/qb"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
-	"github.com/donbarrigon/nuevo-proyecto/internal/policy"
-	"github.com/donbarrigon/nuevo-proyecto/internal/validator"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/policy"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/validator"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 

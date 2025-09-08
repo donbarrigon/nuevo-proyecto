@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/model"
 )
 
 func SendEmailConfirm(user *model.User) {

@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/controller"
-	"github.com/donbarrigon/nuevo-proyecto/internal/middleware"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/controller"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/middleware"
 )
 
 func user(r *app.Routes) {

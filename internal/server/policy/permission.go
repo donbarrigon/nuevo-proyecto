@@ -2,7 +2,7 @@ package policy
 
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/model"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/model"
 )
 
 func PermissionViewAny(ctx *app.HttpContext) app.Error {

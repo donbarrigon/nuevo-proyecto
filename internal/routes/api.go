@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/donbarrigon/nuevo-proyecto/internal/app"
-	"github.com/donbarrigon/nuevo-proyecto/internal/controller"
 	dbroutes "github.com/donbarrigon/nuevo-proyecto/internal/database/routes"
+	"github.com/donbarrigon/nuevo-proyecto/internal/server/controller"
 )
 
 func GetAll() *app.Routes {
