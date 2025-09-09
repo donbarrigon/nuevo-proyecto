@@ -141,22 +141,57 @@ function findGoFiles(dir: string): string[] {
     return files;
 }
 
+// async function stopGoProcess(goProcess: ChildProcess): Promise<void> {
+//     return new Promise((resolve) => {
+//         if (!goProcess.pid) {
+//             resolve();
+//             return;
+//         }
+
+//         // Enviar señal SIGINT (equivalente a Ctrl+C)
+//         process.kill(goProcess.pid, 'SIGINT');
+//         // process.kill(goProcess.pid, 'SIGTERM');
+        
+//         // Esperar a que el proceso termine gracefulmente
+//         const timeout = setTimeout(() => {
+//             // Si no termina después de 3 segundos, forzar la terminación
+//             goProcess.kill('SIGKILL');
+//             resolve();
+//         }, 3000);
+
+//         goProcess.once('exit', () => {
+//             clearTimeout(timeout);
+//             resolve();
+//         });
+//     });
+// }
+
 async function stopGoProcess(goProcess: ChildProcess): Promise<void> {
     return new Promise((resolve) => {
-        if (!goProcess.pid) {
+        if (!goProcess.pid || goProcess.exitCode !== null) {
             resolve();
             return;
         }
 
-        // Enviar señal SIGINT (equivalente a Ctrl+C)
-        process.kill(goProcess.pid, 'SIGINT');
-        
-        // Esperar a que el proceso termine gracefulmente
+        try {
+            // Enviar señal SIGTERM
+            process.kill(goProcess.pid, 'SIGTERM');
+        } catch (err: any) {
+            if (err.code === 'ESRCH') {
+                // Proceso ya no existe, lo damos por terminado
+                resolve();
+                return;
+            }
+            throw err; // otro error inesperado
+        }
+
+        // Esperar a que el proceso termine graceful
         const timeout = setTimeout(() => {
-            // Si no termina después de 3 segundos, forzar la terminación
-            goProcess.kill('SIGKILL');
+            if (goProcess.exitCode === null) {
+                goProcess.kill('SIGKILL');
+            }
             resolve();
-        }, 3000);
+        }, 9000);
 
         goProcess.once('exit', () => {
             clearTimeout(timeout);
@@ -192,18 +227,21 @@ async function main() {
 
         // Función para reiniciar el servidor Go
         const restartGoServer = async () => {
-        if (restartTimeout) {
-            clearTimeout(restartTimeout);
-        }
-        
-        restartTimeout = setTimeout(async () => {
-            if (goProcess) {
-            console.log('Reiniciando servidor Go...');
-            await stopGoProcess(goProcess);
-            goProcess = runGoDev();
+            if (restartTimeout) {
+                clearTimeout(restartTimeout);
             }
-            restartTimeout = null;
-        }, 300); // Debounce de 300ms
+            
+            restartTimeout = setTimeout(async () => {
+                if (goProcess) {
+                    console.log('Reiniciando servidor Go...');
+                    await stopGoProcess(goProcess);
+                    // Espera un poquito por que el shutdown es asincrono
+                    setTimeout(() => {
+                        goProcess = runGoDev();
+                    }, 500);
+                }
+                restartTimeout = null;
+            }, 2000); // Debounce para que vscode no trolee, se puede ajuztar al poder del pc
         };
 
         // Watch for changes

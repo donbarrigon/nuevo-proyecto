@@ -2,8 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"reflect"
 	"strings"
 	"time"
@@ -25,14 +23,16 @@ func InitMongoDB() error {
 
 	DBClient, err = mongo.Connect(clientOptions)
 	if err != nil {
-		log.Fatalf("Error al conectar con mongodb: %v", err)
+		PrintInfo("🔴💥 Fail to connect db :db: :string",
+			Entry{"string", Env.DB_CONNECTION_STRING},
+			Entry{"db", Env.DB_DATABASE})
 		return err
 	}
 	DB = DBClient.Database(Env.DB_DATABASE)
 
-	PrintInfo("Conectado exitosamente a MongoDB: :con - Base de datos: :db",
-		Entry{"con", Env.DB_CONNECTION_STRING},
-		Entry{"con", Env.DB_DATABASE})
+	PrintInfo("🍃 Successful connection to :db: :string",
+		Entry{"string", Env.DB_CONNECTION_STRING},
+		Entry{"db", Env.DB_DATABASE})
 	return nil
 }
 
@@ -42,14 +42,7 @@ func CloseMongoDB() error {
 		return nil
 	}
 
-	err := DBClient.Disconnect(context.TODO())
-	if err != nil {
-		e := fmt.Errorf("error al cerrar la conexión con MongoDB: %w", err)
-		Print(e.Error())
-		return e
-	}
-
-	return nil
+	return DBClient.Disconnect(context.TODO())
 }
 
 // FillChanges compara model con request y retorna los valores antiguos y los nuevos.

@@ -6,12 +6,7 @@ import (
 )
 
 func main() {
-
 	app.LoadEnv()
-
 	app.InitMongoDB()
-
-	httpServer := app.NewHttpServer(app.Env.SERVER_PORT, routes.GetAll())
-
-	app.HttpServerGracefulShutdown(httpServer)
+	app.ServerStart(app.Env.SERVER_PORT, routes.GetAll())
 }
